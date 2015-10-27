@@ -11,6 +11,16 @@
 #define TCP 				SOCK_STREAM
 #define UDP 				SOCK_DGRAM
 
+#define ROLE_SENDER			1
+#define ROLE_RECEIVER			2
+
+#define TEST_UNKNOWN			10
+#define TEST_NOT_STARTED		11
+#define TEST_RUNNING			12
+#define TEST_FINISHED			13
+#define TEST_INTERRUPTED		14
+
+
 /* default values */
 #define MAX_CONNECTIONS_PER_THREAD	512
 #define MAX_NUM_THREADS			512

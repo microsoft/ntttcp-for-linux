@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <time.h>
+#include <signal.h>
 #include <inttypes.h>
 #include <netdb.h>
 #include <netinet/in.h>

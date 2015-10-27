@@ -17,6 +17,9 @@ void print_flags(struct ntttcp_test *test)
 	if (test->server_role && test->use_epoll )
 		printf("%s\n", "*** use epoll()");
 
+	if (test->no_synch )
+		printf("%s\n", "*** no sender/receiver synch");
+
 	printf("%s:\t\t\t %s\n", "mapping", test->mapping);
 
 	if (test->client_role)
@@ -55,14 +58,14 @@ void print_flags(struct ntttcp_test *test)
 void print_usage()
 {
 	printf("Author: %s\n", AUTHOR_NAME);
-	printf("ntttcp: [-r|-s|-D|-m <mapping>|-n|-6|-u|-p|-b|-B|-t|-V|-v|-h]\n\n");
-	printf("\t-r   work as a receiver\n");
-	printf("\t-s   work as a sender\n");
-	printf("\t-D   run as daemon\n");
+	printf("ntttcp: [-r|-s|-D|-m <mapping>|-n|-6|-u|-p|-b|-B|-t|-N|-V|-v|-h]\n\n");
+	printf("\t-r   Run as a receiver\n");
+	printf("\t-s   Run as a sender\n");
+	printf("\t-D   Run as daemon\n");
 	printf("\t-e   [receiver only] use epoll() instead of select()\n");
 
 	printf("\t-m   <mapping>\n");
-	printf("\t  where a mapping is a NumberOfThreads,Processor,BindingIPAddress set\n");
+	printf("\t  Where a mapping is a NumberOfThreads,Processor,BindingIPAddress set\n");
 	printf("\t\t  NumberOfThreads:\t[default: %d]\t[max: %d]\n", DEFAULT_NUM_THREADS, MAX_NUM_THREADS);
 	printf("\t\t  Processor:\t\t*, or cpuid such as 0, 1, etc \n");
 	printf("\t  e.g. -m 8,*,192.168.1.1\n \t\t8 threads running on all processors\n\t\tand listening on ports of network on 192.168.1.1\n");
@@ -70,13 +73,14 @@ void print_usage()
 	printf("\t-n   [sender only] number of connections per server port\n\t\t[default: %d]\n\t\t[max: %d]\n", DEFAULT_CONN_PER_THREAD, MAX_CONNECTIONS_PER_THREAD);
 	printf("\t-6   IPv6 mode [default: IPv4]\n");
 	//printf("\t-u   UDP mode  [default: TCP] NOT SUPPORTED YET\n");
-	printf("\t-p   port number, or starting port number   [default: %d]\n", DEFAULT_BASE_PORT);
+	printf("\t-p   Port number, or starting port number   [default: %d]\n", DEFAULT_BASE_PORT);
 	printf("\t-b   <recv buffer size>  [default: %d]\n", DEFAULT_RECV_BUFFER_SIZE);
 	printf("\t-B   <send buffer size>  [default: %d]\n", DEFAULT_SEND_BUFFER_SIZE);
-	printf("\t-t   time of test duration in seconds  [default: %d]\n", DEFAULT_TEST_DURATION);
+	printf("\t-t   Time of test duration in seconds  [default: %d]\n", DEFAULT_TEST_DURATION);
+	printf("\t-N   No sync, senders will start sending as soon as possible.\n");
 
-	printf("\t-V   verbose mode\n");
-	printf("\t-h   help, tool usage\n");
+	printf("\t-V   Verbose mode\n");
+	printf("\t-h   Help, tool usage\n");
 
 	printf("Example:\n");
 	printf("\treceiver:\n");
@@ -108,6 +112,99 @@ struct ntttcp_test *new_ntttcp_test()
 	return test;
 }
 
+struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, int endpoint_role)
+{
+	int i = 0;
+	struct timeval now;
+	int total_threads = 0;
+
+	struct ntttcp_test_endpoint *e;
+	e = (struct ntttcp_test_endpoint *) malloc(sizeof(struct ntttcp_test_endpoint ));
+	if(!e)
+		return NULL;
+
+	gettimeofday(&now, NULL);
+
+	memset(e, 0, sizeof(struct ntttcp_test_endpoint));
+	e->endpoint_role = endpoint_role;
+	e->test = test;
+	e->state = TEST_NOT_STARTED;
+	e->confirmed_duration = test->duration;
+	e->start_time = now;
+	e->end_time = now;
+	e->synch_thread = 0;
+	if (endpoint_role == ROLE_SENDER) {
+		if (test->no_synch == true)
+			total_threads = test->parallel * test->conn_per_thread;
+		else
+			total_threads = test->parallel * test->conn_per_thread + 1;
+
+		e->client_streams = (struct  ntttcp_stream_client **) malloc( sizeof( struct  ntttcp_stream_client ) * total_threads );
+		if(!e->client_streams) {
+			free (e);
+			return NULL;
+		}
+		memset(e->client_streams, 0, sizeof( struct  ntttcp_stream_client ) * total_threads );
+
+		for(i = 0; i < total_threads ; i++ ){
+			e->client_streams[i] = new_ntttcp_client_stream(test);
+		}
+		e->data_threads = malloc( total_threads * sizeof(pthread_t) );
+	}
+	else {
+		if (test->no_synch == true)
+			total_threads = test->parallel;
+		else
+			total_threads = test->parallel + 1;
+
+		e->server_streams = (struct  ntttcp_stream_server **) malloc( sizeof( struct  ntttcp_stream_server ) * total_threads );
+		if(!e->server_streams) {
+			free (e);
+			return NULL;
+		}
+		memset(e->server_streams, 0, sizeof( struct  ntttcp_stream_server) * total_threads );
+
+		for(i = 0; i < total_threads; i++ ){
+			e->server_streams[i] = new_ntttcp_server_stream(test);
+		}
+		e->data_threads = malloc( total_threads * sizeof(pthread_t) );
+	}
+	return e;
+}
+
+void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
+{
+	int i = 0;
+	int total_threads = 0;
+	int endpoint_role = e->endpoint_role;
+
+	if (endpoint_role == ROLE_SENDER) {
+		if (e->test->no_synch == true)
+			total_threads = e->test->parallel * e->test->conn_per_thread;
+		else
+			total_threads = e->test->parallel * e->test->conn_per_thread + 1;
+
+		for(i = 0; i < total_threads ; i++ ){
+			free( e->client_streams[i] );
+		}
+		free( e->client_streams );
+	}
+	else {
+		if (e->test->no_synch == true)
+			total_threads = e->test->parallel;
+		else
+			total_threads = e->test->parallel + 1;
+
+		for(i = 0; i < total_threads ; i++ ){
+			free( e->server_streams[i] );
+		}
+		free( e->server_streams );
+	}
+	free( e->data_threads );
+	free( e->test );
+	free( e );
+}
+
 struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test *test)
 {
 	struct ntttcp_stream_client *s;
@@ -123,6 +220,7 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test *test)
 	s->send_buf_size = test->send_buf_size;
 	s->verbose = test->verbose;
 	s->is_sync_thread = 0;
+	s->no_synch = test->no_synch;
 	return s;
 }
 
@@ -141,6 +239,7 @@ struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test *test)
 	s->recv_buf_size = test->recv_buf_size;
 	s->verbose = test->verbose;
 	s->is_sync_thread = 0;
+	s->no_synch = test->no_synch;
 	s->use_epoll = test->use_epoll;
 	s->total_bytes_transferred = 0;
 	//other fields will be assigned at run time
@@ -216,6 +315,7 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->recv_buf_size    = DEFAULT_RECV_BUFFER_SIZE; //64K
 	test->send_buf_size    = DEFAULT_SEND_BUFFER_SIZE; //128K
 	test->duration         = DEFAULT_TEST_DURATION;
+	test->no_synch         = false;
 	test->verbose          = 0;
 }
 
@@ -289,6 +389,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		{"receiver-buffer", required_argument, NULL, 'b'},
 		{"send-buffer", required_argument, NULL, 'B'},
 		{"duration", required_argument, NULL, 't'},
+		{"nosynch", no_argument, NULL, 'N'},
 		{"verbose", no_argument, NULL, 'V'},
 		{"help", no_argument, NULL, 'h'},
 		{0, 0, 0, 0}
@@ -296,7 +397,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 	int flag;
 
-	while ((flag = getopt_long(argc, argv, "r::s::Dem:n:6up:b:B:t:Vh", longopts, NULL)) != -1) {
+	while ((flag = getopt_long(argc, argv, "r::s::Dem:n:6up:b:B:t:NVh", longopts, NULL)) != -1) {
 		switch (flag) {
 		case 'r':
 			test->server_role = true;
@@ -351,6 +452,10 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			test->duration = atoi(optarg);
 			break;
 
+		case 'N':
+			test->no_synch = true;
+			break;
+
 		case 'V':
 			test->verbose = 1;
 			break;
@@ -377,16 +482,25 @@ void get_cpu_usage(struct cpu_usage *cu)
 	cu->system_time = usage.ru_stime.tv_sec * 1000000.0 + usage.ru_stime.tv_usec;
 }
 
-void print_thread_result(int tid, long total_bytes, int test_duration)
+double get_time_diff(struct timeval *t1, struct timeval *t2)
+{
+	return fabs( (t1->tv_sec + (t1->tv_usec / 1000000.0)) - (t2->tv_sec + (t2->tv_usec / 1000000.0)) );
+}
+
+void print_thread_result(int tid, long total_bytes, double test_duration)
 {
 	char *log = NULL, *log_tmp = NULL;
+
 	if (tid == -1){
 		PRINT_INFO("\tThread\tTime(s)\tThroughput");
 		PRINT_INFO("\t======\t=======\t==========");
 	}
 	else{
+		if (test_duration == 0)
+			return;
+
 		log_tmp = format_throughput(total_bytes, test_duration);
-		asprintf(&log, "\t%d\t %d\t %s", tid, test_duration, log_tmp);
+		asprintf(&log, "\t%d\t %.2f\t %s", tid, test_duration, log_tmp);
 		free(log_tmp);
 		PRINT_INFO_FREE(log);
 	}
@@ -394,14 +508,19 @@ void print_thread_result(int tid, long total_bytes, int test_duration)
 
 void print_total_result(long total_bytes,
 			uint64_t cycle_diff,
-			int test_duration,
+			double test_duration,
 			struct cpu_usage *init_cpu_usage,
 			struct cpu_usage *final_cpu_usage )
 {
 	char *log = NULL, *log_tmp = NULL;
 	double time_diff;
 
+	if (test_duration == 0)
+		return;
+
 	printf("---------------------------------------------------------\n");
+	asprintf(&log, "test duration\t:%.2f seconds", test_duration);
+	PRINT_INFO_FREE(log);
 	asprintf(&log, "total bytes\t:%ld", total_bytes);
 	PRINT_INFO_FREE(log);
 
@@ -465,7 +584,7 @@ const char *unit_bps[] =
 	"Gbps"
 };
 
-char *format_throughput(long bytes_transferred, int test_duration)
+char *format_throughput(long bytes_transferred, double test_duration)
 {
 	double tmp = 0;
 	int unit_idx = 0;

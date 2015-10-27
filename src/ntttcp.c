@@ -59,6 +59,14 @@ void wait_light_on( void )
 	pthread_mutex_unlock( &light_mutex );
 }
 
+void wait_light_off( void )
+{
+        pthread_mutex_lock( &light_mutex );
+        while (run_light != 0)
+                pthread_cond_wait( &wait_light, &light_mutex );
+        pthread_mutex_unlock( &light_mutex );
+}
+
 int is_light_turned_on( void )
 {
 	int temp;
@@ -68,6 +76,47 @@ int is_light_turned_on( void )
 	pthread_mutex_unlock( &light_mutex );
 
 	return temp;
+}
+
+/************************************************************/
+//		ntttcp timer and signal handle
+/************************************************************/
+
+void sig_handler(int signo)
+{
+	//Ctrl+C
+	if (signo == SIGINT){
+		PRINT_INFO("Interrupted by Ctrl+C");
+
+		if (is_light_turned_on())
+			turn_off_light();
+		else
+			exit (1);
+	}
+}
+
+void timer_fired()
+{
+	turn_off_light();
+}
+
+void run_test_timer(int duration)
+{
+	struct itimerval it_val;
+
+	it_val.it_value.tv_sec = duration;
+	it_val.it_value.tv_usec = 0;
+	it_val.it_interval.tv_sec = 0;
+	it_val.it_interval.tv_usec = 0;
+
+	if (signal(SIGALRM, timer_fired) == SIG_ERR) {
+		PRINT_ERR("unable to set test timer: signal SIGALRM failed");
+		exit(1);
+	}
+	if (setitimer(ITIMER_REAL, &it_val, NULL) == -1) {
+		PRINT_ERR("unable to set test timer: setitimer ITIMER_REAL failed");
+		exit(1);
+	}
 }
 
 /************************************************************/
@@ -90,7 +139,7 @@ void *run_ntttcp_sender_stream( void *ptr )
 	char *port_str; //to get remote peer's port number for getaddrinfo()
 	struct addrinfo hints, *serv_info, *p; //to get remote peer's sockaddr for connect()
 
-	int i = 0; //just for debug purpose
+	int i = 0;
 
 	test = (struct ntttcp_stream_client *) ptr;
 
@@ -179,11 +228,21 @@ void *run_ntttcp_sender_stream( void *ptr )
 			return 0;
 		}
 		 // for debug
+		/*
 		for (i = 0; i < n; i++ ){
 			putc( isprint(buffer[i]) ? buffer[i] : '.' , stdout );
 			fflush(stdout);
 		}
-		nbytes = 1;
+		*/
+		if (n > 0) {
+			if (buffer[0] == TEST_RUNNING) {
+				PRINT_ERR("receiver is busy with an existing test running");
+				free(buffer);
+				close(sockfd);
+				return 0;
+			}
+		}
+		nbytes = 0; //don't count this bytes as it is synch thread
 
 		/* now, now turn on the green light so that other sync thread can send data for test */
 		turn_on_light();
@@ -335,8 +394,8 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *test)
 	socklen_t peer_addr_size, local_addr_size;
 	char *ip_address_str;
 	int ip_address_max_size;
-
-	int i = 0, j = 0;
+	int i = 0;
+	char receiver_state = TEST_UNKNOWN;
 
 	if ( (buffer = (char *)malloc(test->recv_buf_size)) == (char *)NULL){
 		PRINT_ERR("cannot allocate memory for receive buffer");
@@ -427,8 +486,8 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *test)
 					if (epoll_ctl (efd, EPOLL_CTL_ADD, newfd, &event) != 0)
 						PRINT_ERR("epoll_ctl failed");
 
-					//for TCP, there is no synch thread, so if any new connection coming, indicates test started
-					if ( test->protocol == TCP )
+					//if there is no synch thread, if any new connection coming, indicates test started
+					if ( test->no_synch )
 						turn_on_light();
 					//else, leave the sync thread to fire the trigger
 				}
@@ -458,21 +517,29 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *test)
 
 					if (test->is_sync_thread){
 						// for debug, write the 'X' received from sender
+						/*
 						for ( j = 0; j < nbytes; j++ ){
 							putc( isprint(buffer[j]) ? buffer[j] : '.' , stdout );
 							fflush(stdout);
 						}
-
+						*/
 						/* send ack to client on the sync thread */
-						memset(buffer, 'X', 1 * sizeof(char));
+						if (is_light_turned_on())
+							receiver_state = TEST_RUNNING;
+						else
+							receiver_state = TEST_NOT_STARTED;
+
+						memset(buffer, (char)receiver_state, 1 * sizeof(char));
 						nbytes = n_write(current_fd, buffer, 1);
 						if (nbytes < 0){
 							PRINT_ERR("cannot write ack data to the socket for sender/receiver sync");
 							err_code = ERROR_NETWORK_WRITE;
 						}
 						else {
-							turn_on_light();
-							PRINT_INFO("Network activity progressing...");
+							if (!is_light_turned_on()){
+								turn_on_light();
+								PRINT_INFO("Network activity progressing...");
+							}
 						}
 					}
 				}
@@ -503,8 +570,7 @@ int ntttcp_server_select(struct ntttcp_stream_server *test)
 	socklen_t peer_addr_size, local_addr_size;
 	char *ip_address_str;
 	int ip_address_max_size;
-
-	int j = 0;
+	char receiver_state = TEST_UNKNOWN;
 
 	if ( (buffer = (char *)malloc(test->recv_buf_size)) == (char *)NULL){
 		PRINT_ERR("cannot allocate memory for receive buffer");
@@ -575,8 +641,8 @@ int ntttcp_server_select(struct ntttcp_stream_server *test)
 					PRINT_DBG_FREE(log);
 				}
 
-				//for TCP, there is no synch thread, so if any new connection coming, indicates test started
-				if ( test->protocol == TCP )
+				//if there is no synch thread, if any new connection coming, indicates test started
+				if ( test->no_synch )
 					turn_on_light();
 				//else, leave the sync thread to fire the trigger
 			}
@@ -606,21 +672,29 @@ int ntttcp_server_select(struct ntttcp_stream_server *test)
 
 					if (test->is_sync_thread){
 						// for debug, write the 'X' received from sender
+						/*
 						for ( j = 0; j < nbytes; j++ ){
 							putc( isprint(buffer[j]) ? buffer[j] : '.' , stdout );
 							fflush(stdout);
 						}
-
+						*/
 						/* send ack to client on the sync thread */
-						memset(buffer, 'X', 1 * sizeof(char));
+						if (is_light_turned_on())
+							receiver_state = TEST_RUNNING;
+						else
+							receiver_state = TEST_NOT_STARTED;
+
+						memset(buffer, (char)receiver_state, 1 * sizeof(char));
 						nbytes = n_write(current_fd, buffer, 1);
 						if (nbytes < 0){
 							PRINT_ERR("cannot write ack data to the socket for sender/receiver sync");
 							err_code = ERROR_NETWORK_WRITE;
 						}
 						else{
-							turn_on_light();
-							PRINT_INFO("Network activity progressing...");
+							if (!is_light_turned_on()){
+								turn_on_light();
+								PRINT_INFO("Network activity progressing...");
+							}
 						}
 					}
 				}
@@ -666,19 +740,22 @@ void *run_ntttcp_receiver_stream( void *ptr )
 /************************************************************/
 //		ntttcp high level functions
 /************************************************************/
-int run_ntttcp_sender(struct ntttcp_test *test)
+int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 {
 	int err_code = NO_ERROR;
+	struct ntttcp_test *test;
 	char *log = NULL;
 	int threads_created = 0, stream_created = 0;
-	pthread_t threads[MAX_NUM_THREADS + 1]; //including one synch thread
-	struct ntttcp_stream_client *client_stream;
-	struct ntttcp_stream_client *all_client_streams[MAX_NUM_THREADS + 1]; //including one synch thread
+	struct ntttcp_stream_client *this_client_stream;
 	int rc, t, i;
 	void *bytes;
 	long nbytes = 0, total_bytes = 0;
+	struct timeval now;
+	double actual_test_time = 0;
 	struct cpu_usage *init_cpu_usage, *final_cpu_usage;
 	uint64_t init_cycle_count = 0, final_cycle_count = 0, cycle_diff = 0;
+
+	test = tep->test;
 
 	/* calculate the resource usage */
 	init_cpu_usage = (struct cpu_usage *) malloc(sizeof(struct cpu_usage));
@@ -696,26 +773,26 @@ int run_ntttcp_sender(struct ntttcp_test *test)
 	init_cycle_count = get_cc_rdtsc();
 
 	/* create threads */
-	for (t = 0; t < test->parallel + 1; t++) {  //the last one is an extra synch thread
-		client_stream = new_ntttcp_client_stream(test);
-		if (client_stream == NULL){
+	for (t = 0; t < tep->test->parallel + 1; t++) {  //the last one is an extra synch thread
+		this_client_stream = tep->client_streams[t];
+		if (this_client_stream == NULL){
 			PRINT_ERR("sender: error when creating new client stream");
 			err_code = ERROR_MEMORY_ALLOC;
 			continue;
 		}
-		client_stream->server_port = test->server_base_port + t;
-		all_client_streams[stream_created] = client_stream;
+		this_client_stream->server_port = test->server_base_port + t;
 		stream_created++;
 
 		/* for the last iteration: */
 		if (t == test->parallel) {
-			if (test->protocol == UDP){ /* if UDP, create the synch thread */
-				client_stream->server_port = test->server_base_port - 1;
-				client_stream->is_sync_thread = 1;
-				rc = pthread_create(&threads[threads_created],
-					NULL,
-					run_ntttcp_sender_stream,
-					(void*)client_stream);
+			if (test->no_synch == false){
+				/* synch thread */
+				this_client_stream->server_port = test->server_base_port - 1;
+				this_client_stream->is_sync_thread = 1;
+				rc = pthread_create(&tep->data_threads[threads_created],
+							NULL,
+							run_ntttcp_sender_stream,
+							(void*)this_client_stream);
 				if (rc){
 					PRINT_ERR("pthread_create() create thread failed");
 					err_code = ERROR_PTHREAD_CREATE;
@@ -725,7 +802,7 @@ int run_ntttcp_sender(struct ntttcp_test *test)
 					threads_created++;
 				}
 			}
-			else{   /* for TCP, does not need synch thread, so turn on light directly */
+			else{   /* no synch thread, so turn on light directly */
 				turn_on_light();
 			}
 			continue; //anyway, finish the loop as this is the last thread
@@ -735,10 +812,10 @@ int run_ntttcp_sender(struct ntttcp_test *test)
 		/* in client side, multiple connections will (one thread for one connection) */
 		/* connect to same port on server */
 		for (i = 0; i < test->conn_per_thread; i++ ){
-			rc = pthread_create(&threads[threads_created],
+			rc = pthread_create(&tep->data_threads[threads_created],
 						NULL,
 						run_ntttcp_sender_stream,
-						(void*)client_stream);
+						(void*)this_client_stream);
 			if (rc){
 				PRINT_ERR("pthread_create() create thread failed");
 				err_code = ERROR_PTHREAD_CREATE;
@@ -752,46 +829,59 @@ int run_ntttcp_sender(struct ntttcp_test *test)
 	asprintf(&log, "%d threads created", threads_created);
 	PRINT_DBG_FREE(log);
 
-	/* wait test running done */
-	sleep(test->duration);
-	turn_off_light(); //it is time to end the test now, turn off the green light :)
+	/* run the timer. it will trigger turn_off_light() after timer timeout */
+	run_test_timer(test->duration);
+	/* wait synch thread to complete */
+	wait_light_on();
+	tep->state = TEST_RUNNING;
+	gettimeofday(&now, NULL);
+	tep->start_time = now;
+
+	/* wait test done */
+	wait_light_off();
+	tep->state = TEST_FINISHED;
+	gettimeofday(&now, NULL);
+	tep->end_time = now;
+
+	/* calculate the actual test run time */
+	actual_test_time = get_time_diff(&tep->end_time, &tep->start_time);
 
 	/* calculate resource usage */
 	final_cycle_count = get_cc_rdtsc();
 	cycle_diff = final_cycle_count - init_cycle_count;
 	get_cpu_usage( final_cpu_usage );
 
-	/* calculate client side throughput */
+	/* calculate client side throughput, but exclude the last thread as it is synch thread */
 	print_thread_result(-1, 0, 0);
-	for (i = 0; i < threads_created; i++) {
-		pthread_join(threads[i], &bytes);
+	for (i = 0; i < threads_created - 1; i++) {
+		pthread_join(tep->data_threads[i], &bytes);
 		nbytes = (long)bytes;
 		total_bytes += nbytes;
-		print_thread_result(i, nbytes, test->duration); //to be improved: more precise test duration
+		print_thread_result(i, nbytes, actual_test_time);
 	}
-	print_total_result(total_bytes, cycle_diff, test->duration, init_cpu_usage, final_cpu_usage);
+	print_total_result(total_bytes, cycle_diff, actual_test_time, init_cpu_usage, final_cpu_usage);
 
-	for (i = 0; i < stream_created; i++){
-		free(all_client_streams[i]);
-	}
 	free (init_cpu_usage);
 	free (final_cpu_usage);
 
 	return err_code;
 }
 
-int run_ntttcp_receiver(struct ntttcp_test *test)
+int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 {
 	int err_code = NO_ERROR;
+	struct ntttcp_test *test;
 	char *log = NULL;
 	int total_threads = 0, threads_created = 0, stream_created = 0;
-	pthread_t threads[MAX_NUM_THREADS + 1]; //including one synch thread
-	struct ntttcp_stream_server *server_stream;
-	struct ntttcp_stream_server *all_server_streams[MAX_NUM_THREADS + 1]; //including one synch thread
-	int rc, t, k;
+	struct ntttcp_stream_server *this_server_stream;
+	int rc, t;
 	long nbytes = 0, total_bytes = 0;
+	struct timeval now;
+	double actual_test_time = 0;
 	struct cpu_usage *init_cpu_usage, *final_cpu_usage;
 	uint64_t init_cycle_count = 0, final_cycle_count = 0, cycle_diff = 0;
+
+	test = tep->test;
 
 	/* calculate the resource usage */
 	init_cpu_usage = (struct cpu_usage *) malloc(sizeof(struct cpu_usage));
@@ -811,22 +901,29 @@ int run_ntttcp_receiver(struct ntttcp_test *test)
 	/* create threads */
 	total_threads = test->parallel + 1; //including one synch thread
 	for (t = 0; t < total_threads; t++) {
-		server_stream = new_ntttcp_server_stream( test );
-		if (server_stream == NULL){
+		this_server_stream = tep->server_streams[t];
+		if (this_server_stream == NULL){
 			PRINT_ERR("receiver: error when creating new server stream");
 			continue;
 		}
-		server_stream->server_port = test->server_base_port + t;
-		if (t == total_threads - 1){
-			/* sync thread, only for the purpose of compatibility with Windows version */
-			server_stream->server_port = test->server_base_port - 1;
-			server_stream->is_sync_thread = 1;
-		}
-
-		all_server_streams[t] = server_stream;
+		this_server_stream->server_port = test->server_base_port + t;
 		stream_created++;
 
-		rc = pthread_create(&threads[t], NULL, run_ntttcp_receiver_stream, (void*)server_stream);
+		if (t == total_threads - 1){
+			if (test->no_synch == false){
+				/* sync thread */
+				this_server_stream->server_port = test->server_base_port - 1;
+				this_server_stream->is_sync_thread = 1;
+			}
+			else{
+				continue;
+			}
+		}
+
+		rc = pthread_create(&tep->data_threads[t],
+					NULL,
+					run_ntttcp_receiver_stream,
+					(void*)this_server_stream);
 		if (rc){
 			PRINT_ERR("pthread_create() create thread failed");
 			err_code = ERROR_PTHREAD_CREATE;
@@ -838,52 +935,61 @@ int run_ntttcp_receiver(struct ntttcp_test *test)
 	asprintf(&log, "%d threads created", threads_created);
 	PRINT_DBG_FREE(log);
 
-	while ( 1 ){
-		while ( 1 ) {
-			if ( is_light_turned_on() ){ //means: at receiver side, testing is in progress, then just wait for its done
-				/* wait test running done */
-				sleep( test->duration );
-				turn_off_light();
+	while ( 1 ) {
+		if ( is_light_turned_on() ){ //means: at receiver side, testing is in progress, then just wait for its done
+			/* run the timer. it will trigger turn_off_light() after timer timeout */
+			run_test_timer(test->duration);
 
-				/* calculate resource usage */
-				final_cycle_count = get_cc_rdtsc();
-				cycle_diff = final_cycle_count - init_cycle_count;
-				get_cpu_usage( final_cpu_usage );
+			/* wait synch thread to complete */
+			//wait_light_on();  // test already started, don't need to wait
+			tep->state = TEST_RUNNING;
+			gettimeofday(&now, NULL);
+			tep->start_time = now;
 
-				/* calculate server side throughput */
-				total_bytes = 0;
-				print_thread_result(-1, 0, 0);
-				for (t=0; t < stream_created; t++){
-					/* exclude the sync thread */
-					if (all_server_streams[t]->is_sync_thread)
-						continue;
+			/* wait test done */
+			wait_light_off();
+			tep->state = TEST_FINISHED;
+			gettimeofday(&now, NULL);
+			tep->end_time = now;
 
-					nbytes = (long)__atomic_load_n( &(all_server_streams[t]->total_bytes_transferred), __ATOMIC_SEQ_CST );
-					total_bytes += nbytes;
-					print_thread_result(t, nbytes, test->duration);
-				}
+			/* calculate the actual test run time */
+			actual_test_time = get_time_diff(&tep->end_time, &tep->start_time);
 
-				print_total_result(total_bytes, cycle_diff, test->duration, init_cpu_usage, final_cpu_usage);
-				/* reset server side perf counters */
-				for (t=0; t < stream_created; t++)
-					__atomic_store_n( &(all_server_streams[t]->total_bytes_transferred), 0, __ATOMIC_SEQ_CST );
+			/* calculate resource usage */
+			final_cycle_count = get_cc_rdtsc();
+			cycle_diff = final_cycle_count - init_cycle_count;
+			get_cpu_usage( final_cpu_usage );
 
-				break; //current test finished
+			//sleep(1);  //looks like server needs more time to receive data ...
+
+			/* calculate server side throughput */
+			total_bytes = 0;
+			print_thread_result(-1, 0, 0);
+			for (t=0; t < stream_created; t++){
+				/* exclude the sync thread */
+				if (tep->server_streams[t]->is_sync_thread)
+					continue;
+
+				nbytes = (long)__atomic_load_n( &(tep->server_streams[t]->total_bytes_transferred), __ATOMIC_SEQ_CST );
+				total_bytes += nbytes;
+				print_thread_result(t, nbytes, actual_test_time);
 			}
-			else { //means: at server side, test is not started, then just wait for its start
-				sleep( 1 );
-			}
+
+			print_total_result(total_bytes, cycle_diff, actual_test_time, init_cpu_usage, final_cpu_usage);
+
+			/* reset server side perf counters */
+			for (t=0; t < stream_created; t++)
+				__atomic_store_n( &(tep->server_streams[t]->total_bytes_transferred), 0, __ATOMIC_SEQ_CST );
+		}
+		else { //means: at server side, test is not started, then just wait for its start
 		}
 	}
 
 	/* as receiver threads will keep listening on ports, so they will not exit */
 	for (t=0; t < threads_created; t++) {
-		pthread_join(threads[t], NULL);
+		pthread_join(tep->data_threads[t], NULL);
 	}
 
-	for (k = 0; k < stream_created; k++){
-		free(all_server_streams[k]);
-	}
 	free (init_cpu_usage);
 	free (final_cpu_usage);
 
@@ -915,6 +1021,11 @@ int main(int argc, char **argv)
 	int err_code = NO_ERROR;
 	cpu_set_t cpuset;
 	struct ntttcp_test *test;
+	struct ntttcp_test_endpoint *tep;
+
+	/* catch SIGINT: Ctrl + C */
+	if (signal(SIGINT, sig_handler) == SIG_ERR)
+		PRINT_ERR("main: error when setting the disposition of the signal SIGINT");
 
 	print_version();
 	test = new_ntttcp_test();
@@ -961,11 +1072,15 @@ int main(int argc, char **argv)
 
 //	run_ntttcp_debug(test);
 
-	if (test->client_role == true)
-		err_code = run_ntttcp_sender(test);
-	else
-		err_code = run_ntttcp_receiver(test);
+	if (test->client_role == true) {
+		tep = new_ntttcp_test_endpoint(test, ROLE_SENDER);
+		err_code = run_ntttcp_sender(tep);
+	}
+	else {
+		tep = new_ntttcp_test_endpoint(test, ROLE_RECEIVER);
+		err_code = run_ntttcp_receiver(tep);
+	}
 
-	free(test);
+	free_ntttcp_test_endpoint_and_test(tep);
 	return err_code;
 }
