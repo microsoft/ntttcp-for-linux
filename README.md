@@ -2,7 +2,20 @@
 
 ## Summary
 
-A Linux network throughput performance benchmark tool. 
+A multiple-thread based Linux network throughput benchmark tool.
+
+## Features
+
+* Multiple threads to send/receive data. By default, Receiver ("-r") uses 16 threads and Sender ("-s") uses 64 threads to exchange data.
+
+* Support cpu affinity.
+
+* Support running in background (daemon).
+
+* Support Sender and Receiver sync mode by default. Use "-N" (no_sync) to disable the sync.
+
+* Only support TCP mode; and support both ipv4 and ipv6.
+
 
 ## Getting Started
 
@@ -17,7 +30,7 @@ A Linux network throughput performance benchmark tool.
 
 ### Known issues
 
-* One extra TCP connection created on receiver side: this connection is reserved for sender-receiver synch purpose. 
+* UDP is not supported. 
 
 # Related topics
 

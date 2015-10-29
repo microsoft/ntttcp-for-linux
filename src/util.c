@@ -51,7 +51,7 @@ void print_flags(struct ntttcp_test *test)
 		printf("%s:\t %.2f\n", "sender socket buffer (bytes)", test->send_buf_size);
 
 	printf("%s:\t\t %d\n", "test duration (sec)", test->duration);
-	printf("%s:\t\t\t %s\n", "verbose mode", test->duration?"enabled":"disabled");
+	printf("%s:\t\t\t %s\n", "verbose mode", test->verbose ? "enabled" : "disabled");
 	printf("---------------------------------------------------------\n");
 }
 
@@ -101,151 +101,6 @@ void print_version()
 	printf("---------------------------------------------------------\n");
 }
 
-struct ntttcp_test *new_ntttcp_test()
-{
-	struct ntttcp_test *test;
-	test = (struct ntttcp_test *) malloc(sizeof(struct ntttcp_test));
-	if (!test)
-		return NULL;
-
-	memset(test, 0, sizeof(struct ntttcp_test));
-	return test;
-}
-
-struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, int endpoint_role)
-{
-	int i = 0;
-	struct timeval now;
-	int total_threads = 0;
-
-	struct ntttcp_test_endpoint *e;
-	e = (struct ntttcp_test_endpoint *) malloc(sizeof(struct ntttcp_test_endpoint ));
-	if(!e)
-		return NULL;
-
-	gettimeofday(&now, NULL);
-
-	memset(e, 0, sizeof(struct ntttcp_test_endpoint));
-	e->endpoint_role = endpoint_role;
-	e->test = test;
-	e->state = TEST_NOT_STARTED;
-	e->confirmed_duration = test->duration;
-	e->start_time = now;
-	e->end_time = now;
-	e->synch_thread = 0;
-	if (endpoint_role == ROLE_SENDER) {
-		if (test->no_synch == true)
-			total_threads = test->parallel * test->conn_per_thread;
-		else
-			total_threads = test->parallel * test->conn_per_thread + 1;
-
-		e->client_streams = (struct  ntttcp_stream_client **) malloc( sizeof( struct  ntttcp_stream_client ) * total_threads );
-		if(!e->client_streams) {
-			free (e);
-			return NULL;
-		}
-		memset(e->client_streams, 0, sizeof( struct  ntttcp_stream_client ) * total_threads );
-
-		for(i = 0; i < total_threads ; i++ ){
-			e->client_streams[i] = new_ntttcp_client_stream(test);
-		}
-		e->data_threads = malloc( total_threads * sizeof(pthread_t) );
-	}
-	else {
-		if (test->no_synch == true)
-			total_threads = test->parallel;
-		else
-			total_threads = test->parallel + 1;
-
-		e->server_streams = (struct  ntttcp_stream_server **) malloc( sizeof( struct  ntttcp_stream_server ) * total_threads );
-		if(!e->server_streams) {
-			free (e);
-			return NULL;
-		}
-		memset(e->server_streams, 0, sizeof( struct  ntttcp_stream_server) * total_threads );
-
-		for(i = 0; i < total_threads; i++ ){
-			e->server_streams[i] = new_ntttcp_server_stream(test);
-		}
-		e->data_threads = malloc( total_threads * sizeof(pthread_t) );
-	}
-	return e;
-}
-
-void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
-{
-	int i = 0;
-	int total_threads = 0;
-	int endpoint_role = e->endpoint_role;
-
-	if (endpoint_role == ROLE_SENDER) {
-		if (e->test->no_synch == true)
-			total_threads = e->test->parallel * e->test->conn_per_thread;
-		else
-			total_threads = e->test->parallel * e->test->conn_per_thread + 1;
-
-		for(i = 0; i < total_threads ; i++ ){
-			free( e->client_streams[i] );
-		}
-		free( e->client_streams );
-	}
-	else {
-		if (e->test->no_synch == true)
-			total_threads = e->test->parallel;
-		else
-			total_threads = e->test->parallel + 1;
-
-		for(i = 0; i < total_threads ; i++ ){
-			free( e->server_streams[i] );
-		}
-		free( e->server_streams );
-	}
-	free( e->data_threads );
-	free( e->test );
-	free( e );
-}
-
-struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test *test)
-{
-	struct ntttcp_stream_client *s;
-	s = (struct ntttcp_stream_client *) malloc(sizeof(struct ntttcp_stream_client));
-	if (!s)
-		return NULL;
-
-	memset(s, 0, sizeof(struct ntttcp_stream_client));
-	s->domain = test->domain;
-	s->protocol = test->protocol;
-	s->bind_address = test->bind_address;
-	//s->server_port, should be specified by caller
-	s->send_buf_size = test->send_buf_size;
-	s->verbose = test->verbose;
-	s->is_sync_thread = 0;
-	s->no_synch = test->no_synch;
-	return s;
-}
-
-struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test *test)
-{
-	struct ntttcp_stream_server *s;
-	s = (struct ntttcp_stream_server *) malloc(sizeof(struct ntttcp_stream_server));
-	if (!s)
-	 	return NULL;
-
-	memset(s, 0, sizeof(struct ntttcp_stream_server));
-	s->domain = test->domain;
-	s->protocol = test->protocol;
-	s->bind_address = test->bind_address;
-	//s->server_port, should be specified by caller
-	s->recv_buf_size = test->recv_buf_size;
-	s->verbose = test->verbose;
-	s->is_sync_thread = 0;
-	s->no_synch = test->no_synch;
-	s->use_epoll = test->use_epoll;
-	s->total_bytes_transferred = 0;
-	//other fields will be assigned at run time
-	return s;
-}
-
 int process_mappings(struct ntttcp_test *test)
 {
 	int state = S_THREADS, threads = 0;
@@ -259,7 +114,7 @@ int process_mappings(struct ntttcp_test *test)
 		if (S_THREADS == state)		{
 			threads = atoi(token);
 
-			if (0 > threads)			{
+			if (0 > threads) {
 				return ERROR_ARGS;
 			}
 			test->parallel = threads;
@@ -298,30 +153,11 @@ int process_mappings(struct ntttcp_test *test)
 	return NO_ERROR;
 }
 
-void default_ntttcp_test(struct ntttcp_test *test)
-{
-	test->server_role      = false;
-	test->client_role      = false;
-	test->daemon           = false;
-	test->use_epoll        = false;
-	test->mapping          = "16,*,*";
-	test->bind_address     = "0.0.0.0";
-	test->parallel         = DEFAULT_NUM_THREADS;
-	test->cpu_affinity     = -1; //no hard cpu affinity
-	test->conn_per_thread  = DEFAULT_CONN_PER_THREAD;
-	test->domain           = AF_INET;
-	test->protocol         = TCP;
-	test->server_base_port = DEFAULT_BASE_PORT;
-	test->recv_buf_size    = DEFAULT_RECV_BUFFER_SIZE; //64K
-	test->send_buf_size    = DEFAULT_SEND_BUFFER_SIZE; //128K
-	test->duration         = DEFAULT_TEST_DURATION;
-	test->no_synch         = false;
-	test->verbose          = 0;
-}
-
 /* Check flag or role compatibility; set default value for some params */
 int verify_args(struct ntttcp_test *test)
 {
+	bool verbose_log = test->verbose;
+
 	if (test->server_role && test->client_role) {
 		PRINT_ERR("both sender and receiver roles provided");
 		return ERROR_ARGS;
@@ -457,7 +293,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			break;
 
 		case 'V':
-			test->verbose = 1;
+			test->verbose = true;
 			break;
 
 		case 'h':

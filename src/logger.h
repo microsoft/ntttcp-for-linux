@@ -27,13 +27,13 @@
 #define PRINT_ERR_FREE(y) { PRINT_LOG_FREE ("ERR ", y) }
 
 #define PRINT_DBG(y) { \
-	if(test->verbose) { \
+	if(verbose_log) { \
 		PRINT_LOG ("DBG ", y) \
 	} \
 }
 
 #define PRINT_DBG_FREE(y) { \
-	if(test->verbose) { \
+	if(verbose_log) { \
 		PRINT_LOG_FREE ("DBG ", y) \
 	} \
 }

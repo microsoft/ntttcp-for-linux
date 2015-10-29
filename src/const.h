@@ -5,7 +5,7 @@
 // ----------------------------------------------------------------------------------
 
 #define TOOL_NAME "NTTTCP for Linux"
-#define TOOL_VERSION "1.0.0.0"
+#define TOOL_VERSION "1.1.0"
 #define AUTHOR_NAME "Shihua (Simon) Xiao, sixiao@microsoft.com"
 
 #define TCP 				SOCK_STREAM
@@ -44,3 +44,4 @@
 #define ERROR_EPOLL			-1107
 #define ERROR_NETWORK_READ		-1108
 #define ERROR_NETWORK_WRITE		-1109
+#define ERROR_RECEIVER_NOT_READY		-1110
