@@ -20,7 +20,7 @@ void print_flags(struct ntttcp_test *test)
 	if (test->no_synch )
 		printf("%s\n", "*** no sender/receiver synch");
 
-	printf("%s:\t\t\t %s\n", "mapping", test->mapping);
+	//printf("%s:\t\t\t %s\n", "mapping", test->mapping);
 
 	if (test->client_role)
 		printf("%s:\t\t\t %d X %d\n", "threads", test->parallel, test->conn_per_thread);
@@ -64,23 +64,27 @@ void print_usage()
 	printf("\t-D   Run as daemon\n");
 	printf("\t-e   [receiver only] use epoll() instead of select()\n");
 
-	printf("\t-m   <mapping>\n");
-	printf("\t  Where a mapping is a NumberOfThreads,Processor,BindingIPAddress set\n");
-	printf("\t\t  NumberOfThreads:\t[default: %d]\t[max: %d]\n", DEFAULT_NUM_THREADS, MAX_NUM_THREADS);
-	printf("\t\t  Processor:\t\t*, or cpuid such as 0, 1, etc \n");
-	printf("\t  e.g. -m 8,*,192.168.1.1\n \t\t8 threads running on all processors\n\t\tand listening on ports of network on 192.168.1.1\n");
+	printf("\t-P   Number of ports listening on receiver side\n");
+	printf("\t-n   [sender only] number of connections per receiver port    [default: %d]  [max: %d]\n", DEFAULT_CONN_PER_THREAD, MAX_CONNECTIONS_PER_THREAD);
 
-	printf("\t-n   [sender only] number of connections per server port\n\t\t[default: %d]\n\t\t[max: %d]\n", DEFAULT_CONN_PER_THREAD, MAX_CONNECTIONS_PER_THREAD);
-	printf("\t-6   IPv6 mode [default: IPv4]\n");
-	//printf("\t-u   UDP mode  [default: TCP] NOT SUPPORTED YET\n");
-	printf("\t-p   Port number, or starting port number   [default: %d]\n", DEFAULT_BASE_PORT);
-	printf("\t-b   <recv buffer size>  [default: %d]\n", DEFAULT_RECV_BUFFER_SIZE);
-	printf("\t-B   <send buffer size>  [default: %d]\n", DEFAULT_SEND_BUFFER_SIZE);
-	printf("\t-t   Time of test duration in seconds  [default: %d]\n", DEFAULT_TEST_DURATION);
+	printf("\t-6   IPv6 mode    [default: IPv4]\n");
+	//printf("\t-u   UDP mode    [default: TCP] NOT SUPPORTED YET\n");
+	printf("\t-p   Port number, or starting port number    [default: %d]\n", DEFAULT_BASE_PORT);
+	printf("\t-b   <recv buffer size>    [default: %d]\n", DEFAULT_RECV_BUFFER_SIZE);
+	printf("\t-B   <send buffer size>    [default: %d]\n", DEFAULT_SEND_BUFFER_SIZE);
+	printf("\t-t   Time of test duration in seconds    [default: %d]\n", DEFAULT_TEST_DURATION);
 	printf("\t-N   No sync, senders will start sending as soon as possible.\n");
 
 	printf("\t-V   Verbose mode\n");
 	printf("\t-h   Help, tool usage\n");
+
+	printf("\t-m   <mapping>\tfor the purpose of compatible with Windows ntttcp usage\n");
+	printf("\t\t  Where a mapping is a NumberOfReceiverPorts,Processor,BindingIPAddress set:\n");
+	printf("\t\t  NumberOfReceiverPorts:    [default: %d]  [max: %d]\n", DEFAULT_NUM_THREADS, MAX_NUM_THREADS);
+	printf("\t\t  Processor:\t\t*, or cpuid such as 0, 1, etc \n");
+	printf("\t\t  e.g. -m 8,*,192.168.1.1\n");
+	printf("\t\t\t  If receiver role: 8 threads running on all processors;\n\t\t\tand listening on 8 ports of network on 192.168.1.1.\n");
+	printf("\t\t\t  If sender role: receiver has 8 threads running and listening on 8 ports of network on 192.168.1.1;\n\t\t\tand all sender threads will run on all processors.\n");
 
 	printf("Example:\n");
 	printf("\treceiver:\n");
@@ -218,6 +222,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		{"daemon", no_argument, NULL, 'D'},
 		{"epoll", no_argument, NULL, 'e'},
 		{"mapping", required_argument, NULL, 'm'},
+		{"nports", required_argument, NULL, 'P'},
 		{"nconn", required_argument, NULL, 'n'},
 		{"ipv6", no_argument, NULL, '6'},
 		{"udp", no_argument, NULL, 'u'},
@@ -233,7 +238,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 	int flag;
 
-	while ((flag = getopt_long(argc, argv, "r::s::Dem:n:6up:b:B:t:NVh", longopts, NULL)) != -1) {
+	while ((flag = getopt_long(argc, argv, "r::s::Dem:P:n:6up:b:B:t:NVh", longopts, NULL)) != -1) {
 		switch (flag) {
 		case 'r':
 			test->server_role = true;
@@ -258,6 +263,10 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		case 'm':
 			test->mapping = optarg;
 			process_mappings(test);
+			break;
+
+		case 'P':
+			test->parallel = atoi(optarg);
 			break;
 
 		case 'n':
@@ -354,7 +363,7 @@ void print_total_result(long total_bytes,
 	if (test_duration == 0)
 		return;
 
-	printf("---------------------------------------------------------\n");
+	PRINT_INFO("#####  Totals:  #####");
 	asprintf(&log, "test duration\t:%.2f seconds", test_duration);
 	PRINT_INFO_FREE(log);
 	asprintf(&log, "total bytes\t:%ld", total_bytes);

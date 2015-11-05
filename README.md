@@ -37,15 +37,15 @@ A multiple-thread based Linux network throughput benchmark tool.
 To measure the network performance between two multi-core serves running SLES 12, NODE1 (192.168.4.1) and NODE2 (192.168.4.2), connected via a 40 GigE connection. 
 
 On NODE1 (the receiver), run:
-
+```
 ./ntttcp -r
-
+```
 (Translation: Run ntttcp as a receiver with default setting. The default setting includes: with 16 threads created and run across all CPUs, allocating 64K receiver buffer, and run for 60 seconds.)
 
 And on NODE2 (the sender), run:
-
+```
 ./ntttcp.exe -s192.168.4.1
-
+```
 (Translation: Run ntttcp as a sender, with default setting. The default setting includes: with 64 threads created and run across all CPUs, allocating 128KB sender buffer, and run for 60 seconds.)
 
 Using the above parameters, the program returns results on both the sender and receiver nodes, correlating network communication to CPU utilization.  
