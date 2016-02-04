@@ -21,6 +21,7 @@ main.o: main.c
 
 .PHONY: clean
 clean:
+	rm -rf /usr/bin/$(OUT)
 	rm -rf *.o $(OUT)
 
 .PHONY: install

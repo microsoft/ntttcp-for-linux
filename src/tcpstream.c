@@ -101,7 +101,7 @@ void *run_ntttcp_sender_stream( void *ptr )
 		return 0;
 	}
 
-	/* connect to remote receiver */
+	/* get address of remote receiver */
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = sc->domain;
 	hints.ai_socktype = sc->protocol;
@@ -112,14 +112,33 @@ void *run_ntttcp_sender_stream( void *ptr )
 	}
 	free(port_str);
 
-	/* only get the first entry to connect */
+	/* only get the first entry of remote receiver to connect */
 	for (p = serv_info; p != NULL; p = p->ai_next) {
+		/* create socket fd */
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0){
 			PRINT_ERR("cannot create socket ednpoint");
 			freeaddrinfo(serv_info);
 			free(ip_address_str);
 			return 0;
 		}
+
+		/* bind this socket fd to a local random/ephemeral TCP port */
+		if (sc->domain == AF_INET){
+			(*(struct sockaddr_in*)&local_addr).sin_family = AF_INET; 
+			(*(struct sockaddr_in*)&local_addr).sin_port = 0;
+		}
+		else{
+			(*(struct sockaddr_in6*)&local_addr).sin6_family = AF_INET6;
+			(*(struct sockaddr_in6*)&local_addr).sin6_port = 0;
+		}
+
+		local_addr_size = sizeof(local_addr);
+		if (( i = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0 ){
+			asprintf(&log, "failed to bind socket: %d to a local ephemeral port. errno = %d", sockfd, errno);
+			PRINT_ERR_FREE(log);
+		}
+
+		/* connect to receiver */
 		ip_address_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, ip_address_str, ip_address_max_size);
 		if (( i = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0){
 			if (i == -1){
@@ -140,8 +159,7 @@ void *run_ntttcp_sender_stream( void *ptr )
 		}
 	}
 
-	/* get local port number */
-	local_addr_size = sizeof(local_addr);
+	/* get local TCP ephemeral  port number assigned */
 	if (getsockname(sockfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0){
 		asprintf(&log, "failed to get local address information for socket: %d", sockfd);
 		PRINT_ERR_FREE(log);
