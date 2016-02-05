@@ -100,21 +100,20 @@ int create_sender_sync_socket( struct ntttcp_test_endpoint *tep )
  */
 int query_receiver_busy_state(int sockfd)
 {
-	int send = (int)'X'; //the int to be sent
-	int conv = htonl(send);
-	int recv = 0; //the int to be received
+	int request = (int)'X'; //the int to be sent
+	int converted = htonl(request);
+	int response = 0; //the int to be received
 
-	if ( write(sockfd, &conv, sizeof(conv)) < 0 ) {
+	if ( write(sockfd, &converted, sizeof(converted)) < 0 ) {
 		PRINT_ERR("cannot write data to the socket for sender/receiver sync");
 		return -1;
 	}
-	if ( read(sockfd, &recv, sizeof(recv)) <= 0 ){
+	if ( read(sockfd, &response, sizeof(response)) <= 0 ){
 		PRINT_ERR("cannot read data from the socket for sender/receiver sync");
 		return -1;
 	}
-	conv = ntohl(recv);
 
-	if (conv == TEST_RUNNING) {
+	if (ntohl(response) == TEST_RUNNING) {
 		PRINT_ERR("receiver is busy with an existing test running");
 		return 1;   //server is busy
 	}
@@ -128,19 +127,19 @@ int query_receiver_busy_state(int sockfd)
  */
 int negotiate_test_duration(int sockfd, int proposed_time)
 {
-	int conv = htonl(proposed_time);
-	int recv = 0; //the int to be received
+	int converted = htonl(proposed_time);
+	int response = 0; //the int to be received
 
-	if ( write(sockfd, &conv, sizeof(conv)) < 0 ) {
+	if ( write(sockfd, &converted, sizeof(converted)) < 0 ) {
 		PRINT_ERR("cannot write data to the socket for sender/receiver sync");
 		return -1;
 	}
-	if ( read(sockfd, &recv, sizeof(recv)) <= 0 ){
+	if ( read(sockfd, &response, sizeof(response)) <= 0 ){
 		PRINT_ERR("cannot read data from the socket for sender/receiver sync");
 		return -1;
 	}
 
-	return ntohl(recv);
+	return ntohl(response);
 }
 
 /* request server to start the test. if return:
@@ -150,20 +149,20 @@ int negotiate_test_duration(int sockfd, int proposed_time)
  */
 int request_to_start(int sockfd)
 {
-	int send = (int)'R'; //the int to be sent
-	int conv = htonl(send);
-	int recv = 0; //the int to be received
+	int request = (int)'R'; //the int to be sent
+	int converted = htonl(request);
+	int response = 0; //the int to be received
 
-	if ( write(sockfd, &conv, sizeof(conv)) < 0 ) {
+	if ( write(sockfd, &converted, sizeof(converted)) < 0 ) {
 		PRINT_ERR("cannot write data to the socket for sender/receiver sync");
 		return -1;
 	}
-	if ( read(sockfd, &recv, sizeof(recv)) <= 0 ){
+	if ( read(sockfd, &response, sizeof(response)) <= 0 ){
 		PRINT_ERR("cannot read data from the socket for sender/receiver sync");
 		return -1;
 	}
 
-	if (ntohl(recv) != (int)'R') {
+	if (ntohl(response) != (int)'R') {
 		PRINT_ERR("receiver is not ready to run test");
 		return 0;   //server is not ready
 	}
@@ -184,9 +183,9 @@ void *create_receiver_sync_socket( void *ptr )
 	int sync_listener = 0;
 	bool verbose_log = test->verbose;
 
-	int send = 0; //the int to be sent
-	int conv = 0;
-	int recv = 0; //the int to be received
+	int answer_to_send = 0;  //the int to be sent
+	int converted = 0;
+	int request_received = 0; //the int to be received
 	int nbytes;
 
 	int n_fds = 0, newfd, current_fd = 0;
@@ -294,7 +293,7 @@ void *create_receiver_sync_socket( void *ptr )
 			/* handle data from an EXISTING client */
 			else{
 				/* got error or connection closed by client */
-				if ((nbytes = read(current_fd, &recv, sizeof(recv))) <= 0) {
+				if ((nbytes = read(current_fd, &request_received, sizeof(request_received))) <= 0) {
 					if (nbytes == 0){
 						asprintf(&log, "socket closed: %d", current_fd);
 						PRINT_DBG_FREE(log);
@@ -308,37 +307,37 @@ void *create_receiver_sync_socket( void *ptr )
 				}
 				/* reply sender's sync request */
 				else{
-					conv = ntohl(recv);
+					converted = ntohl(request_received);
 
-					switch (conv) {
+					switch (converted) {
 					case (int)'X':  //query state
-						send = tep->state;
+						answer_to_send = tep->state;
 						break;
 
 					case (int)'R':  //request to start test
-						send = (int)'R';
+						answer_to_send = (int)'R';
 						tep->state = TEST_RUNNING;
 
 						turn_on_light();
 						PRINT_INFO("Network activity progressing...");
 						break;
 
-					default:  //negotiate test duration
-						if (tep->test->duration > conv) {
-							send = conv;  //send the duration back
-							tep->confirmed_duration = send ;
+					default:  //negotiate test duration, use the max one
+						if (tep->test->duration > converted) {
+							answer_to_send = converted;
+							tep->confirmed_duration = answer_to_send;
 
-							asprintf(&log, "test duration negotiated is: %d seconds", send);
+							asprintf(&log, "test duration negotiated is: %d seconds", answer_to_send);
 							PRINT_INFO_FREE(log);
 						}
 						else {
-							send = tep->test->duration;
-							tep->confirmed_duration = send;
-						}
+							answer_to_send = tep->test->duration;
+							tep->confirmed_duration = answer_to_send;
+						}			
 					}
 
-					conv = htonl(send);
-					nbytes = write(current_fd, &conv, sizeof(conv));
+					converted = htonl(answer_to_send);
+					nbytes = write(current_fd, &converted, sizeof(converted));
 					if (nbytes < 0){
 						PRINT_ERR("cannot write ack data to the socket for sender/receiver sync");
 					}
