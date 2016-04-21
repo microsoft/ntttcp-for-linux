@@ -323,7 +323,7 @@ void *create_receiver_sync_socket( void *ptr )
 						break;
 
 					default:  //negotiate test duration, use the max one
-						if (tep->test->duration > converted) {
+						if (tep->test->duration < converted) {
 							answer_to_send = converted;
 							tep->confirmed_duration = answer_to_send;
 
