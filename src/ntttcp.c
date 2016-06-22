@@ -72,7 +72,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 		}
 		memset(e->client_streams, 0, sizeof( struct  ntttcp_stream_client ) * total_threads );
 
-		for(i = 0; i < total_threads ; i++ ){
+		for(i = 0; i < total_threads ; i++ ) {
 			e->client_streams[i] = new_ntttcp_client_stream(test);
 		}
 		e->data_threads = malloc( total_threads * sizeof(pthread_t) );

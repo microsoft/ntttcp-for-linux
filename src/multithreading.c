@@ -62,7 +62,7 @@ int is_light_turned_on( void )
 void sig_handler(int signo)
 {
 	//Ctrl+C
-	if (signo == SIGINT){
+	if (signo == SIGINT) {
 		PRINT_INFO("Interrupted by Ctrl+C");
 
 		if (is_light_turned_on())

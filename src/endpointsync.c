@@ -29,7 +29,7 @@ int create_sender_sync_socket( struct ntttcp_test_endpoint *tep )
 	sync_port = test->server_base_port - 1;
 
 	ip_address_max_size = (test->domain == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
-	if ( (ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL){
+	if ( (ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for ip address string");
 		freeaddrinfo(serv_info);
 		return 0;
@@ -48,15 +48,15 @@ int create_sender_sync_socket( struct ntttcp_test_endpoint *tep )
 
 	/* only get the first entry to connect */
 	for (p = serv_info; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0){
+		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
 			PRINT_ERR("cannot create socket ednpoint");
 			freeaddrinfo(serv_info);
 			free(ip_address_str);
 			return 0;
 		}
 		ip_address_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, ip_address_str, ip_address_max_size);
-		if (( i = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0){
-			if (i == -1){
+		if (( i = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
+			if (i == -1) {
 				asprintf(&log, "failed to connect to receiver: %s:%d on socket: %d. errno = %d", ip_address_str, sync_port, sockfd, errno);
 				PRINT_ERR_FREE(log);
 			}
@@ -76,7 +76,7 @@ int create_sender_sync_socket( struct ntttcp_test_endpoint *tep )
 
 	/* get local port number */
 	local_addr_size = sizeof(local_addr);
-	if (getsockname(sockfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0){
+	if (getsockname(sockfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0) {
 		asprintf(&log, "failed to get local address information for socket: %d", sockfd);
 		PRINT_ERR_FREE(log);
 	}
@@ -108,7 +108,7 @@ int query_receiver_busy_state(int sockfd)
 		PRINT_ERR("cannot write data to the socket for sender/receiver sync");
 		return -1;
 	}
-	if ( read(sockfd, &response, sizeof(response)) <= 0 ){
+	if ( read(sockfd, &response, sizeof(response)) <= 0 ) {
 		PRINT_ERR("cannot read data from the socket for sender/receiver sync");
 		return -1;
 	}
@@ -134,7 +134,7 @@ int negotiate_test_duration(int sockfd, int proposed_time)
 		PRINT_ERR("cannot write data to the socket for sender/receiver sync");
 		return -1;
 	}
-	if ( read(sockfd, &response, sizeof(response)) <= 0 ){
+	if ( read(sockfd, &response, sizeof(response)) <= 0 ) {
 		PRINT_ERR("cannot read data from the socket for sender/receiver sync");
 		return -1;
 	}
@@ -157,7 +157,7 @@ int request_to_start(int sockfd)
 		PRINT_ERR("cannot write data to the socket for sender/receiver sync");
 		return -1;
 	}
-	if ( read(sockfd, &response, sizeof(response)) <= 0 ){
+	if ( read(sockfd, &response, sizeof(response)) <= 0 ) {
 		PRINT_ERR("cannot read data from the socket for sender/receiver sync");
 		return -1;
 	}
@@ -199,13 +199,14 @@ void *create_receiver_sync_socket( void *ptr )
 	int ip_address_max_size;
 
 	ss = new_ntttcp_server_stream(test);
-	if (ss == NULL){
+	if (ss == NULL) {
 		PRINT_ERR("receiver: error when creating new server stream");
 		return NULL;
 	}
 	ss->server_port = test->server_base_port - 1;
+	ss->protocol = TCP; //no matter what test will be executed, the synch thread always uses TCP
 	ss->listener = ntttcp_server_listen(ss);
-	if (sync_listener == -1){
+	if (sync_listener == -1) {
 		PRINT_ERR("receiver: failed to listen on sync port");
 		return NULL;
 	}
@@ -222,14 +223,14 @@ void *create_receiver_sync_socket( void *ptr )
 	free(port_str);
 
 	ip_address_max_size = (test->domain == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
-	if ( (ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL){
+	if ( (ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for ip address string");
 		freeaddrinfo(serv_info);
 		return NULL;
 	}
 
 	ip_address_max_size = (ss->domain == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
-	if ( (ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL){
+	if ( (ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for ip address of peer");
 		return NULL;
 	}
@@ -241,7 +242,7 @@ void *create_receiver_sync_socket( void *ptr )
 
 		/* we are notified by select() */
 		n_fds = select(ss->max_fd + 1, &read_set, NULL, NULL, NULL);
-		if (n_fds < 0 && errno != EINTR){
+		if (n_fds < 0 && errno != EINTR) {
 			PRINT_ERR("error happened when select()");
 			continue;
 		}
@@ -256,24 +257,24 @@ void *create_receiver_sync_socket( void *ptr )
 			if (current_fd == ss->listener) {
  				/* handle new connections */
 				peer_addr_size = sizeof(peer_addr);
-				if ((newfd = accept(ss->listener, (struct sockaddr *) &peer_addr, &peer_addr_size)) < 0 ){
+				if ((newfd = accept(ss->listener, (struct sockaddr *) &peer_addr, &peer_addr_size)) < 0 ) {
 					break;
 				}
 
 				/* then we got a new connection */
-				if (set_socket_non_blocking(newfd) == -1){
+				if (set_socket_non_blocking(newfd) == -1) {
 					asprintf(&log, "cannot set the new socket as non-blocking: %d", newfd);
 					PRINT_DBG_FREE(log);
 				}
 				FD_SET(newfd, &ss->read_set); /* add the new one to read_set */
-				if (newfd > ss->max_fd){
+				if (newfd > ss->max_fd) {
 					/* update the maximum */
 					ss->max_fd = newfd;
 				}
 
 				/* print out new connection info */
 				local_addr_size = sizeof(local_addr);
-				if (getsockname(newfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0){
+				if (getsockname(newfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0) {
 					asprintf(&log, "failed to get local address information for the new socket: %d", newfd);
 					PRINT_DBG_FREE(log);
 				}
@@ -294,7 +295,7 @@ void *create_receiver_sync_socket( void *ptr )
 			else{
 				/* got error or connection closed by client */
 				if ((nbytes = read(current_fd, &request_received, sizeof(request_received))) <= 0) {
-					if (nbytes == 0){
+					if (nbytes == 0) {
 						asprintf(&log, "socket closed: %d", current_fd);
 						PRINT_DBG_FREE(log);
 					}
@@ -333,12 +334,12 @@ void *create_receiver_sync_socket( void *ptr )
 						else {
 							answer_to_send = tep->test->duration;
 							tep->confirmed_duration = answer_to_send;
-						}			
+						}
 					}
 
 					converted = htonl(answer_to_send);
 					nbytes = write(current_fd, &converted, sizeof(converted));
-					if (nbytes < 0){
+					if (nbytes < 0) {
 						PRINT_ERR("cannot write ack data to the socket for sender/receiver sync");
 					}
 				}

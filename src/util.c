@@ -124,7 +124,7 @@ int process_mappings(struct ntttcp_test *test)
 			test->parallel = threads;
 			++state;
 		}
-		else if (S_PROCESSOR == state){
+		else if (S_PROCESSOR == state) {
 			if (0 == strcmp(token, "*")){
 				//do nothing
 			}
@@ -144,7 +144,7 @@ int process_mappings(struct ntttcp_test *test)
 			}
 			++state;
 		}
-		else if (S_HOST == state){
+		else if (S_HOST == state) {
 			test->bind_address = token;
 			++state;
 		}
@@ -336,7 +336,7 @@ void print_thread_result(int tid, long total_bytes, double test_duration)
 {
 	char *log = NULL, *log_tmp = NULL;
 
-	if (tid == -1){
+	if (tid == -1) {
 		PRINT_INFO("\tThread\tTime(s)\tThroughput");
 		PRINT_INFO("\t======\t=======\t==========");
 	}
@@ -405,7 +405,7 @@ double unit_atod(const char *s)
 	char suffix = '\0';
 
 	sscanf(s, "%lf%c", &n, &suffix);
-	switch (suffix){
+	switch (suffix) {
 	case 'g': case 'G':
 		n *= GIBI;
 		break;
@@ -436,7 +436,7 @@ char *format_throughput(long bytes_transferred, double test_duration)
 	char *throughput;
 
 	tmp = bytes_transferred * 8.0 / test_duration;
-	while (tmp > 1000 && unit_idx < 3){
+	while (tmp > 1000 && unit_idx < 3) {
 		tmp /= 1000.0;
 		unit_idx++;
 	}
@@ -460,4 +460,19 @@ char *retrive_ip_address_str(struct sockaddr_storage *ss, char *ip_str, size_t m
 		break;
 	}
 	return ip_str;
+}
+
+int set_socket_non_blocking(int fd)
+{
+	int flags, rtn;
+	flags = fcntl (fd, F_GETFL, 0);
+	if (flags == -1)
+		return -1;
+
+	flags |= O_NONBLOCK;
+	rtn = fcntl (fd, F_SETFL, flags);
+	if (rtn == -1)
+		return -1;
+
+	return 0;
 }

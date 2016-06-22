@@ -50,18 +50,18 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 
 	/* for calculate the resource usage */
 	init_cpu_usage = (struct cpu_usage *) malloc(sizeof(struct cpu_usage));
-	if (!init_cpu_usage){
+	if (!init_cpu_usage) {
 		PRINT_ERR("sender: error when creating cpu_usage struct");
 		return ERROR_MEMORY_ALLOC;
 	}
 	final_cpu_usage = (struct cpu_usage *) malloc(sizeof(struct cpu_usage));
-	if (!final_cpu_usage){
+	if (!final_cpu_usage) {
 		free (init_cpu_usage);
 		PRINT_ERR("sender: error when creating cpu_usage struct");
 		return ERROR_MEMORY_ALLOC;
 	}
 
-	if (test->no_synch == false ){
+	if (test->no_synch == false ) {
 		/* Negotiate with sender on:
 		* 1) receiver state: is receiver busy with another test?
 		* 2) submit sender's test duration time to receiver to negotiate
@@ -87,7 +87,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			PRINT_ERR("sender: failed to negotiate test duration with receiver");
 			return ERROR_GENERAL;
 		}
-		if (reply_received != test->duration){
+		if (reply_received != test->duration) {
 			asprintf(&log, "test duration negotiated is: %d seconds", reply_received);
 			PRINT_INFO_FREE(log);
 		}
@@ -114,7 +114,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	/* create threads */
 	for (t = 0; t < test->parallel; t++) {
 		cs = tep->client_streams[t];
-		if (cs == NULL){
+		if (cs == NULL) {
 			PRINT_ERR("sender: error when creating new client stream");
 			err_code = ERROR_MEMORY_ALLOC;
 			continue;
@@ -125,12 +125,18 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		/* in client side, multiple connections will (one thread for one connection)
 		 * connect to same port on server
 		 */
-		for (i = 0; i < test->conn_per_thread; i++ ){
-			rc = pthread_create(&tep->data_threads[threads_created],
-						NULL,
-						run_ntttcp_sender_stream,
-						(void*)cs);
-			if (rc){
+		for (i = 0; i < test->conn_per_thread; i++ ) {
+			if (test->protocol == TCP) {
+				rc = pthread_create(&tep->data_threads[threads_created],
+							NULL,
+							run_ntttcp_sender_tcp_stream,
+							(void*)cs);
+			}
+			else {
+				PRINT_ERR("sender: only TCP is supported");
+			}
+
+			if (rc) {
 				PRINT_ERR("pthread_create() create thread failed");
 				err_code = ERROR_PTHREAD_CREATE;
 				continue;
@@ -202,12 +208,12 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 
 	/* for calculate the resource usage */
 	init_cpu_usage = (struct cpu_usage *) malloc(sizeof(struct cpu_usage));
-	if (!init_cpu_usage){
+	if (!init_cpu_usage) {
 		PRINT_ERR("receiver: error when creating cpu_usage struct");
 		return ERROR_MEMORY_ALLOC;
 	}
 	final_cpu_usage = (struct cpu_usage *) malloc(sizeof(struct cpu_usage));
-	if (!final_cpu_usage){
+	if (!final_cpu_usage) {
 		free (init_cpu_usage);
 		PRINT_ERR("receiver: error when creating cpu_usage struct");
 		return ERROR_MEMORY_ALLOC;
@@ -216,18 +222,24 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	/* create threads */
 	for (t = 0; t < test->parallel; t++) {
 		ss = tep->server_streams[t];
-		if (ss == NULL){
+		if (ss == NULL) {
 			PRINT_ERR("receiver: error when creating new server stream");
 			continue;
 		}
 		ss->server_port = test->server_base_port + t;
 		stream_created++;
 
-		rc = pthread_create(&tep->data_threads[t],
-					NULL,
-					run_ntttcp_receiver_stream,
-					(void*)ss);
-		if (rc){
+		if (test->protocol == TCP) {
+			rc = pthread_create(&tep->data_threads[t],
+						NULL,
+						run_ntttcp_receiver_tcp_stream,
+						(void*)ss);
+		}
+		else {
+			PRINT_ERR("receiver: only TCP is supported");
+		}
+
+		if (rc) {
 			PRINT_ERR("pthread_create() create thread failed");
 			err_code = ERROR_PTHREAD_CREATE;
 			continue;
@@ -236,13 +248,19 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	}
 
 	/* create synch thread */
-	if (test->no_synch == false){
-		/* ss struct will not be used in sync thread, because:
-		 * we are only allowed to  pass one param to the thread in pthread_create();
-		 * so we calculate the tcp port for synch stream in create_receiver_sync_socket().
+	if (test->no_synch == false) {
+		/* ss struct is not used in sync thread, because:
+		 * we are only allowed to pass one param to the thread in pthread_create();
+		 * but the information stored in ss, is not enough to be used for synch;
+		 * so we pass *tep to the pthread_create().
+		 * notes:
+		 * 1) we will calculate the tcp port for synch stream in create_receiver_sync_socket().
+		 *   the synch_port = base_port -1
+		 * 2) we will assign the protocol for synch stream to TCP, always, in create_receiver_sync_socket()
 		 */
 		ss = tep->server_streams[test->parallel];
-		ss->server_port = test->server_base_port - 1;
+		ss->server_port = test->server_base_port - 1; //just for bookkeeping
+		ss->protocol = TCP; //just for bookkeeping
 		ss->is_sync_thread = 1;
 		stream_created++;
 
@@ -250,7 +268,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 				NULL,
 				create_receiver_sync_socket,
 				(void*)tep);
-		if (rc){
+		if (rc) {
 				PRINT_ERR("pthread_create() create thread failed");
 			err_code = ERROR_PTHREAD_CREATE;
 		}
@@ -343,14 +361,14 @@ int main(int argc, char **argv)
 
 	print_version();
 	test = new_ntttcp_test();
-	if (!test){
+	if (!test) {
 		PRINT_ERR("main: error when creating new test");
 		exit (-1);
 	}
 
 	default_ntttcp_test(test);
 	err_code = parse_arguments(test, argc, argv);
-	if (err_code != NO_ERROR){
+	if (err_code != NO_ERROR) {
 		PRINT_ERR("main: error when parsing args");
 		print_flags(test);
 		free(test);
@@ -358,7 +376,7 @@ int main(int argc, char **argv)
 	}
 
 	err_code = verify_args(test);
-	if (err_code != NO_ERROR){
+	if (err_code != NO_ERROR) {
 		PRINT_ERR("main: error when verifying the args");
 		print_flags(test);
 		free(test);
@@ -378,7 +396,7 @@ int main(int argc, char **argv)
 			PRINT_ERR("main: cannot set cpu affinity");
 	}
 
-	if (test->daemon){
+	if (test->daemon) {
 		PRINT_INFO("main: run this tool in the background");
 		if ( daemon(0, 0) != 0 )
 			PRINT_ERR("main: cannot run this tool in the background");

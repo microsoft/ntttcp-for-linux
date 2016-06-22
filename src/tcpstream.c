@@ -14,9 +14,9 @@ int n_read(int fd, char *buffer, size_t total)
 	register ssize_t rtn;
 	register size_t left = total;
 
-	while (left > 0){
+	while (left > 0) {
 		rtn = read(fd, buffer, left);
-		if (rtn < 0){
+		if (rtn < 0) {
 			if (errno == EINTR || errno == EAGAIN)
 				break;
 			else
@@ -37,9 +37,9 @@ int n_write(int fd, const char *buffer, size_t total)
 	register ssize_t rtn;
 	register size_t left = total;
 
-	while (left > 0){
+	while (left > 0) {
 		rtn = write(fd, buffer, left);
-		if (rtn < 0){
+		if (rtn < 0) {
 			if (errno == EINTR || errno == EAGAIN)
 				return total - left;
 			else
@@ -54,71 +54,48 @@ int n_write(int fd, const char *buffer, size_t total)
 	return total;
 }
 
-int set_socket_non_blocking(int fd)
-{
-	int flags, rtn;
-	flags = fcntl (fd, F_GETFL, 0);
-	if (flags == -1)
-		return -1;
-
-	flags |= O_NONBLOCK;
-	rtn = fcntl (fd, F_SETFL, flags);
-	if (rtn == -1)
-		return -1;
-
-	return 0;
-}
-
 /************************************************************/
 //		ntttcp sender
 /************************************************************/
-void *run_ntttcp_sender_stream( void *ptr )
+void *run_ntttcp_sender_tcp_stream( void *ptr )
 {
-	char *log = NULL;
+	char *log        = NULL;
 	bool verbose_log = false;
-	int sockfd = 0; //socket id
-	char *buffer; //send buffer
+	int sockfd       = 0; //socket id
+	char *buffer;         //send buffer
+	int n            = 0; //write n bytes to socket
+	long nbytes      = 0; //total bytes sent
+	int i            = 0; //hold function return value
 	struct ntttcp_stream_client *sc;
-	int n = 0; //write n bytes to socket
-	long nbytes = 0;  //total bytes sent
 
 	struct sockaddr_storage local_addr; //for local address
-	socklen_t local_addr_size; //local address size, for getsockname(), to get local port
-	char *ip_address_str; //used to get remote peer's ip address
-	int ip_address_max_size;  //used to get remote peer's ip address
-	char *port_str; //to get remote peer's port number for getaddrinfo()
-	struct addrinfo hints, *serv_info, *p; //to get remote peer's sockaddr for connect()
+	socklen_t local_addr_size;          //local address size
 
-	int i = 0;
+	char *remote_addr_str; //used to get remote peer's ip address
+	int ip_addr_max_size;  //used to get remote peer's ip address
+	char *port_str;        //used to get remote peer's port number
+	struct addrinfo hints, *remote_serv_info, *p; //to get remote peer's sockaddr
 
 	sc = (struct ntttcp_stream_client *) ptr;
 	verbose_log = sc->verbose;
-
-	ip_address_max_size = (sc->domain == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
-	if ( (ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL){
-		PRINT_ERR("cannot allocate memory for ip address string");
-		freeaddrinfo(serv_info);
-		return 0;
-	}
 
 	/* get address of remote receiver */
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = sc->domain;
 	hints.ai_socktype = sc->protocol;
 	asprintf(&port_str, "%d", sc->server_port);
-	if (getaddrinfo(sc->bind_address, port_str, &hints, &serv_info) != 0) {
+	if (getaddrinfo(sc->bind_address, port_str, &hints, &remote_serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");
 		return 0;
 	}
 	free(port_str);
 
-	/* only get the first entry of remote receiver to connect */
-	for (p = serv_info; p != NULL; p = p->ai_next) {
+	/* only get the first entry if connected */
+	for (p = remote_serv_info; p != NULL; p = p->ai_next) {
 		/* 1. create socket fd */
-		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0){
+		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
 			PRINT_ERR("cannot create socket ednpoint");
-			freeaddrinfo(serv_info);
-			free(ip_address_str);
+			freeaddrinfo(remote_serv_info);
 			return 0;
 		}
 
@@ -128,8 +105,8 @@ void *run_ntttcp_sender_stream( void *ptr )
 		   2. bind this socket fd to a local random/ephemeral TCP port,
 		      so that the sender side will have randomized TCP ports.
 		*/
-		if (sc->domain == AF_INET){
-			(*(struct sockaddr_in*)&local_addr).sin_family = AF_INET; 
+		if (sc->domain == AF_INET) {
+			(*(struct sockaddr_in*)&local_addr).sin_family = AF_INET;
 			(*(struct sockaddr_in*)&local_addr).sin_port = 0;
 		}
 		else{
@@ -137,24 +114,45 @@ void *run_ntttcp_sender_stream( void *ptr )
 			(*(struct sockaddr_in6*)&local_addr).sin6_port = 0;
 		}
 
-		if (( i = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0 ){
-			asprintf(&log, "failed to bind socket: %d to a local ephemeral port. errno = %d", sockfd, errno);
+		if (( i = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0 ) {
+			asprintf(&log,
+				"failed to bind socket: %d to a local ephemeral port. errno = %d",
+				sockfd,
+				errno);
 			PRINT_ERR_FREE(log);
 		}
 
 		/* 3. connect to receiver */
-		ip_address_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, ip_address_str, ip_address_max_size);
-		if (( i = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0){
-			if (i == -1){
-				asprintf(&log, "failed to connect to receiver: %s:%d on socket: %d. errno = %d", ip_address_str, sc->server_port, sockfd, errno);
+		ip_addr_max_size = (sc->domain == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
+		if ( (remote_addr_str = (char *)malloc(ip_addr_max_size)) == (char *)NULL) {
+			PRINT_ERR("cannot allocate memory for ip address string");
+			freeaddrinfo(remote_serv_info);
+			return 0;
+		}
+		remote_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr,
+							remote_addr_str,
+							ip_addr_max_size);
+		if (( i = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
+			if (i == -1) {
+				asprintf(&log,
+					"failed to connect to receiver: %s:%d on socket: %d. errno = %d",
+					remote_addr_str,
+					sc->server_port,
+					sockfd,
+					errno);
 				PRINT_ERR_FREE(log);
 			}
 			else {
-				asprintf(&log, "failed to connect to receiver: %s:%d on socket: %d. error code = %d", ip_address_str, sc->server_port, sockfd, i);
+				asprintf(&log,
+					"failed to connect to receiver: %s:%d on socket: %d. error code = %d",
+					remote_addr_str,
+					sc->server_port,
+					sockfd,
+					i);
 				PRINT_ERR_FREE(log);
 			}
-			freeaddrinfo(serv_info);
-			free(ip_address_str);
+			freeaddrinfo(remote_serv_info);
+			free(remote_addr_str);
 			close(sockfd);
 			return 0;
 		}
@@ -164,8 +162,10 @@ void *run_ntttcp_sender_stream( void *ptr )
 	}
 
 	/* get local TCP ephemeral port number assigned, for logging */
-	if (getsockname(sockfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0){
-		asprintf(&log, "failed to get local address information for socket: %d", sockfd);
+	if (getsockname(sockfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0) {
+		asprintf(&log,
+			"failed to get local address information for socket: %d",
+			sockfd);
 		PRINT_ERR_FREE(log);
 	}
 
@@ -173,15 +173,17 @@ void *run_ntttcp_sender_stream( void *ptr )
 			ntohs(sc->domain == AF_INET?
 					((struct sockaddr_in *)&local_addr)->sin_port:
 					((struct sockaddr_in6 *)&local_addr)->sin6_port),
-			sockfd,	ip_address_str, sc->server_port);
+			sockfd,
+			remote_addr_str,
+			sc->server_port);
 	PRINT_DBG_FREE(log);
-	free(ip_address_str);
-	freeaddrinfo(serv_info);
+	free(remote_addr_str);
+	freeaddrinfo(remote_serv_info);
 
 	/* wait for sync thread to finish */
 	wait_light_on();
 
-	if ((buffer = (char *)malloc(sc->send_buf_size * sizeof(char))) == (char *)NULL){
+	if ((buffer = (char *)malloc(sc->send_buf_size * sizeof(char))) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for send buffer");
 		close(sockfd);
 		return 0;
@@ -214,14 +216,13 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 {
 	char *log;
 	bool verbose_log = ss->verbose;
-	int opt = 1;
-	int sockfd = 0; //socket file descriptor
-	char *ip_address_str; //used to get local ip address
-	int ip_address_max_size;  //used to get local ip address
-	char *port_str; //to get remote peer's port number for getaddrinfo()
-	struct addrinfo hints, *serv_info, *p; //to get remote peer's sockaddr for bind()
-
-	int i = 0; //just for debug purpose
+	int i            = 0; //hold function return value
+	int opt          = 1;
+	int sockfd       = 0;  //socket file descriptor
+	char *local_addr_str;  //used to get local ip address
+	int ip_addr_max_size;  //used to get local ip address
+	char *port_str;        //used to get port number string for getaddrinfo()
+	struct addrinfo hints, *serv_info, *p; //to get local sockaddr for bind()
 
 	/* get receiver/itself address */
 	memset(&hints, 0, sizeof hints);
@@ -234,8 +235,8 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 	}
 	free(port_str);
 
-	ip_address_max_size = (ss->domain == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
-	if ( (ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL){
+	ip_addr_max_size = (ss->domain == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
+	if ( (local_addr_str = (char *)malloc(ip_addr_max_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for ip address string");
 		freeaddrinfo(serv_info);
 		return -1;
@@ -243,34 +244,39 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 
 	/* get the first entry to bind and listen */
 	for (p = serv_info; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0){
+		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
 			PRINT_ERR("cannot create socket ednpoint");
 			freeaddrinfo(serv_info);
-			free(ip_address_str);
+			free(local_addr_str);
 			return -1;
 		}
 
-		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *) &opt, sizeof(opt)) < 0){
+		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *) &opt, sizeof(opt)) < 0) {
 			asprintf(&log, "cannot set socket options: %d", sockfd);
 			PRINT_ERR_FREE(log);
 			freeaddrinfo(serv_info);
-			free(ip_address_str);
+			free(local_addr_str);
 			close(sockfd);
 			return -1;
 		}
-		if ( set_socket_non_blocking(sockfd) == -1){
+		if ( set_socket_non_blocking(sockfd) == -1) {
 			asprintf(&log, "cannot set socket as non-blocking: %d", sockfd);
 			PRINT_ERR_FREE(log);
 			freeaddrinfo(serv_info);
-			free(ip_address_str);
+			free(local_addr_str);
 			close(sockfd);
 			return -1;
 		}
-		if (( i = bind(sockfd, p->ai_addr, p->ai_addrlen)) < 0){
-			asprintf(&log, "failed to bind the socket to local address: %s on socket: %d. errcode = %d",
-			ip_address_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, ip_address_str, ip_address_max_size), sockfd, i );
+		if (( i = bind(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
+			asprintf(&log,
+				"failed to bind the socket to local address: %s on socket: %d. errcode = %d",
+				local_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr,
+									local_addr_str,
+									ip_addr_max_size),
+				sockfd,
+				i );
 
-			if (i == -1)
+			if (i == -1) //append more info to log
 				asprintf(&log, "%s. errcode = %d", log, errno);
 			PRINT_DBG_FREE(log);
 			continue;
@@ -280,8 +286,8 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 		}
 	}
 	freeaddrinfo(serv_info);
-	free(ip_address_str);
-	if (p == NULL){
+	free(local_addr_str);
+	if (p == NULL) {
 		asprintf(&log, "cannot bind the socket on address: %s", ss->bind_address);
 		PRINT_ERR_FREE(log);
 		close(sockfd);
@@ -289,7 +295,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 	}
 
 	ss->listener = sockfd;
-	if (listen(ss->listener, MAX_CONNECTIONS_PER_THREAD) < 0){
+	if (listen(ss->listener, MAX_CONNECTIONS_PER_THREAD) < 0) {
 		asprintf(&log, "failed to listen on address: %s: %d", ss->bind_address, ss->server_port);
 		PRINT_ERR_FREE(log);
 		close(ss->listener);
@@ -311,11 +317,11 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 {
 	int err_code = NO_ERROR;
-	char *log = NULL;
+	char *log    = NULL;
 	bool verbose_log = ss->verbose;
 
 	int efd = 0, n_fds = 0, newfd = 0, current_fd = 0;
-	char *buffer; //receive buffer
+	char *buffer;  //receive buffer
 	long nbytes;   //bytes read
 	int bytes_to_be_read = 0;  //read bytes from socket
 	struct epoll_event event, *events;
@@ -323,15 +329,15 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 	struct sockaddr_storage peer_addr, local_addr; //for remote peer, and local address
 	socklen_t peer_addr_size, local_addr_size;
 	char *ip_address_str;
-	int ip_address_max_size;
+	int ip_addr_max_size;
 	int i = 0;
 
-	if ( (buffer = (char *)malloc(ss->recv_buf_size)) == (char *)NULL){
+	if ( (buffer = (char *)malloc(ss->recv_buf_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for receive buffer");
 		return ERROR_MEMORY_ALLOC;
 	}
-	ip_address_max_size = (ss->domain == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
-	if ( (ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL){
+	ip_addr_max_size = (ss->domain == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
+	if ( (ip_address_str = (char *)malloc(ip_addr_max_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for ip address of peer");
 		free(buffer);
 		return ERROR_MEMORY_ALLOC;
@@ -347,7 +353,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 
 	event.data.fd = ss->listener;
 	event.events = EPOLLIN;
-	if (epoll_ctl(efd, EPOLL_CTL_ADD, ss->listener, &event) != 0){
+	if (epoll_ctl(efd, EPOLL_CTL_ADD, ss->listener, &event) != 0) {
 		PRINT_ERR("epoll_ctl failed");
 		free(buffer);
 		free(ip_address_str);
@@ -358,12 +364,14 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 	/* Buffer where events are returned */
 	events = calloc (MAX_EPOLL_EVENTS, sizeof event);
 
-	while (1){
+	while (1) {
 		n_fds = epoll_wait (efd, events, MAX_EPOLL_EVENTS, -1);
-		for (i = 0; i < n_fds; i++){
+		for (i = 0; i < n_fds; i++) {
 			current_fd = events[i].data.fd;
 
-			if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) || (!(events[i].events & EPOLLIN))) {
+			if ((events[i].events & EPOLLERR) ||
+			    (events[i].events & EPOLLHUP) ||
+			    (!(events[i].events & EPOLLIN))) {
 				/* An error has occured on this fd, or the socket is not ready for reading */
 				PRINT_ERR("error happened on the associated connection");
 				close (current_fd);
@@ -387,19 +395,19 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 							break;
 						}
 					}
-					if (set_socket_non_blocking(newfd) == -1){
+					if (set_socket_non_blocking(newfd) == -1) {
 						asprintf(&log, "cannot set the new socket as non-blocking: %d", newfd);
 						PRINT_DBG_FREE(log);
 					}
 
 					local_addr_size = sizeof(local_addr);
-					if (getsockname(newfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0){
+					if (getsockname(newfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0) {
 						asprintf(&log, "failed to get local address information for the new socket: %d", newfd);
 						PRINT_DBG_FREE(log);
 					}
 					else {
 						asprintf(&log, "New connection: %s:%d --> local:%d [socket %d]",
-								ip_address_str = retrive_ip_address_str(&peer_addr, ip_address_str, ip_address_max_size),
+								ip_address_str = retrive_ip_address_str(&peer_addr, ip_address_str, ip_addr_max_size),
 								ntohs( ss->domain == AF_INET ?
 										((struct sockaddr_in *)&peer_addr)->sin_port
 										:((struct sockaddr_in6 *)&peer_addr)->sin6_port),
@@ -428,7 +436,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 
 				/* got error or connection closed by client */
 				if ((nbytes = n_read(current_fd, buffer, bytes_to_be_read)) <= 0) {
-					if (nbytes == 0){
+					if (nbytes == 0) {
 						asprintf(&log, "socket closed: %d", i);
 						PRINT_DBG_FREE(log);
 					}
@@ -459,26 +467,26 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 int ntttcp_server_select(struct ntttcp_stream_server *ss)
 {
 	int err_code = NO_ERROR;
-	char *log = NULL;
+	char *log    = NULL;
 	bool verbose_log = ss->verbose;
 
 	int n_fds = 0, newfd, current_fd = 0;
-	char *buffer; //receive buffer
-	long nbytes; //bytes read
+	char *buffer;  //receive buffer
+	long nbytes;   //bytes read
 	int bytes_to_be_read = 0;  //read bytes from socket
 	fd_set read_set, write_set;
 
 	struct sockaddr_storage peer_addr, local_addr; //for remote peer, and local address
 	socklen_t peer_addr_size, local_addr_size;
 	char *ip_address_str;
-	int ip_address_max_size;
+	int ip_addr_max_size;
 
-	if ( (buffer = (char *)malloc(ss->recv_buf_size)) == (char *)NULL){
+	if ( (buffer = (char *)malloc(ss->recv_buf_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for receive buffer");
 		return ERROR_MEMORY_ALLOC;
 	}
-	ip_address_max_size = (ss->domain == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
-	if ( (ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL){
+	ip_addr_max_size = (ss->domain == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
+	if ( (ip_address_str = (char *)malloc(ip_addr_max_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for ip address of peer");
 		free(buffer);
 		return ERROR_MEMORY_ALLOC;
@@ -491,7 +499,7 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 
 		/* we are notified by select() */
 		n_fds = select(ss->max_fd + 1, &read_set, NULL, NULL, NULL);
-		if (n_fds < 0 && errno != EINTR){
+		if (n_fds < 0 && errno != EINTR) {
 			PRINT_ERR("error happened when select()");
 			err_code = ERROR_SELECT;
 			continue;
@@ -507,31 +515,31 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 			if (current_fd == ss->listener) {
  				/* handle new connections */
 				peer_addr_size = sizeof(peer_addr);
-				if ((newfd = accept(ss->listener, (struct sockaddr *) &peer_addr, &peer_addr_size)) < 0 ){
+				if ((newfd = accept(ss->listener, (struct sockaddr *) &peer_addr, &peer_addr_size)) < 0 ) {
 					err_code = ERROR_ACCEPT;
 					break;
 				}
 
 				/* then we got a new connection */
-				if (set_socket_non_blocking(newfd) == -1){
+				if (set_socket_non_blocking(newfd) == -1) {
 					asprintf(&log, "cannot set the new socket as non-blocking: %d", newfd);
 					PRINT_DBG_FREE(log);
 				}
 				FD_SET(newfd, &ss->read_set); /* add the new one to read_set */
-				if (newfd > ss->max_fd){
+				if (newfd > ss->max_fd) {
 					/* update the maximum */
 					ss->max_fd = newfd;
 				}
 
 				/* print out new connection info */
 				local_addr_size = sizeof(local_addr);
-				if (getsockname(newfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0){
+				if (getsockname(newfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0) {
 					asprintf(&log, "failed to get local address information for the new socket: %d", newfd);
 					PRINT_DBG_FREE(log);
 				}
 				else{
 					asprintf(&log, "New connection: %s:%d --> local:%d [socket %d]",
-							ip_address_str = retrive_ip_address_str(&peer_addr, ip_address_str, ip_address_max_size),
+							ip_address_str = retrive_ip_address_str(&peer_addr, ip_address_str, ip_addr_max_size),
 							ntohs( ss->domain == AF_INET ?
 									((struct sockaddr_in *)&peer_addr)->sin_port
 									:((struct sockaddr_in6 *)&peer_addr)->sin6_port),
@@ -554,7 +562,7 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 
 				/* got error or connection closed by client */
 				if ((nbytes = n_read(current_fd, buffer, bytes_to_be_read)) <= 0) {
-					if (nbytes == 0){
+					if (nbytes == 0) {
 						asprintf(&log, "socket closed: %d", current_fd);
 						PRINT_DBG_FREE(log);
 					}
@@ -581,7 +589,7 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 	return err_code;
 }
 
-void *run_ntttcp_receiver_stream( void *ptr )
+void *run_ntttcp_receiver_tcp_stream( void *ptr )
 {
 	char *log = NULL;
 	struct ntttcp_stream_server *ss;
@@ -589,19 +597,19 @@ void *run_ntttcp_receiver_stream( void *ptr )
 	ss = (struct ntttcp_stream_server *) ptr;
 
 	ss->listener = ntttcp_server_listen(ss);
-	if (ss->listener < 0){
+	if (ss->listener < 0) {
 		asprintf(&log, "listen error at port: %d", ss->server_port);
 		PRINT_ERR_FREE(log);
 	}
 	else{
-		if (ss->use_epoll == true){
+		if (ss->use_epoll == true) {
 			if ( ntttcp_server_epoll(ss) != NO_ERROR ) {
 				asprintf(&log, "epoll error at port: %d", ss->server_port);
 				PRINT_ERR_FREE(log);
 			}
 		}
 		else {
-			if ( ntttcp_server_select(ss) != NO_ERROR ){
+			if ( ntttcp_server_select(ss) != NO_ERROR ) {
 				asprintf(&log, "select error at port: %d", ss->server_port);
 				PRINT_ERR_FREE(log);
 			}

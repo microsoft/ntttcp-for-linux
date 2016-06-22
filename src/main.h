@@ -7,4 +7,3 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include "endpointsync.h"
-#include "multithreading.h"
