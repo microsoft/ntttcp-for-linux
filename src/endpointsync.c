@@ -38,7 +38,7 @@ int create_sender_sync_socket( struct ntttcp_test_endpoint *tep )
 	/* connect to remote receiver */
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = test->domain;
-	hints.ai_socktype = test->protocol;
+	hints.ai_socktype = TCP;
 	asprintf(&port_str, "%d", sync_port);
 	if (getaddrinfo(test->bind_address, port_str, &hints, &serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");

@@ -54,4 +54,6 @@ void print_total_result(long total_bytes, uint64_t cycle_diff, double test_durat
 void print_thread_result(int tid, long total_bytes, double test_duration);
 char *format_throughput(long bytes_transferred, double test_duration);
 char *retrive_ip_address_str(struct sockaddr_storage *ss, char *ip_str, size_t maxlen);
+char *retrive_ip4_address_str(struct sockaddr_in *ss, char *ip_str, size_t maxlen);
+char *retrive_ip6_address_str(struct sockaddr_in6 *ss, char *ip_str, size_t maxlen);
 int set_socket_non_blocking(int fd);

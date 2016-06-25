@@ -28,7 +28,7 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->parallel         = DEFAULT_NUM_THREADS;
 	test->cpu_affinity     = -1; //no hard cpu affinity
 	test->conn_per_thread  = DEFAULT_CONN_PER_THREAD;
-	test->domain           = AF_INET;
+	test->domain           = AF_INET; //IPV4
 	test->protocol         = TCP;
 	test->server_base_port = DEFAULT_BASE_PORT;
 	test->recv_buf_size    = DEFAULT_RECV_BUFFER_SIZE; //64K

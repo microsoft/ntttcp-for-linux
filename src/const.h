@@ -21,11 +21,15 @@
 #define TEST_INTERRUPTED		14
 
 
-/* default values */
+/* max values */
 #define MAX_CONNECTIONS_PER_THREAD	512
 #define MAX_NUM_THREADS			512
 #define MAX_EPOLL_EVENTS		512
 #define MAX_NUM_TOTAL_CONNECTIONS	MAX_NUM_THREADS * MAX_CONNECTIONS_PER_THREAD
+/* Maximum size of sending a UDP packet is (64K - 1) - IP header - UDP header */
+#define MAX_UDP_SEND_SIZE		(65535 - 8 - 20)
+
+/* default values */
 #define DEFAULT_NUM_THREADS		16
 #define DEFAULT_CONN_PER_THREAD		4
 #define DEFAULT_BASE_PORT		5001

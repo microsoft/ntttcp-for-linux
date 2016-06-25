@@ -62,10 +62,10 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	}
 
 	if (test->no_synch == false ) {
-		/* Negotiate with sender on:
+		/* Negotiate with receiver on:
 		* 1) receiver state: is receiver busy with another test?
 		* 2) submit sender's test duration time to receiver to negotiate
-		* 3) request server to start the test
+		* 3) request receiver to start the test
 		*/
 		reply_received = create_sender_sync_socket( tep );
 		if (reply_received == 0) {
@@ -133,7 +133,10 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 							(void*)cs);
 			}
 			else {
-				PRINT_ERR("sender: only TCP is supported");
+				rc = pthread_create(&tep->data_threads[threads_created],
+							NULL,
+							run_ntttcp_sender_udp_stream,
+							(void*)cs);
 			}
 
 			if (rc) {
@@ -236,7 +239,10 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 						(void*)ss);
 		}
 		else {
-			PRINT_ERR("receiver: only TCP is supported");
+			rc = pthread_create(&tep->data_threads[t],
+						NULL,
+						run_ntttcp_receiver_udp_stream,
+						(void*)ss);
 		}
 
 		if (rc) {

@@ -40,15 +40,17 @@ void print_flags(struct ntttcp_test *test)
 		printf("%s:\t\t\t\t %s\n", "domain", "IPv6");
 	if (test->protocol == TCP)
 		printf("%s:\t\t\t %s\n", "protocol", "TCP");
-	else //(test->domain == UDP)
-		printf("%s:\t\t\t %s\n", "protocol", "UDP(*not supported yet*)");
+	else if (test->protocol == UDP)
+		printf("%s:\t\t\t %s\n", "protocol", "UDP");
+	else
+		printf("%s:\t\t\t %s\n", "protocol", "unsupported");
 
 	printf("%s:\t %d\n", "server port starting at", test->server_base_port);
 
 	if (test->server_role)
-		printf("%s:\t %.2f\n", "receiver socket buffer (bytes)", test->recv_buf_size);
+		printf("%s:\t %ld\n", "receiver socket buffer (bytes)", test->recv_buf_size);
 	if (test->client_role)
-		printf("%s:\t %.2f\n", "sender socket buffer (bytes)", test->send_buf_size);
+		printf("%s:\t %ld\n", "sender socket buffer (bytes)", test->send_buf_size);
 
 	printf("%s:\t\t %d\n", "test duration (sec)", test->duration);
 	printf("%s:\t\t\t %s\n", "verbose mode", test->verbose ? "enabled" : "disabled");
@@ -68,7 +70,7 @@ void print_usage()
 	printf("\t-n   [sender only] number of connections per receiver port    [default: %d]  [max: %d]\n", DEFAULT_CONN_PER_THREAD, MAX_CONNECTIONS_PER_THREAD);
 
 	printf("\t-6   IPv6 mode    [default: IPv4]\n");
-	//printf("\t-u   UDP mode    [default: TCP] NOT SUPPORTED YET\n");
+	printf("\t-u   UDP mode     [default: TCP]\n");
 	printf("\t-p   Port number, or starting port number    [default: %d]\n", DEFAULT_BASE_PORT);
 	printf("\t-b   <recv buffer size>    [default: %d]\n", DEFAULT_RECV_BUFFER_SIZE);
 	printf("\t-B   <send buffer size>    [default: %d]\n", DEFAULT_SEND_BUFFER_SIZE);
@@ -182,11 +184,6 @@ int verify_args(struct ntttcp_test *test)
 		return ERROR_ARGS;
 	}
 
-	if (test->protocol == UDP) {
-		PRINT_ERR("UDP is not supported so far");
-		return ERROR_ARGS;
-	}
-
 	if (!test->server_role && !test->client_role) {
 		PRINT_INFO("no role specified. use receiver role");
 		test->server_role = true;
@@ -210,6 +207,12 @@ int verify_args(struct ntttcp_test *test)
 			PRINT_DBG("ignore '-e' on sender role");
 
 	}
+
+	if (test->protocol == UDP && test->send_buf_size > MAX_UDP_SEND_SIZE) {
+		PRINT_INFO("the UDP send size is too big. use the max value");
+		test->send_buf_size = MAX_UDP_SEND_SIZE;
+	}
+
 	return NO_ERROR;
 }
 
@@ -459,6 +462,18 @@ char *retrive_ip_address_str(struct sockaddr_storage *ss, char *ip_str, size_t m
 	default:
 		break;
 	}
+	return ip_str;
+}
+
+char *retrive_ip4_address_str(struct sockaddr_in *ss, char *ip_str, size_t maxlen)
+{
+	inet_ntop(AF_INET, &(ss->sin_addr), ip_str, maxlen);
+	return ip_str;
+}
+
+char *retrive_ip6_address_str(struct sockaddr_in6 *ss, char *ip_str, size_t maxlen)
+{
+	inet_ntop(AF_INET6, &(ss->sin6_addr), ip_str, maxlen);
 	return ip_str;
 }
 
