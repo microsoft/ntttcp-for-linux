@@ -14,8 +14,6 @@ A multiple-thread based Linux network throughput benchmark tool.
 
 * Support Sender and Receiver sync mode by default. Use "-N" (no_sync) to disable the sync.
 
-* Only support TCP mode; and support both ipv4 and ipv6.
-
 
 ## Getting Started
 
@@ -30,7 +28,7 @@ A multiple-thread based Linux network throughput benchmark tool.
 
 ### Known issues
 
-* UDP is not supported. 
+ 
 
 ### Example run
 
@@ -44,7 +42,7 @@ On NODE1 (the receiver), run:
 
 And on NODE2 (the sender), run:
 ```
-./ntttcp.exe -s192.168.4.1
+./ntttcp -s192.168.4.1
 ```
 (Translation: Run ntttcp as a sender, with default setting. The default setting includes: with 64 threads created and run across all CPUs, allocating 128KB sender buffer, and run for 60 seconds.)
 
