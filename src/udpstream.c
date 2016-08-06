@@ -32,7 +32,7 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	char *buffer;         //send buffer
 
 	int n            = 0; //write n bytes to socket
-	long nbytes      = 0; //total bytes sent
+	uint64_t nbytes  = 0; //total bytes sent
 	int i            = 0; //hold function return value
 	bool verbose_log = sc->verbose;
 
@@ -91,11 +91,12 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 		}
 		nbytes += n;
 	}
+	sc->total_bytes_transferred = nbytes;
 
 	free(buffer);
 	close(sockfd);
 
-	return (void *)nbytes;
+	return 0;
 }
 
 void *run_ntttcp_sender_udp6_stream( struct ntttcp_stream_client * sc )

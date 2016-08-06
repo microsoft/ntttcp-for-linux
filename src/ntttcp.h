@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include "const.h"
@@ -49,7 +50,7 @@ struct ntttcp_test_endpoint{
 	struct	ntttcp_stream_client **client_streams; /* alloc memory for this if client/sender role */
 	struct	ntttcp_stream_server **server_streams; /* alloc memory for this if server/receiver role */
 
-	pthread_t	*data_threads;
+	pthread_t	*threads;
 };
 
 /* manage a client test connection/stream */
@@ -62,6 +63,8 @@ struct ntttcp_stream_client{
 	int	is_sync_thread;
 	bool	no_synch;
 	bool	verbose;
+
+	uint64_t        total_bytes_transferred;
 };
 
 /* manage a server test connection/stream */
@@ -81,7 +84,7 @@ struct ntttcp_stream_server{
 	fd_set	read_set;     /* set of read sockets */
 	fd_set	write_set;    /* set of write sockets */
 	int	state;
-	long	total_bytes_transferred;
+	uint64_t	total_bytes_transferred;
 };
 
 struct ntttcp_test *new_ntttcp_test();

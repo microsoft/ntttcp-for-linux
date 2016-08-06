@@ -71,11 +71,19 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 			return NULL;
 		}
 		memset(e->client_streams, 0, sizeof( struct  ntttcp_stream_client ) * total_threads );
-
 		for(i = 0; i < total_threads ; i++ ) {
 			e->client_streams[i] = new_ntttcp_client_stream(test);
 		}
-		e->data_threads = malloc( total_threads * sizeof(pthread_t) );
+
+		e->threads = malloc( total_threads * sizeof(pthread_t) );
+		if(!e->threads) {
+			for(i = 0; i < total_threads ; i++ ){
+				free( e->client_streams[i] );
+			}
+			free (e->client_streams);
+			free (e);
+			return NULL;
+		}
 	}
 	else {
 		if (test->no_synch == true)
@@ -89,11 +97,19 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 			return NULL;
 		}
 		memset(e->server_streams, 0, sizeof( struct  ntttcp_stream_server) * total_threads );
-
 		for(i = 0; i < total_threads; i++ ){
 			e->server_streams[i] = new_ntttcp_server_stream(test);
 		}
-		e->data_threads = malloc( total_threads * sizeof(pthread_t) );
+
+		e->threads = malloc( total_threads * sizeof(pthread_t) );
+		if(!e->threads) {
+			for(i = 0; i < total_threads ; i++ ){
+				free( e->server_streams[i] );
+			}
+			free (e->server_streams);
+			free (e);
+			return NULL;
+		}
 	}
 	return e;
 }
@@ -126,7 +142,7 @@ void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
 		}
 		free( e->server_streams );
 	}
-	free( e->data_threads );
+	free( e->threads );
 	free( e->test );
 	free( e );
 }
@@ -147,6 +163,7 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test *test)
 	s->verbose = test->verbose;
 	s->is_sync_thread = 0;
 	s->no_synch = test->no_synch;
+	s->total_bytes_transferred = 0;
 	return s;
 }
 

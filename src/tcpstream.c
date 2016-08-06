@@ -64,7 +64,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	int sockfd       = 0; //socket id
 	char *buffer;         //send buffer
 	int n            = 0; //write n bytes to socket
-	long nbytes      = 0; //total bytes sent
+	uint64_t nbytes  = 0; //total bytes sent
 	int i            = 0; //hold function return value
 	struct ntttcp_stream_client *sc;
 
@@ -201,11 +201,11 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 		}
 		nbytes += n;
 	}
-
+	sc->total_bytes_transferred = nbytes;
 	free(buffer);
 	close(sockfd);
 
-	return (void *)nbytes;
+	return 0;
 }
 
 /************************************************************/
@@ -322,7 +322,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 
 	int efd = 0, n_fds = 0, newfd = 0, current_fd = 0;
 	char *buffer;  //receive buffer
-	long nbytes;   //bytes read
+	uint64_t nbytes;   //bytes read
 	int bytes_to_be_read = 0;  //read bytes from socket
 	struct epoll_event event, *events;
 
@@ -472,7 +472,7 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 
 	int n_fds = 0, newfd, current_fd = 0;
 	char *buffer;  //receive buffer
-	long nbytes;   //bytes read
+	uint64_t nbytes;   //bytes read
 	int bytes_to_be_read = 0;  //read bytes from socket
 	fd_set read_set, write_set;
 

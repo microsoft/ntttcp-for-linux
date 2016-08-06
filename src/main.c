@@ -38,11 +38,11 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	char *log = NULL;
 	bool verbose_log = test->verbose;
 
-	int threads_created = 0, stream_created = 0;
+	int threads_created = 0;
 	struct ntttcp_stream_client *cs;
-	int rc, t, i, reply_received;
-	void *bytes;
-	long nbytes = 0, total_bytes = 0;
+	int rc, t, n, reply_received;
+	uint64_t nbytes = 0, total_bytes = 0;
+	void *p_retval;
 	struct timeval now;
 	double actual_test_time = 0;
 	struct cpu_usage *init_cpu_usage, *final_cpu_usage;
@@ -113,27 +113,21 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 
 	/* create threads */
 	for (t = 0; t < test->parallel; t++) {
-		cs = tep->client_streams[t];
-		if (cs == NULL) {
-			PRINT_ERR("sender: error when creating new client stream");
-			err_code = ERROR_MEMORY_ALLOC;
-			continue;
-		}
-		cs->server_port = test->server_base_port + t;
-		stream_created++;
-
-		/* in client side, multiple connections will (one thread for one connection)
-		 * connect to same port on server
-		 */
-		for (i = 0; i < test->conn_per_thread; i++ ) {
+		for (n = 0; n < test->conn_per_thread; n++ ) {
+			cs = tep->client_streams[t * test->conn_per_thread + n];
+			/* in client side, multiple connections will (one thread for one connection)
+			 * connect to same port on server
+			 */
+			cs->server_port = test->server_base_port + t;
+	
 			if (test->protocol == TCP) {
-				rc = pthread_create(&tep->data_threads[threads_created],
+				rc = pthread_create(&tep->threads[threads_created],
 							NULL,
 							run_ntttcp_sender_tcp_stream,
 							(void*)cs);
 			}
 			else {
-				rc = pthread_create(&tep->data_threads[threads_created],
+				rc = pthread_create(&tep->threads[threads_created],
 							NULL,
 							run_ntttcp_sender_udp_stream,
 							(void*)cs);
@@ -179,11 +173,14 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 
 	/* calculate client side throughput, but exclude the last thread as it is synch thread */
 	print_thread_result(-1, 0, 0);
-	for (i = 0; i < threads_created; i++) {
-		pthread_join(tep->data_threads[i], &bytes);
-		nbytes = (long)bytes;
+	for (n = 0; n < threads_created; n++) {
+		if (pthread_join(tep->threads[n], &p_retval) !=0 ) {
+			PRINT_ERR("sender: error when pthread_join");
+			continue;
+		}
+		nbytes = tep->client_streams[n]->total_bytes_transferred;
 		total_bytes += nbytes;
-		print_thread_result(i, nbytes, actual_test_time);
+		print_thread_result(n, nbytes, actual_test_time);
 	}
 	print_total_result(total_bytes, cycle_diff, actual_test_time, init_cpu_usage, final_cpu_usage);
 
@@ -200,10 +197,10 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	char *log = NULL;
 	bool verbose_log = test->verbose;
 
-	int threads_created = 0, stream_created = 0;
+	int threads_created = 0;
 	struct ntttcp_stream_server *ss;
 	int rc, t;
-	long nbytes = 0, total_bytes = 0;
+	uint64_t nbytes = 0, total_bytes = 0;
 	struct timeval now;
 	double actual_test_time = 0;
 	struct cpu_usage *init_cpu_usage, *final_cpu_usage;
@@ -225,21 +222,16 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	/* create threads */
 	for (t = 0; t < test->parallel; t++) {
 		ss = tep->server_streams[t];
-		if (ss == NULL) {
-			PRINT_ERR("receiver: error when creating new server stream");
-			continue;
-		}
-		ss->server_port = test->server_base_port + t;
-		stream_created++;
+		ss->server_port = test->server_base_port + t;	
 
 		if (test->protocol == TCP) {
-			rc = pthread_create(&tep->data_threads[t],
+			rc = pthread_create(&tep->threads[t],
 						NULL,
 						run_ntttcp_receiver_tcp_stream,
 						(void*)ss);
 		}
 		else {
-			rc = pthread_create(&tep->data_threads[t],
+			rc = pthread_create(&tep->threads[t],
 						NULL,
 						run_ntttcp_receiver_udp_stream,
 						(void*)ss);
@@ -267,10 +259,9 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		ss = tep->server_streams[test->parallel];
 		ss->server_port = test->server_base_port - 1; //just for bookkeeping
 		ss->protocol = TCP; //just for bookkeeping
-		ss->is_sync_thread = 1;
-		stream_created++;
+		ss->is_sync_thread = 1;	
 
-		rc = pthread_create(&tep->data_threads[t],
+		rc = pthread_create(&tep->threads[t],
 				NULL,
 				create_receiver_sync_socket,
 				(void*)tep);
@@ -299,7 +290,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		 * this is to handle the case when: receiver in sync mode, but sender connected as no_sync mode
 		 * in this case, before loght_no, the threads have some data counted already
 		 */
-		for (t=0; t < stream_created; t++)
+		for (t=0; t < threads_created; t++)
 			__atomic_store_n( &(tep->server_streams[t]->total_bytes_transferred), 0, __ATOMIC_SEQ_CST );
 
 		get_cpu_usage( init_cpu_usage );
@@ -330,12 +321,12 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		/* calculate server side throughput */
 		total_bytes = 0;
 		print_thread_result(-1, 0, 0);
-		for (t=0; t < stream_created; t++){
+		for (t=0; t < threads_created; t++){
 			/* exclude the sync thread */
 			if (tep->server_streams[t]->is_sync_thread)
 				continue;
 
-			nbytes = (long)__atomic_load_n( &(tep->server_streams[t]->total_bytes_transferred), __ATOMIC_SEQ_CST );
+			nbytes = (uint64_t)__atomic_load_n( &(tep->server_streams[t]->total_bytes_transferred), __ATOMIC_SEQ_CST );
 			total_bytes += nbytes;
 			print_thread_result(t, nbytes, actual_test_time);
 		}
@@ -345,7 +336,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 
 	/* as receiver threads will keep listening on ports, so they will not exit */
 	for (t=0; t < threads_created; t++) {
-		pthread_join(tep->data_threads[t], NULL);
+		pthread_join(tep->threads[t], NULL);
 	}
 
 	free (init_cpu_usage);

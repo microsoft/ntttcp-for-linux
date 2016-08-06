@@ -335,7 +335,7 @@ double get_time_diff(struct timeval *t1, struct timeval *t2)
 	return fabs( (t1->tv_sec + (t1->tv_usec / 1000000.0)) - (t2->tv_sec + (t2->tv_usec / 1000000.0)) );
 }
 
-void print_thread_result(int tid, long total_bytes, double test_duration)
+void print_thread_result(int tid, uint64_t total_bytes, double test_duration)
 {
 	char *log = NULL, *log_tmp = NULL;
 
@@ -354,7 +354,7 @@ void print_thread_result(int tid, long total_bytes, double test_duration)
 	}
 }
 
-void print_total_result(long total_bytes,
+void print_total_result(uint64_t total_bytes,
 			uint64_t cycle_diff,
 			double test_duration,
 			struct cpu_usage *init_cpu_usage,
@@ -369,7 +369,7 @@ void print_total_result(long total_bytes,
 	PRINT_INFO("#####  Totals:  #####");
 	asprintf(&log, "test duration\t:%.2f seconds", test_duration);
 	PRINT_INFO_FREE(log);
-	asprintf(&log, "total bytes\t:%ld", total_bytes);
+	asprintf(&log, "total bytes\t:%llu", total_bytes);
 	PRINT_INFO_FREE(log);
 
 	log_tmp = format_throughput(total_bytes, test_duration);
@@ -390,7 +390,7 @@ void print_total_result(long total_bytes,
 		((final_cpu_usage->system_time - init_cpu_usage->system_time) / time_diff) * 100);
 	PRINT_INFO_FREE(log);
 
-	asprintf(&log, "\t cpu cycles\t:%ld", cycle_diff);
+	asprintf(&log, "\t cpu cycles\t:%llu", cycle_diff);
 	PRINT_INFO_FREE(log);
 
 	asprintf(&log, "cycles/byte\t:%.2f", total_bytes == 0? 0 : (double)cycle_diff/(double)total_bytes);
@@ -432,7 +432,7 @@ const char *unit_bps[] =
 	"Gbps"
 };
 
-char *format_throughput(long bytes_transferred, double test_duration)
+char *format_throughput(uint64_t bytes_transferred, double test_duration)
 {
 	double tmp = 0;
 	int unit_idx = 0;

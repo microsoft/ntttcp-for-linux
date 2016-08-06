@@ -14,7 +14,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <inttypes.h>
 #include <getopt.h>
 #include <time.h>
 #include <math.h>
@@ -50,9 +49,9 @@ double unit_atod(const char *s);
 
 void get_cpu_usage(struct cpu_usage *cu);
 double get_time_diff(struct timeval *t1, struct timeval *t2);
-void print_total_result(long total_bytes, uint64_t cycle_diff, double test_duration, struct cpu_usage *init_cpu_usage, struct cpu_usage *final_cpu_usage );
-void print_thread_result(int tid, long total_bytes, double test_duration);
-char *format_throughput(long bytes_transferred, double test_duration);
+void print_total_result(uint64_t total_bytes, uint64_t cycle_diff, double test_duration, struct cpu_usage *init_cpu_usage, struct cpu_usage *final_cpu_usage );
+void print_thread_result(int tid, uint64_t total_bytes, double test_duration);
+char *format_throughput(uint64_t bytes_transferred, double test_duration);
 char *retrive_ip_address_str(struct sockaddr_storage *ss, char *ip_str, size_t maxlen);
 char *retrive_ip4_address_str(struct sockaddr_in *ss, char *ip_str, size_t maxlen);
 char *retrive_ip6_address_str(struct sockaddr_in6 *ss, char *ip_str, size_t maxlen);
