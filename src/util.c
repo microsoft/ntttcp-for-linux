@@ -369,7 +369,7 @@ void print_total_result(uint64_t total_bytes,
 	PRINT_INFO("#####  Totals:  #####");
 	asprintf(&log, "test duration\t:%.2f seconds", test_duration);
 	PRINT_INFO_FREE(log);
-	asprintf(&log, "total bytes\t:%llu", total_bytes);
+	asprintf(&log, "total bytes\t:%" PRIu64, total_bytes);
 	PRINT_INFO_FREE(log);
 
 	log_tmp = format_throughput(total_bytes, test_duration);
@@ -390,7 +390,7 @@ void print_total_result(uint64_t total_bytes,
 		((final_cpu_usage->system_time - init_cpu_usage->system_time) / time_diff) * 100);
 	PRINT_INFO_FREE(log);
 
-	asprintf(&log, "\t cpu cycles\t:%llu", cycle_diff);
+	asprintf(&log, "\t cpu cycles\t:%" PRIu64, cycle_diff);
 	PRINT_INFO_FREE(log);
 
 	asprintf(&log, "cycles/byte\t:%.2f", total_bytes == 0? 0 : (double)cycle_diff/(double)total_bytes);

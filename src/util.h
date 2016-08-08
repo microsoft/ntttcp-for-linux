@@ -4,6 +4,7 @@
 // Author: Shihua (Simon) Xiao, sixiao@microsoft.com
 // ----------------------------------------------------------------------------------
 
+#define __STDC_FORMAT_MACROS
 #pragma once
 
 #define _GNU_SOURCE
