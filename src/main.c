@@ -46,6 +46,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	struct timeval now;
 	double actual_test_time = 0;
 	struct cpu_usage *init_cpu_usage, *final_cpu_usage;
+	struct tcp_retrans *init_tcp_retrans, *final_tcp_retrans;
 	uint64_t init_cycle_count = 0, final_cycle_count = 0, cycle_diff = 0;
 
 	/* for calculate the resource usage */
@@ -58,6 +59,23 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	if (!final_cpu_usage) {
 		free (init_cpu_usage);
 		PRINT_ERR("sender: error when creating cpu_usage struct");
+		return ERROR_MEMORY_ALLOC;
+	}
+
+	/* for calculate the TCP re-transmit */
+	init_tcp_retrans = (struct tcp_retrans *) malloc(sizeof(struct tcp_retrans));
+	if (!init_tcp_retrans) {
+		free (init_cpu_usage);
+		free (final_cpu_usage);
+		PRINT_ERR("sender: error when creating tcp_retrans struct");
+		return ERROR_MEMORY_ALLOC;
+	}
+	final_tcp_retrans = (struct tcp_retrans *) malloc(sizeof(struct tcp_retrans));
+	if (!final_tcp_retrans) {
+		free (init_cpu_usage);
+		free (final_cpu_usage);
+		free (init_tcp_retrans);
+		PRINT_ERR("sender: error when creating tcp_retrans struct");
 		return ERROR_MEMORY_ALLOC;
 	}
 
@@ -149,6 +167,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	turn_on_light();
 
 	get_cpu_usage( init_cpu_usage );
+	get_tcp_retrans( init_tcp_retrans );
 	init_cycle_count = get_cc_rdtsc();
 
 	/* run the timer. it will trigger turn_off_light() after timer timeout */
@@ -170,6 +189,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	final_cycle_count = get_cc_rdtsc();
 	cycle_diff = final_cycle_count - init_cycle_count;
 	get_cpu_usage( final_cpu_usage );
+	get_tcp_retrans( final_tcp_retrans );
 
 	/* calculate client side throughput, but exclude the last thread as it is synch thread */
 	print_thread_result(-1, 0, 0);
@@ -182,10 +202,14 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		total_bytes += nbytes;
 		print_thread_result(n, nbytes, actual_test_time);
 	}
-	print_total_result(total_bytes, cycle_diff, actual_test_time, init_cpu_usage, final_cpu_usage);
+	print_total_result(total_bytes, cycle_diff, actual_test_time,
+				init_cpu_usage, final_cpu_usage,
+				init_tcp_retrans, final_tcp_retrans);
 
 	free (init_cpu_usage);
 	free (final_cpu_usage);
+	free (init_tcp_retrans);
+	free (final_tcp_retrans);
 
 	return err_code;
 }
@@ -204,6 +228,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	struct timeval now;
 	double actual_test_time = 0;
 	struct cpu_usage *init_cpu_usage, *final_cpu_usage;
+	struct tcp_retrans *init_tcp_retrans, *final_tcp_retrans;
 	uint64_t init_cycle_count = 0, final_cycle_count = 0, cycle_diff = 0;
 
 	/* for calculate the resource usage */
@@ -216,6 +241,23 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	if (!final_cpu_usage) {
 		free (init_cpu_usage);
 		PRINT_ERR("receiver: error when creating cpu_usage struct");
+		return ERROR_MEMORY_ALLOC;
+	}
+
+	/* for calculate the TCP re-transmit */
+	init_tcp_retrans = (struct tcp_retrans *) malloc(sizeof(struct tcp_retrans));
+	if (!init_tcp_retrans) {
+		free (init_cpu_usage);
+		free (final_cpu_usage);
+		PRINT_ERR("sender: error when creating tcp_retrans struct");
+		return ERROR_MEMORY_ALLOC;
+	}
+	final_tcp_retrans = (struct tcp_retrans *) malloc(sizeof(struct tcp_retrans));
+	if (!final_tcp_retrans) {
+		free (init_cpu_usage);
+		free (final_cpu_usage);
+		free (init_tcp_retrans);
+		PRINT_ERR("sender: error when creating tcp_retrans struct");
 		return ERROR_MEMORY_ALLOC;
 	}
 
@@ -294,6 +336,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 			__atomic_store_n( &(tep->server_streams[t]->total_bytes_transferred), 0, __ATOMIC_SEQ_CST );
 
 		get_cpu_usage( init_cpu_usage );
+		get_tcp_retrans( init_tcp_retrans );
 		init_cycle_count = get_cc_rdtsc();
 
 		/* run the timer. it will trigger turn_off_light() after timer timeout */
@@ -315,6 +358,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		final_cycle_count = get_cc_rdtsc();
 		cycle_diff = final_cycle_count - init_cycle_count;
 		get_cpu_usage( final_cpu_usage );
+		get_tcp_retrans( final_tcp_retrans );
 
 		//sleep(1);  //looks like server needs more time to receive data ...
 
@@ -331,7 +375,9 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 			print_thread_result(t, nbytes, actual_test_time);
 		}
 
-		print_total_result(total_bytes, cycle_diff, actual_test_time, init_cpu_usage, final_cpu_usage);
+		print_total_result(total_bytes, cycle_diff, actual_test_time,
+					init_cpu_usage, final_cpu_usage,
+					init_tcp_retrans, final_tcp_retrans);
 	}
 
 	/* as receiver threads will keep listening on ports, so they will not exit */
@@ -341,6 +387,8 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 
 	free (init_cpu_usage);
 	free (final_cpu_usage);
+	free (init_tcp_retrans);
+	free (final_tcp_retrans);
 
 	return err_code;
 }

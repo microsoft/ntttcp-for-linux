@@ -20,7 +20,6 @@
 #define TEST_FINISHED			13
 #define TEST_INTERRUPTED		14
 
-
 /* max values */
 #define MAX_CONNECTIONS_PER_THREAD	512
 #define MAX_NUM_THREADS			512
@@ -49,3 +48,8 @@
 #define ERROR_NETWORK_READ		-1108
 #define ERROR_NETWORK_WRITE		-1109
 #define ERROR_RECEIVER_NOT_READY		-1110
+
+/* /proc file for re-transmit counters */
+#define TCP_SECTION			"Tcp"
+#define PROC_FILE_SNMP			"/proc/net/snmp"
+#define PROC_FILE_NETSTAT 		"/proc/net/netstat"

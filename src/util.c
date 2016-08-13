@@ -358,13 +358,18 @@ void print_total_result(uint64_t total_bytes,
 			uint64_t cycle_diff,
 			double test_duration,
 			struct cpu_usage *init_cpu_usage,
-			struct cpu_usage *final_cpu_usage )
+			struct cpu_usage *final_cpu_usage,
+			struct tcp_retrans *init_tcp_retrans,
+			struct tcp_retrans *final_tcp_retrans )
 {
 	char *log = NULL, *log_tmp = NULL;
 	double time_diff;
+	uint64_t counter_diff;
 
 	if (test_duration == 0)
 		return;
+
+	time_diff = final_cpu_usage->time - init_cpu_usage->time;
 
 	PRINT_INFO("#####  Totals:  #####");
 	asprintf(&log, "test duration\t:%.2f seconds", test_duration);
@@ -377,23 +382,47 @@ void print_total_result(uint64_t total_bytes,
 	free(log_tmp);
 	PRINT_INFO_FREE(log);
 
-	time_diff = final_cpu_usage->time - init_cpu_usage->time;
 	asprintf(&log, "total cpu time\t:%.2f%%",
 		(((final_cpu_usage->clock - init_cpu_usage->clock) * 1000000.0 / CLOCKS_PER_SEC) / time_diff) * 100);
 	PRINT_INFO_FREE(log);
-
 	asprintf(&log, "\t user time\t:%.2f%%",
 		((final_cpu_usage->user_time - init_cpu_usage->user_time) / time_diff) * 100);
 	PRINT_INFO_FREE(log);
-
 	asprintf(&log, "\t system time\t:%.2f%%",
 		((final_cpu_usage->system_time - init_cpu_usage->system_time) / time_diff) * 100);
 	PRINT_INFO_FREE(log);
-
 	asprintf(&log, "\t cpu cycles\t:%" PRIu64, cycle_diff);
 	PRINT_INFO_FREE(log);
+	asprintf(&log, "\t cycles/byte\t:%.2f", total_bytes == 0? 0 : (double)cycle_diff/(double)total_bytes);
+	PRINT_INFO_FREE(log);
 
-	asprintf(&log, "cycles/byte\t:%.2f", total_bytes == 0? 0 : (double)cycle_diff/(double)total_bytes);
+	PRINT_INFO("tcp retransmit:");
+	/*
+	asprintf(&log, "\t InitRetransSegs:%" PRIu64, init_tcp_retrans->retrans_segs);
+	PRINT_INFO_FREE(log);
+	asprintf(&log, "\t End RetransSegs:%" PRIu64, final_tcp_retrans->retrans_segs);
+	PRINT_INFO_FREE(log);
+	*/
+	counter_diff = final_tcp_retrans->retrans_segs - init_tcp_retrans->retrans_segs;
+	asprintf(&log, "\t retrans_segments/sec\t:%.2f", counter_diff / test_duration);
+	PRINT_INFO_FREE(log);
+	counter_diff = final_tcp_retrans->tcp_lost_retransmit - init_tcp_retrans->tcp_lost_retransmit;
+	asprintf(&log, "\t lost_retrans/sec\t:%.2f", counter_diff / test_duration);
+	PRINT_INFO_FREE(log);
+	counter_diff = final_tcp_retrans->tcp_syn_retrans - init_tcp_retrans->tcp_syn_retrans;
+	asprintf(&log, "\t syn_retrans/sec\t:%.2f", counter_diff / test_duration);
+	PRINT_INFO_FREE(log);
+	counter_diff = final_tcp_retrans->tcp_fast_retrans - init_tcp_retrans->tcp_fast_retrans;
+	asprintf(&log, "\t fast_retrans/sec\t:%.2f", counter_diff / test_duration);
+	PRINT_INFO_FREE(log);
+	counter_diff = final_tcp_retrans->tcp_forward_retrans - init_tcp_retrans->tcp_forward_retrans;
+	asprintf(&log, "\t forward_retrans/sec\t:%.2f", counter_diff / test_duration);
+	PRINT_INFO_FREE(log);
+	counter_diff = final_tcp_retrans->tcp_slowStart_retrans - init_tcp_retrans->tcp_slowStart_retrans;
+	asprintf(&log, "\t slowStart_retrans/sec\t:%.2f", counter_diff / test_duration);
+	PRINT_INFO_FREE(log);
+	counter_diff = final_tcp_retrans->tcp_retrans_fail - init_tcp_retrans->tcp_retrans_fail;
+	asprintf(&log, "\t retrans_fail/sec\t:%.2f", counter_diff / test_duration);
 	PRINT_INFO_FREE(log);
 
 	printf("---------------------------------------------------------\n");
@@ -480,14 +509,67 @@ char *retrive_ip6_address_str(struct sockaddr_in6 *ss, char *ip_str, size_t maxl
 int set_socket_non_blocking(int fd)
 {
 	int flags, rtn;
-	flags = fcntl (fd, F_GETFL, 0);
+	flags = fcntl(fd, F_GETFL, 0);
 	if (flags == -1)
 		return -1;
 
 	flags |= O_NONBLOCK;
-	rtn = fcntl (fd, F_SETFL, flags);
+	rtn = fcntl(fd, F_SETFL, flags);
 	if (rtn == -1)
 		return -1;
 
 	return 0;
+}
+
+uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
+{
+	FILE *stream;
+	char *line = NULL, *pch = NULL;
+	size_t len = 0;
+	ssize_t read;
+	int key_found = 0;
+	
+	stream = fopen(file_name, "r");
+	if (!stream)
+		exit(EXIT_FAILURE);
+
+	while ((read = getline(&line, &len, stream)) != -1) {
+		if (key_found >0) {
+			pch = line;
+    			while ((pch = strtok(pch, " "))) {
+				key_found--;
+				if (key_found == 0)
+					goto found;
+				pch = NULL;
+			}
+		}
+		if (strcmp(section, line) < 0) {
+			if (strstr(line, key) > 0) {
+				pch = line;
+    				while ((pch = strtok(pch, " "))) {
+					key_found++;
+					if (strcmp(pch, key) == 0)
+						break;
+					pch = NULL;
+				}
+			}
+		}
+	}
+
+found:
+	free(line);
+	fclose(stream);
+
+	return pch? strtoull(pch, NULL, 10):0;
+}
+
+void get_tcp_retrans(struct tcp_retrans *tr)
+{
+	tr->retrans_segs		= read_counter_from_proc(PROC_FILE_SNMP,    TCP_SECTION, "RetransSegs");
+	tr->tcp_lost_retransmit		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPLostRetransmit");
+	tr->tcp_syn_retrans		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPSynRetrans");
+	tr->tcp_fast_retrans		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPFastRetrans");
+	tr->tcp_forward_retrans		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPForwardRetrans");
+	tr->tcp_slowStart_retrans	= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPSlowStartRetrans");
+	tr->tcp_retrans_fail		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPRetransFail");
 }
