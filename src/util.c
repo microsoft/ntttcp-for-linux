@@ -53,6 +53,7 @@ void print_flags(struct ntttcp_test *test)
 		printf("%s:\t %ld\n", "sender socket buffer (bytes)", test->send_buf_size);
 
 	printf("%s:\t\t %d\n", "test duration (sec)", test->duration);
+	printf("%s:\t %s\n", "show system tcp retransmit", test->show_tcp_retransmit ? "yes" : "no");
 	printf("%s:\t\t\t %s\n", "verbose mode", test->verbose ? "enabled" : "disabled");
 	printf("---------------------------------------------------------\n");
 }
@@ -75,8 +76,9 @@ void print_usage()
 	printf("\t-b   <recv buffer size>    [default: %d]\n", DEFAULT_RECV_BUFFER_SIZE);
 	printf("\t-B   <send buffer size>    [default: %d]\n", DEFAULT_SEND_BUFFER_SIZE);
 	printf("\t-t   Time of test duration in seconds    [default: %d]\n", DEFAULT_TEST_DURATION);
-	printf("\t-N   No sync, senders will start sending as soon as possible.\n");
+	printf("\t-N   No sync, senders will start sending as soon as possible\n");
 
+	printf("\t-R   Show system TCP retransmit counters in log from /proc\n");
 	printf("\t-V   Verbose mode\n");
 	printf("\t-h   Help, tool usage\n");
 
@@ -86,7 +88,7 @@ void print_usage()
 	printf("\t\t  Processor:\t\t*, or cpuid such as 0, 1, etc \n");
 	printf("\t\t  e.g. -m 8,*,192.168.1.1\n");
 	printf("\t\t\t  If receiver role: 8 threads running on all processors;\n\t\t\tand listening on 8 ports of network on 192.168.1.1.\n");
-	printf("\t\t\t  If sender role: receiver has 8 threads running and listening on 8 ports of network on 192.168.1.1;\n\t\t\tand all sender threads will run on all processors.\n");
+	printf("\t\t\t  If sender role: receiver has 8 threads running and listening on 8 ports of network on 192.168.1.1;\n\t\t\tand all sender threads will run on all processors\n");
 
 	printf("Example:\n");
 	printf("\treceiver:\n");
@@ -233,7 +235,8 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		{"receiver-buffer", required_argument, NULL, 'b'},
 		{"send-buffer", required_argument, NULL, 'B'},
 		{"duration", required_argument, NULL, 't'},
-		{"nosynch", no_argument, NULL, 'N'},
+		{"no-synch", no_argument, NULL, 'N'},
+		{"show-retrans", no_argument, NULL, 'R'},
 		{"verbose", no_argument, NULL, 'V'},
 		{"help", no_argument, NULL, 'h'},
 		{0, 0, 0, 0}
@@ -241,7 +244,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 	int flag;
 
-	while ((flag = getopt_long(argc, argv, "r::s::Dem:P:n:6up:b:B:t:NVh", longopts, NULL)) != -1) {
+	while ((flag = getopt_long(argc, argv, "r::s::Dem:P:n:6up:b:B:t:NRVh", longopts, NULL)) != -1) {
 		switch (flag) {
 		case 'r':
 			test->server_role = true;
@@ -304,6 +307,10 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			test->no_synch = true;
 			break;
 
+		case 'R':
+			test->show_tcp_retransmit = true;
+			break;
+
 		case 'V':
 			test->verbose = true;
 			break;
@@ -354,7 +361,8 @@ void print_thread_result(int tid, uint64_t total_bytes, double test_duration)
 	}
 }
 
-void print_total_result(uint64_t total_bytes,
+void print_total_result(struct ntttcp_test *test,
+			uint64_t total_bytes,
 			uint64_t cycle_diff,
 			double test_duration,
 			struct cpu_usage *init_cpu_usage,
@@ -396,34 +404,36 @@ void print_total_result(uint64_t total_bytes,
 	asprintf(&log, "\t cycles/byte\t:%.2f", total_bytes == 0? 0 : (double)cycle_diff/(double)total_bytes);
 	PRINT_INFO_FREE(log);
 
-	PRINT_INFO("tcp retransmit:");
-	/*
-	asprintf(&log, "\t InitRetransSegs:%" PRIu64, init_tcp_retrans->retrans_segs);
-	PRINT_INFO_FREE(log);
-	asprintf(&log, "\t End RetransSegs:%" PRIu64, final_tcp_retrans->retrans_segs);
-	PRINT_INFO_FREE(log);
-	*/
-	counter_diff = final_tcp_retrans->retrans_segs - init_tcp_retrans->retrans_segs;
-	asprintf(&log, "\t retrans_segments/sec\t:%.2f", counter_diff / test_duration);
-	PRINT_INFO_FREE(log);
-	counter_diff = final_tcp_retrans->tcp_lost_retransmit - init_tcp_retrans->tcp_lost_retransmit;
-	asprintf(&log, "\t lost_retrans/sec\t:%.2f", counter_diff / test_duration);
-	PRINT_INFO_FREE(log);
-	counter_diff = final_tcp_retrans->tcp_syn_retrans - init_tcp_retrans->tcp_syn_retrans;
-	asprintf(&log, "\t syn_retrans/sec\t:%.2f", counter_diff / test_duration);
-	PRINT_INFO_FREE(log);
-	counter_diff = final_tcp_retrans->tcp_fast_retrans - init_tcp_retrans->tcp_fast_retrans;
-	asprintf(&log, "\t fast_retrans/sec\t:%.2f", counter_diff / test_duration);
-	PRINT_INFO_FREE(log);
-	counter_diff = final_tcp_retrans->tcp_forward_retrans - init_tcp_retrans->tcp_forward_retrans;
-	asprintf(&log, "\t forward_retrans/sec\t:%.2f", counter_diff / test_duration);
-	PRINT_INFO_FREE(log);
-	counter_diff = final_tcp_retrans->tcp_slowStart_retrans - init_tcp_retrans->tcp_slowStart_retrans;
-	asprintf(&log, "\t slowStart_retrans/sec\t:%.2f", counter_diff / test_duration);
-	PRINT_INFO_FREE(log);
-	counter_diff = final_tcp_retrans->tcp_retrans_fail - init_tcp_retrans->tcp_retrans_fail;
-	asprintf(&log, "\t retrans_fail/sec\t:%.2f", counter_diff / test_duration);
-	PRINT_INFO_FREE(log);
+	if (test->show_tcp_retransmit) {
+		PRINT_INFO("tcp retransmit:");
+		/*
+		asprintf(&log, "\t InitRetransSegs:%" PRIu64, init_tcp_retrans->retrans_segs);
+		PRINT_INFO_FREE(log);
+		asprintf(&log, "\t End RetransSegs:%" PRIu64, final_tcp_retrans->retrans_segs);
+		PRINT_INFO_FREE(log);
+		*/
+		counter_diff = final_tcp_retrans->retrans_segs - init_tcp_retrans->retrans_segs;
+		asprintf(&log, "\t retrans_segments/sec\t:%.2f", counter_diff / test_duration);
+		PRINT_INFO_FREE(log);
+		counter_diff = final_tcp_retrans->tcp_lost_retransmit - init_tcp_retrans->tcp_lost_retransmit;
+		asprintf(&log, "\t lost_retrans/sec\t:%.2f", counter_diff / test_duration);
+		PRINT_INFO_FREE(log);
+		counter_diff = final_tcp_retrans->tcp_syn_retrans - init_tcp_retrans->tcp_syn_retrans;
+		asprintf(&log, "\t syn_retrans/sec\t:%.2f", counter_diff / test_duration);
+		PRINT_INFO_FREE(log);
+		counter_diff = final_tcp_retrans->tcp_fast_retrans - init_tcp_retrans->tcp_fast_retrans;
+		asprintf(&log, "\t fast_retrans/sec\t:%.2f", counter_diff / test_duration);
+		PRINT_INFO_FREE(log);
+		counter_diff = final_tcp_retrans->tcp_forward_retrans - init_tcp_retrans->tcp_forward_retrans;
+		asprintf(&log, "\t forward_retrans/sec\t:%.2f", counter_diff / test_duration);
+		PRINT_INFO_FREE(log);
+		counter_diff = final_tcp_retrans->tcp_slowStart_retrans - init_tcp_retrans->tcp_slowStart_retrans;
+		asprintf(&log, "\t slowStart_retrans/sec\t:%.2f", counter_diff / test_duration);
+		PRINT_INFO_FREE(log);
+		counter_diff = final_tcp_retrans->tcp_retrans_fail - init_tcp_retrans->tcp_retrans_fail;
+		asprintf(&log, "\t retrans_fail/sec\t:%.2f", counter_diff / test_duration);
+		PRINT_INFO_FREE(log);
+	}
 
 	printf("---------------------------------------------------------\n");
 }

@@ -34,6 +34,7 @@ struct ntttcp_test
 	ulong	recv_buf_size;       /* '-b' for receive buffer option */
 	ulong	send_buf_size;       /* '-B' for send buffer option */
 	int	duration;            /* '-t' for total duration in sec of test */
+	bool 	show_tcp_retransmit; /* '-R' to display TCP retransmit counters in log from /proc */
 	bool	verbose;             /* '-V' for verbose logging */
 };
 

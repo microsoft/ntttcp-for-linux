@@ -202,9 +202,10 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		total_bytes += nbytes;
 		print_thread_result(n, nbytes, actual_test_time);
 	}
-	print_total_result(total_bytes, cycle_diff, actual_test_time,
-				init_cpu_usage, final_cpu_usage,
-				init_tcp_retrans, final_tcp_retrans);
+	print_total_result(tep->test, total_bytes,
+			   cycle_diff, actual_test_time,
+			   init_cpu_usage, final_cpu_usage,
+			   init_tcp_retrans, final_tcp_retrans);
 
 	free (init_cpu_usage);
 	free (final_cpu_usage);
@@ -375,9 +376,10 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 			print_thread_result(t, nbytes, actual_test_time);
 		}
 
-		print_total_result(total_bytes, cycle_diff, actual_test_time,
-					init_cpu_usage, final_cpu_usage,
-					init_tcp_retrans, final_tcp_retrans);
+		print_total_result(tep->test, total_bytes,
+				   cycle_diff, actual_test_time,
+				   init_cpu_usage, final_cpu_usage,
+				   init_tcp_retrans, final_tcp_retrans);
 	}
 
 	/* as receiver threads will keep listening on ports, so they will not exit */

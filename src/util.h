@@ -59,7 +59,10 @@ double unit_atod(const char *s);
 
 void get_cpu_usage(struct cpu_usage *cu);
 double get_time_diff(struct timeval *t1, struct timeval *t2);
-void print_total_result(uint64_t total_bytes, uint64_t cycle_diff, double test_duration, struct cpu_usage *init_cpu_usage, struct cpu_usage *final_cpu_usage, struct tcp_retrans *init_tcp_retrans, struct tcp_retrans *final_tcp_retrans);
+void print_total_result(struct ntttcp_test *test, uint64_t total_bytes,
+			uint64_t cycle_diff, double test_duration,
+			struct cpu_usage *init_cpu_usage, struct cpu_usage *final_cpu_usage,
+			struct tcp_retrans *init_tcp_retrans, struct tcp_retrans *final_tcp_retrans);
 void print_thread_result(int tid, uint64_t total_bytes, double test_duration);
 char *format_throughput(uint64_t bytes_transferred, double test_duration);
 char *retrive_ip_address_str(struct sockaddr_storage *ss, char *ip_str, size_t maxlen);
