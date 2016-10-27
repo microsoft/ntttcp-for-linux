@@ -47,6 +47,9 @@ void print_flags(struct ntttcp_test *test)
 
 	printf("%s:\t %d\n", "server port starting at", test->server_base_port);
 
+	if (test->client_role && test->client_base_port > 0)
+		printf("%s:\t %d\n", "client source port starting at", test->client_base_port);
+
 	if (test->server_role)
 		printf("%s:\t %ld\n", "receiver socket buffer (bytes)", test->recv_buf_size);
 	if (test->client_role)
@@ -72,7 +75,8 @@ void print_usage()
 
 	printf("\t-6   IPv6 mode    [default: IPv4]\n");
 	printf("\t-u   UDP mode     [default: TCP]\n");
-	printf("\t-p   Port number, or starting port number    [default: %d]\n", DEFAULT_BASE_PORT);
+	printf("\t-p   Destination port number, or starting port number    [default: %d]\n", DEFAULT_BASE_DST_PORT);
+	printf("\t-f   Fixed source port number, or starting port number    [default: %d]\n", DEFAULT_BASE_SRC_PORT);
 	printf("\t-b   <recv buffer size>    [default: %d]\n", DEFAULT_RECV_BUFFER_SIZE);
 	printf("\t-B   <send buffer size>    [default: %d]\n", DEFAULT_SEND_BUFFER_SIZE);
 	printf("\t-t   Time of test duration in seconds    [default: %d]\n", DEFAULT_TEST_DURATION);
@@ -95,12 +99,12 @@ void print_usage()
 	printf("\t1) ./ntttcp -r\n");
 	printf("\t2) ./ntttcp -r192.168.1.1\n");
 	printf("\t3) ./ntttcp -r -m 8,*,192.168.1.1 -6\n");
-	printf("\t4) ./ntttcp -r -m 8,0,192.168.1.1 -6 -V\n");
+	printf("\t4) ./ntttcp -r -m 8,0,192.168.1.1 -6 -R -V\n");
 	printf("\tsender:\n");
 	printf("\t1) ./ntttcp -s\n");
 	printf("\t2) ./ntttcp -s192.168.1.1\n");
 	printf("\t3) ./ntttcp -s -m 8,*,192.168.1.1 -n 16 -6\n");
-	printf("\t4) ./ntttcp -s -m 8,0,192.168.1.1 -n 16 -6 -V\n");
+	printf("\t4) ./ntttcp -s -m 8,0,192.168.1.1 -n 16 -f25001 -6 -V\n");
 }
 
 void print_version()
@@ -207,7 +211,15 @@ int verify_args(struct ntttcp_test *test)
 	if (test->client_role) {
 		if (test->use_epoll)
 			PRINT_DBG("ignore '-e' on sender role");
+	}
 
+	if (test->server_role && test->client_base_port > 0) {
+		PRINT_DBG("ignore '-f' on receiver role");
+	}
+
+	if (test->client_role && test->client_base_port > 0 && test->client_base_port <= 1024) {
+		test->client_base_port = DEFAULT_BASE_SRC_PORT;
+		PRINT_DBG("source port is too small. use the default value");
 	}
 
 	if (test->protocol == UDP && test->send_buf_size > MAX_UDP_SEND_SIZE) {
@@ -231,7 +243,8 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		{"nconn", required_argument, NULL, 'n'},
 		{"ipv6", no_argument, NULL, '6'},
 		{"udp", no_argument, NULL, 'u'},
-		{"base-port", required_argument, NULL, 'p'},
+		{"base-dst-port", required_argument, NULL, 'p'},
+		{"base-src-port", optional_argument, NULL, 'f'},
 		{"receiver-buffer", required_argument, NULL, 'b'},
 		{"send-buffer", required_argument, NULL, 'B'},
 		{"duration", required_argument, NULL, 't'},
@@ -244,7 +257,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 	int flag;
 
-	while ((flag = getopt_long(argc, argv, "r::s::Dem:P:n:6up:b:B:t:NRVh", longopts, NULL)) != -1) {
+	while ((flag = getopt_long(argc, argv, "r::s::Dem:P:n:6up:f::b:B:t:NRVh", longopts, NULL)) != -1) {
 		switch (flag) {
 		case 'r':
 			test->server_role = true;
@@ -289,6 +302,13 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 		case 'p':
 			test->server_base_port = atoi(optarg);
+			break;
+
+		case 'f':
+			if (optarg)
+				test->client_base_port = atoi(optarg);
+			else
+				test->client_base_port = DEFAULT_BASE_SRC_PORT;
 			break;
 
 		case 'b':

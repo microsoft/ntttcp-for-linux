@@ -31,6 +31,7 @@ struct ntttcp_test
 	int	domain;              /* default for AF_INET, or '-6' for AF_INET6 */
 	int	protocol;            /* default for SOCK_STREAM for TCP, or '-u' for SOCK_DGRAM for UDP (does not support UDP for now) */
 	uint	server_base_port;    /* '-p' for server listening base port */
+	uint	client_base_port;    /* '-f' to pin client source port based on this */
 	ulong	recv_buf_size;       /* '-b' for receive buffer option */
 	ulong	send_buf_size;       /* '-B' for send buffer option */
 	int	duration;            /* '-t' for total duration in sec of test */
@@ -60,6 +61,7 @@ struct ntttcp_stream_client{
 	int	protocol;
 	char	*bind_address;
 	uint	server_port;
+	uint	client_port;
 	ulong	send_buf_size;
 	int	is_sync_thread;
 	bool	no_synch;

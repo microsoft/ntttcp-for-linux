@@ -30,7 +30,8 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->conn_per_thread  = DEFAULT_CONN_PER_THREAD;
 	test->domain           = AF_INET; //IPV4
 	test->protocol         = TCP;
-	test->server_base_port = DEFAULT_BASE_PORT;
+	test->server_base_port = DEFAULT_BASE_DST_PORT;
+	test->client_base_port = 0;                        //random/ephemeral port
 	test->recv_buf_size    = DEFAULT_RECV_BUFFER_SIZE; //64K
 	test->send_buf_size    = DEFAULT_SEND_BUFFER_SIZE; //128K
 	test->duration         = DEFAULT_TEST_DURATION;
@@ -159,6 +160,7 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test *test)
 	s->protocol = test->protocol;
 	s->bind_address = test->bind_address;
 	//s->server_port, should be specified by caller
+	//s->client_port, should be specified by caller
 	s->send_buf_size = test->send_buf_size;
 	s->verbose = test->verbose;
 	s->is_sync_thread = 0;

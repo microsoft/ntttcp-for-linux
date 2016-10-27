@@ -107,11 +107,11 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 		*/
 		if (sc->domain == AF_INET) {
 			(*(struct sockaddr_in*)&local_addr).sin_family = AF_INET;
-			(*(struct sockaddr_in*)&local_addr).sin_port = 0;
+			(*(struct sockaddr_in*)&local_addr).sin_port = htons(sc->client_port);
 		}
 		else{
 			(*(struct sockaddr_in6*)&local_addr).sin6_family = AF_INET6;
-			(*(struct sockaddr_in6*)&local_addr).sin6_port = 0;
+			(*(struct sockaddr_in6*)&local_addr).sin6_port = htons(sc->client_port);
 		}
 
 		if (( i = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0 ) {
