@@ -13,6 +13,7 @@
 	timeinfo = localtime ( &rawtime );\
 	strftime ( buffer,80,"%H:%M:%S",timeinfo );\
 	printf ( "%s %s: %s\n", buffer, x, y);\
+	fflush(stdout);\
 }
 
 #define PRINT_LOG_FREE(x, y) { \
