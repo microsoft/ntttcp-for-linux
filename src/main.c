@@ -7,28 +7,6 @@
 #include "main.h"
 
 /************************************************************/
-//		ntttcp helper, to count CPU cycle
-/************************************************************/
-
-#if defined(__i386__)
-static __inline__ unsigned long long get_cc_rdtsc(void)
-{
-	unsigned long long int c;
-	__asm__ volatile (".byte 0x0f, 0x31" : "=A" (c));
-	return c;
-}
-
-#elif defined(__x86_64__)
-static __inline__ unsigned long long get_cc_rdtsc(void)
-{
-	unsigned hi, lo;
-	__asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
-	return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
-}
-#endif
-
-
-/************************************************************/
 //		ntttcp high level functions
 /************************************************************/
 int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
@@ -47,7 +25,6 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	double actual_test_time = 0;
 	struct cpu_usage *init_cpu_usage, *final_cpu_usage;
 	struct tcp_retrans *init_tcp_retrans, *final_tcp_retrans;
-	uint64_t init_cycle_count = 0, final_cycle_count = 0, cycle_diff = 0;
 
 	/* for calculate the resource usage */
 	init_cpu_usage = (struct cpu_usage *) malloc(sizeof(struct cpu_usage));
@@ -172,7 +149,6 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 
 	get_cpu_usage( init_cpu_usage );
 	get_tcp_retrans( init_tcp_retrans );
-	init_cycle_count = get_cc_rdtsc();
 
 	/* run the timer. it will trigger turn_off_light() after timer timeout */
 	run_test_timer(tep->confirmed_duration );
@@ -190,8 +166,6 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	actual_test_time = get_time_diff(&tep->end_time, &tep->start_time);
 
 	/* calculate resource usage */
-	final_cycle_count = get_cc_rdtsc();
-	cycle_diff = final_cycle_count - init_cycle_count;
 	get_cpu_usage( final_cpu_usage );
 	get_tcp_retrans( final_tcp_retrans );
 
@@ -206,8 +180,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		total_bytes += nbytes;
 		print_thread_result(n, nbytes, actual_test_time);
 	}
-	print_total_result(tep->test, total_bytes,
-			   cycle_diff, actual_test_time,
+	print_total_result(tep->test, total_bytes, actual_test_time,
 			   init_cpu_usage, final_cpu_usage,
 			   init_tcp_retrans, final_tcp_retrans);
 
@@ -234,7 +207,6 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	double actual_test_time = 0;
 	struct cpu_usage *init_cpu_usage, *final_cpu_usage;
 	struct tcp_retrans *init_tcp_retrans, *final_tcp_retrans;
-	uint64_t init_cycle_count = 0, final_cycle_count = 0, cycle_diff = 0;
 
 	/* for calculate the resource usage */
 	init_cpu_usage = (struct cpu_usage *) malloc(sizeof(struct cpu_usage));
@@ -342,7 +314,6 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 
 		get_cpu_usage( init_cpu_usage );
 		get_tcp_retrans( init_tcp_retrans );
-		init_cycle_count = get_cc_rdtsc();
 
 		/* run the timer. it will trigger turn_off_light() after timer timeout */
 		run_test_timer(tep->confirmed_duration);
@@ -360,8 +331,6 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		actual_test_time = get_time_diff(&tep->end_time, &tep->start_time);
 
 		/* calculate resource usage */
-		final_cycle_count = get_cc_rdtsc();
-		cycle_diff = final_cycle_count - init_cycle_count;
 		get_cpu_usage( final_cpu_usage );
 		get_tcp_retrans( final_tcp_retrans );
 
@@ -380,8 +349,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 			print_thread_result(t, nbytes, actual_test_time);
 		}
 
-		print_total_result(tep->test, total_bytes,
-				   cycle_diff, actual_test_time,
+		print_total_result(tep->test, total_bytes, actual_test_time,
 				   init_cpu_usage, final_cpu_usage,
 				   init_tcp_retrans, final_tcp_retrans);
 	}

@@ -383,7 +383,6 @@ void print_thread_result(int tid, uint64_t total_bytes, double test_duration)
 
 void print_total_result(struct ntttcp_test *test,
 			uint64_t total_bytes,
-			uint64_t cycle_diff,
 			double test_duration,
 			struct cpu_usage *init_cpu_usage,
 			struct cpu_usage *final_cpu_usage,
@@ -392,6 +391,9 @@ void print_total_result(struct ntttcp_test *test,
 {
 	char *log = NULL, *log_tmp = NULL;
 	double time_diff;
+	double total_cpu_usage;
+	double cpu_speed_mhz;
+	double cycles_per_byte;
 	uint64_t counter_diff;
 
 	if (test_duration == 0)
@@ -410,8 +412,8 @@ void print_total_result(struct ntttcp_test *test,
 	free(log_tmp);
 	PRINT_INFO_FREE(log);
 
-	asprintf(&log, "total cpu time\t:%.2f%%",
-		(((final_cpu_usage->clock - init_cpu_usage->clock) * 1000000.0 / CLOCKS_PER_SEC) / time_diff) * 100);
+	total_cpu_usage = ((final_cpu_usage->clock - init_cpu_usage->clock) * 1000000.0 / CLOCKS_PER_SEC) / time_diff;
+	asprintf(&log, "total cpu time\t:%.2f%%", total_cpu_usage * 100);
 	PRINT_INFO_FREE(log);
 	asprintf(&log, "\t user time\t:%.2f%%",
 		((final_cpu_usage->user_time - init_cpu_usage->user_time) / time_diff) * 100);
@@ -419,9 +421,11 @@ void print_total_result(struct ntttcp_test *test,
 	asprintf(&log, "\t system time\t:%.2f%%",
 		((final_cpu_usage->system_time - init_cpu_usage->system_time) / time_diff) * 100);
 	PRINT_INFO_FREE(log);
-	asprintf(&log, "\t cpu cycles\t:%" PRIu64, cycle_diff);
+	cpu_speed_mhz = read_value_from_proc(PROC_FILE_CPUINFO, CPU_SPEED_MHZ);
+	asprintf(&log, "\t cpu speed\t:%.3fMHz",	cpu_speed_mhz);
 	PRINT_INFO_FREE(log);
-	asprintf(&log, "\t cycles/byte\t:%.2f", total_bytes == 0? 0 : (double)cycle_diff/(double)total_bytes);
+	cycles_per_byte = cpu_speed_mhz * 1000 * 1000 * test_duration * total_cpu_usage / total_bytes;
+	asprintf(&log, "\t cycles/byte\t:%.2f",	total_bytes == 0? 0 : cycles_per_byte);
 	PRINT_INFO_FREE(log);
 
 	if (test->show_tcp_retransmit) {
@@ -562,21 +566,32 @@ uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 	stream = fopen(file_name, "r");
 	if (!stream)
 		exit(EXIT_FAILURE);
-
+	/*
+	 * example:
+	 *
+	 * Tcp: ... OutSegs RetransSegs InErrs OutRsts InCsumErrors
+	 * Tcp: ... 8584582 27 0 5 0
+	 *
+	 * the first line contains the key;
+	 * if a key is found, then,
+	 * read the corresponding cell as value from next line
+	 */
 	while ((read = getline(&line, &len, stream)) != -1) {
+		/* key is found, then read the value here */
 		if (key_found >0) {
 			pch = line;
-    			while ((pch = strtok(pch, " "))) {
+			while ((pch = strtok(pch, " "))) {
 				key_found--;
 				if (key_found == 0)
 					goto found;
 				pch = NULL;
 			}
 		}
+		/* try to locate the key */
 		if (strcmp(section, line) < 0) {
 			if (strstr(line, key) > 0) {
 				pch = line;
-    				while ((pch = strtok(pch, " "))) {
+			while ((pch = strtok(pch, " "))) {
 					key_found++;
 					if (strcmp(pch, key) == 0)
 						break;
@@ -602,4 +617,34 @@ void get_tcp_retrans(struct tcp_retrans *tr)
 	tr->tcp_forward_retrans		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPForwardRetrans");
 	tr->tcp_slowStart_retrans	= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPSlowStartRetrans");
 	tr->tcp_retrans_fail		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPRetransFail");
+}
+
+double read_value_from_proc(char *file_name, char *key)
+{
+	FILE *stream;
+	char *line = NULL, *pch = NULL;
+	size_t len = 0;
+	ssize_t read;
+
+	stream = fopen(file_name, "r");
+	if (!stream)
+		exit(EXIT_FAILURE);
+
+	/*
+	 * example:
+	 * ...
+	 * cpu MHz         : 2394.462
+	 * ...
+	 */
+	while ((read = getline(&line, &len, stream)) != -1) {
+		if (strstr(line, key) > 0) {
+			pch = strstr(line, ":") + 1;
+			break;
+		}
+	}
+
+	free(line);
+	fclose(stream);
+
+	return pch? strtod(pch, NULL):0;
 }
