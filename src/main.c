@@ -97,8 +97,6 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			return ERROR_GENERAL;
 		}
 
-		close(tep->synch_socket);
-
 		/* if we go here, the pre-test sync has completed */
 		PRINT_INFO("Network activity progressing...");
 	}
@@ -164,6 +162,16 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 
 	/* calculate the actual test run time */
 	actual_test_time = get_time_diff(&tep->end_time, &tep->start_time);
+
+	/* 
+	 * if actual_test_time < tep->confirmed_duration;
+	 * then this indicates that in the sender side, test is being interrupted.
+	 * hence, tell receiver about this.
+	 */
+	if (actual_test_time < tep->confirmed_duration) {
+		tell_receiver_test_exit(tep->synch_socket);
+	}
+	close(tep->synch_socket);
 
 	/* calculate resource usage */
 	get_cpu_usage( final_cpu_usage );

@@ -11,6 +11,7 @@
 
 /* sender side sync functions */
 int create_sender_sync_socket( struct ntttcp_test_endpoint *tep );
+void tell_receiver_test_exit(int sockfd);
 int query_receiver_busy_state(int sockfd);
 int negotiate_test_duration(int sockfd, int proposed_time);
 int request_to_start(int sockfd);

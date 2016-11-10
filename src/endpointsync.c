@@ -93,7 +93,28 @@ int create_sender_sync_socket( struct ntttcp_test_endpoint *tep )
 	return sockfd;
 }
 
-/* check if receiver is busy. if return:
+/* tell receiver that sender test exited */
+void tell_receiver_test_exit(int sockfd)
+{
+	int request = (int)'E'; //the int to be sent
+	int converted = htonl(request);
+	int response = 0; //the int to be received
+
+	if ( write(sockfd, &converted, sizeof(converted)) < 0 ) {
+		PRINT_ERR("cannot write data to the socket for sender/receiver sync");
+	}
+	if ( read(sockfd, &response, sizeof(response)) <= 0 ) {
+		PRINT_ERR("cannot read data from the socket for sender/receiver sync");	
+	}			
+
+	if (ntohl(response) == TEST_INTERRUPTED || ntohl(response) == TEST_FINISHED) {
+		PRINT_INFO("receiver exited from current test");
+	} else {
+		PRINT_ERR("receiver is not able to handle this interrupt");
+	}
+}
+
+/* check if receiver is busy. if receiver returns:
  * -1: indicates error;
  *  0: receiver is NOT busy;
  *  1: receiver is busy.
@@ -121,7 +142,7 @@ int query_receiver_busy_state(int sockfd)
 	return 0;  //server is not busy
 }
 
-/* negotiate a test duration time with receiver. if return:
+/* negotiate a test duration time with receiver. if receiver returns:
  * -1: indicates error;
  *  Non-Zero positive integer: negotiated test duration, returned from receiver;
  */
@@ -142,7 +163,7 @@ int negotiate_test_duration(int sockfd, int proposed_time)
 	return ntohl(response);
 }
 
-/* request server to start the test. if return:
+/* request server to start the test. if receiver returns:
  * -1: indicates error;
  *  0: failed, receiver is not ready;
  *  1: success, start the test immediately;
@@ -163,7 +184,7 @@ int request_to_start(int sockfd)
 	}
 
 	if (ntohl(response) != (int)'R') {
-		PRINT_ERR("receiver is not ready to run test");
+		PRINT_ERR("receiver is not ready to run this test");
 		return 0;   //server is not ready
 	}
 
@@ -311,6 +332,16 @@ void *create_receiver_sync_socket( void *ptr )
 					converted = ntohl(request_received);
 
 					switch (converted) {
+					case (int)'E':  //Exit current test
+						if (tep->state == TEST_RUNNING){
+							turn_off_light();
+							tep->state = TEST_INTERRUPTED;
+							asprintf(&log, "test exited because sender side was interrupted");
+							PRINT_INFO_FREE(log);
+						}
+						answer_to_send = tep->state;
+						break;
+
 					case (int)'X':  //query state
 						answer_to_send = tep->state;
 						break;
