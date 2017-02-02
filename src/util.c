@@ -81,18 +81,19 @@ void print_usage()
 	printf("\t-B   <send buffer size>    [default: %d]\n", DEFAULT_SEND_BUFFER_SIZE);
 	printf("\t-t   Time of test duration in seconds    [default: %d]\n", DEFAULT_TEST_DURATION);
 	printf("\t-N   No sync, senders will start sending as soon as possible\n");
+	printf("\t     Otherwise, will use 'destination port - 1' as sync port	[default: %d]\n", DEFAULT_BASE_DST_PORT - 1);
 
 	printf("\t-R   Show system TCP retransmit counters in log from /proc\n");
 	printf("\t-V   Verbose mode\n");
 	printf("\t-h   Help, tool usage\n");
 
 	printf("\t-m   <mapping>\tfor the purpose of compatible with Windows ntttcp usage\n");
-	printf("\t\t  Where a mapping is a NumberOfReceiverPorts,Processor,BindingIPAddress set:\n");
-	printf("\t\t  NumberOfReceiverPorts:    [default: %d]  [max: %d]\n", DEFAULT_NUM_THREADS, MAX_NUM_THREADS);
-	printf("\t\t  Processor:\t\t*, or cpuid such as 0, 1, etc \n");
-	printf("\t\t  e.g. -m 8,*,192.168.1.1\n");
-	printf("\t\t\t  If receiver role: 8 threads running on all processors;\n\t\t\tand listening on 8 ports of network on 192.168.1.1.\n");
-	printf("\t\t\t  If sender role: receiver has 8 threads running and listening on 8 ports of network on 192.168.1.1;\n\t\t\tand all sender threads will run on all processors\n");
+	printf("\t     Where a mapping is a NumberOfReceiverPorts,Processor,BindingIPAddress set:\n");
+	printf("\t     NumberOfReceiverPorts:    [default: %d]  [max: %d]\n", DEFAULT_NUM_THREADS, MAX_NUM_THREADS);
+	printf("\t     Processor:\t\t*, or cpuid such as 0, 1, etc \n");
+	printf("\t     e.g. -m 8,*,192.168.1.1\n");
+	printf("\t\t    If receiver role: 8 threads running on all processors;\n\t\t\tand listening on 8 ports of network on 192.168.1.1.\n");
+	printf("\t\t    If sender role: receiver has 8 threads running and listening on 8 ports of network on 192.168.1.1;\n\t\t\tand all sender threads will run on all processors\n");
 
 	printf("Example:\n");
 	printf("\treceiver:\n");
