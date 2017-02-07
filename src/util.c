@@ -127,7 +127,7 @@ int process_mappings(struct ntttcp_test *test)
 		if (S_THREADS == state)		{
 			threads = atoi(token);
 
-			if (0 > threads) {
+			if (1 > threads) {
 				return ERROR_ARGS;
 			}
 			test->parallel = threads;
