@@ -206,6 +206,16 @@ int verify_args(struct ntttcp_test *test)
 		test->parallel = MAX_NUM_THREADS;
 	}
 
+	if (test->conn_per_thread < 1) {
+		PRINT_INFO("You need at least one connection per thread. Using one connection per thread.");
+		test->conn_per_thread = MAX_CONNECTIONS_PER_THREAD;
+	}
+
+	if (test->parallel < 1) {
+		PRINT_INFO("You need at least one port listening on the receiver. Using one port listening on the receiver.");
+		test->parallel = MAX_NUM_THREADS;
+	}	
+	
 	if (test->domain == AF_INET6 && strcmp( test->bind_address, "0.0.0.0")== 0 )
 		test->bind_address = "::";
 
