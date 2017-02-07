@@ -205,6 +205,12 @@ int verify_args(struct ntttcp_test *test)
 		PRINT_INFO("too many threads. use the max value");
 		test->parallel = MAX_NUM_THREADS;
 	}
+	
+	if (test->parallel < 1 ) {
+		PRINT_INFO("You specified less than one thread, but the minimum is one thread. Using one thread.");
+		test->parallel = 1;
+	}
+	
 
 	if (test->domain == AF_INET6 && strcmp( test->bind_address, "0.0.0.0")== 0 )
 		test->bind_address = "::";
