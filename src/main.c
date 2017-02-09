@@ -312,16 +312,16 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 
 	while ( 1 ) {
 		/* for receiver, there are two ways to trigger test start:
-		 * a) if synch enabled, then sync thread will trigger loght_on after sync completed;
+		 * a) if synch enabled, then sync thread will trigger turn_on_light() after sync completed;
 		 *	see create_receiver_sync_socket()
-		 * b) if no synch enabled, then any tcp server accept client connections, the ligh_on will be triggered;
+		 * b) if no synch enabled, then any tcp server accept client connections, the turn_on_light() will be triggered;
 		 *	see ntttcp_server_epoll(), or ntttcp_server_select()
 		 */
 		wait_light_on();
 
 		/* reset server side perf counters at the begining, after light-is-on
 		 * this is to handle the case when: receiver in sync mode, but sender connected as no_sync mode
-		 * in this case, before loght_no, the threads have some data counted already
+		 * in this case, before light-is-on, the threads have some data counted already
 		 */
 		for (t=0; t < threads_created; t++)
 			__atomic_store_n( &(tep->server_streams[t]->total_bytes_transferred), 0, __ATOMIC_SEQ_CST );
