@@ -29,6 +29,7 @@
 #define MAX_UDP_SEND_SIZE		(65535 - 8 - 20)
 
 /* default values */
+#define THREAD_STACK_SIZE		65536
 #define DEFAULT_NUM_THREADS		16
 #define DEFAULT_CONN_PER_THREAD		4
 #define DEFAULT_BASE_DST_PORT		5001

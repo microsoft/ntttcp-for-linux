@@ -16,6 +16,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	char *log = NULL;
 	bool verbose_log = test->verbose;
 
+	pthread_attr_t  pth_attrs;
 	int threads_created = 0;
 	struct ntttcp_stream_client *cs;
 	int rc, t, n, reply_received;
@@ -105,6 +106,9 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	}
 
 	/* create threads */
+	pthread_attr_init(&pth_attrs);
+	pthread_attr_setstacksize(&pth_attrs, THREAD_STACK_SIZE);
+
 	for (t = 0; t < test->parallel; t++) {
 		for (n = 0; n < test->conn_per_thread; n++ ) {
 			cs = tep->client_streams[t * test->conn_per_thread + n];
@@ -119,13 +123,13 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	
 			if (test->protocol == TCP) {
 				rc = pthread_create(&tep->threads[threads_created],
-							NULL,
+							&pth_attrs,
 							run_ntttcp_sender_tcp_stream,
 							(void*)cs);
 			}
 			else {
 				rc = pthread_create(&tep->threads[threads_created],
-							NULL,
+							&pth_attrs,
 							run_ntttcp_sender_udp_stream,
 							(void*)cs);
 			}
@@ -140,6 +144,8 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			}
 		}
 	}
+	pthread_attr_destroy(&pth_attrs);
+
 	asprintf(&log, "%d threads created", threads_created);
 	PRINT_DBG_FREE(log);
 
