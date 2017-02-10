@@ -392,6 +392,12 @@ int main(int argc, char **argv)
 	if (signal(SIGINT, sig_handler) == SIG_ERR)
 		PRINT_ERR("main: error when setting the disposition of the signal SIGINT");
 
+	/*
+	 * Set the SIGPIPE handler to SIG_IGN.
+	 * This will prevent any socket or pipe write from causing a SIGPIPE signal.
+	 */
+	signal(SIGPIPE, SIG_IGN);
+
 	print_version();
 	test = new_ntttcp_test();
 	if (!test) {
