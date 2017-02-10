@@ -184,7 +184,8 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	get_tcp_retrans( final_tcp_retrans );
 
 	/* calculate client side throughput, but exclude the last thread as it is synch thread */
-	print_thread_result(-1, 0, 0);
+	if (verbose_log)
+		print_thread_result(-1, 0, 0);
 	for (n = 0; n < threads_created; n++) {
 		if (pthread_join(tep->threads[n], &p_retval) !=0 ) {
 			PRINT_ERR("sender: error when pthread_join");
@@ -192,7 +193,8 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		}
 		nbytes = tep->client_streams[n]->total_bytes_transferred;
 		total_bytes += nbytes;
-		print_thread_result(n, nbytes, actual_test_time);
+		if (verbose_log)
+			print_thread_result(n, nbytes, actual_test_time);
 	}
 	print_total_result(tep->test, total_bytes, actual_test_time,
 			   init_cpu_usage, final_cpu_usage,
@@ -352,7 +354,8 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 
 		/* calculate server side throughput */
 		total_bytes = 0;
-		print_thread_result(-1, 0, 0);
+		if (verbose_log)
+			print_thread_result(-1, 0, 0);
 		for (t=0; t < threads_created; t++){
 			/* exclude the sync thread */
 			if (tep->server_streams[t]->is_sync_thread)
@@ -360,7 +363,8 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 
 			nbytes = (uint64_t)__atomic_load_n( &(tep->server_streams[t]->total_bytes_transferred), __ATOMIC_SEQ_CST );
 			total_bytes += nbytes;
-			print_thread_result(t, nbytes, actual_test_time);
+			if (verbose_log)
+				print_thread_result(t, nbytes, actual_test_time);
 		}
 
 		print_total_result(tep->test, total_bytes, actual_test_time,
