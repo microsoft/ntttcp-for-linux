@@ -425,8 +425,9 @@ void print_total_result(struct ntttcp_test *test,
 	cpu_speed_mhz = read_value_from_proc(PROC_FILE_CPUINFO, CPU_SPEED_MHZ);
 	asprintf(&log, "\t cpu speed\t:%.3fMHz",	cpu_speed_mhz);
 	PRINT_INFO_FREE(log);
-	cycles_per_byte = cpu_speed_mhz * 1000 * 1000 * test_duration * total_cpu_usage / total_bytes;
-	asprintf(&log, "\t cycles/byte\t:%.2f",	total_bytes == 0? 0 : cycles_per_byte);
+	cycles_per_byte = total_bytes == 0 ? 0 : 
+				cpu_speed_mhz * 1000 * 1000 * test_duration * total_cpu_usage / total_bytes;
+	asprintf(&log, "\t cycles/byte\t:%.2f",	cycles_per_byte);
 	PRINT_INFO_FREE(log);
 
 	if (test->show_tcp_retransmit) {
@@ -565,8 +566,11 @@ uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 	int key_found = 0;
 	
 	stream = fopen(file_name, "r");
-	if (!stream)
-		exit(EXIT_FAILURE);
+	if (!stream) {
+		PRINT_ERR("failed to open file to read counters");
+		return 0;
+	}
+
 	/*
 	 * example:
 	 *
@@ -628,8 +632,10 @@ double read_value_from_proc(char *file_name, char *key)
 	ssize_t read;
 
 	stream = fopen(file_name, "r");
-	if (!stream)
-		exit(EXIT_FAILURE);
+	if (!stream) {
+		PRINT_ERR("failed to open file to read counters");
+		return 0;
+	}
 
 	/*
 	 * example:
