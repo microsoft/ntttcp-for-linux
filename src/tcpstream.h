@@ -6,7 +6,6 @@
 
 #define _GNU_SOURCE
 #include <stdio.h>
-#include <errno.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <sys/epoll.h>

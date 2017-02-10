@@ -559,6 +559,7 @@ int set_socket_non_blocking(int fd)
 
 uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 {
+	char *log;
 	FILE *stream;
 	char *line = NULL, *pch = NULL;
 	size_t len = 0;
@@ -567,7 +568,8 @@ uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 	
 	stream = fopen(file_name, "r");
 	if (!stream) {
-		PRINT_ERR("failed to open file to read counters");
+		asprintf(&log, "failed to open file: %s. errno = %d", file_name, errno);
+		PRINT_ERR_FREE(log);
 		return 0;
 	}
 
@@ -626,6 +628,7 @@ void get_tcp_retrans(struct tcp_retrans *tr)
 
 double read_value_from_proc(char *file_name, char *key)
 {
+	char *log;
 	FILE *stream;
 	char *line = NULL, *pch = NULL;
 	size_t len = 0;
@@ -633,7 +636,8 @@ double read_value_from_proc(char *file_name, char *key)
 
 	stream = fopen(file_name, "r");
 	if (!stream) {
-		PRINT_ERR("failed to open file to read counters");
+		asprintf(&log, "failed to open file: %s. errno = %d", file_name, errno);
+		PRINT_ERR_FREE(log);
 		return 0;
 	}
 
