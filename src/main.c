@@ -323,11 +323,18 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 
 		/* reset the counter?
 		 * yes. we need to reset server side perf counters at the begining, after light-is-on;
-		 * this is to handle the case when: receiver in sync mode, but sender connected as no_sync mode;
+		 * this is to handle these cases when:
+		 * a) receiver in sync mode, but sender connected as no_sync mode;
 		 * in this case, before light-is-on, the threads have some data counted already.
+		 * b) receiver is running in a loop; the previous test has finished but the sockets are still working and 
+		 * receiving data (data arrived with latency); so we need to reset the counter before a new test starting.
 		 *
-		 * this "reset" is implemented by using __sync_lock_test_and_set() later of this function. 
+		 * this "reset" is implemented by using __sync_lock_test_and_set().
+		 * reference: https://gcc.gnu.org/onlinedocs/gcc-4.4.7/gcc/Atomic-Builtins.html
 		 */
+		for (t=0; t < threads_created; t++)
+			/* discard the bytes received before test starting */
+			(uint64_t)__sync_lock_test_and_set(&(tep->server_streams[t]->total_bytes_transferred), 0);
 
 		get_cpu_usage( init_cpu_usage );
 		get_tcp_retrans( init_tcp_retrans );
@@ -362,9 +369,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 			if (tep->server_streams[t]->is_sync_thread)
 				continue;
 
-			/* read and reset the counter
-			 * reference: https://gcc.gnu.org/onlinedocs/gcc-4.4.7/gcc/Atomic-Builtins.html
-			 */
+			/* read and reset the counter */
 			nbytes = (uint64_t)__sync_lock_test_and_set(&(tep->server_streams[t]->total_bytes_transferred), 0);
 			total_bytes += nbytes;
 			if (verbose_log)
