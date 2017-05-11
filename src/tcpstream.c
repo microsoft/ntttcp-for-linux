@@ -71,7 +71,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	struct sockaddr_storage local_addr; //for local address
 	socklen_t local_addr_size;          //local address size
 
-	char *remote_addr_str; //used to get remote peer's ip address
+	char *remote_addr_str = NULL; //used to get remote peer's ip address
 	int ip_addr_max_size;  //used to get remote peer's ip address
 	char *port_str;        //used to get remote peer's port number
 	struct addrinfo hints, *remote_serv_info, *p; //to get remote peer's sockaddr
@@ -124,7 +124,8 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 
 		/* 3. connect to receiver */
 		ip_addr_max_size = (sc->domain == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
-		if ( (remote_addr_str = (char *)malloc(ip_addr_max_size)) == (char *)NULL) {
+		remote_addr_str = malloc(ip_addr_max_size);
+		if (remote_addr_str == NULL) {
 			PRINT_ERR("cannot allocate memory for ip address string");
 			freeaddrinfo(remote_serv_info);
 			return 0;
