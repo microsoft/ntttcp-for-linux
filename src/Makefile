@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -O2 -flto
+CFLAGS=-Wall -W -O2 -flto
 CLIBS=-pthread
 OUT=ntttcp
 OBJS=ntttcp.o util.o tcpstream.o udpstream.o endpointsync.o multithreading.o main.o
