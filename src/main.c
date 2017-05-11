@@ -17,9 +17,9 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	bool verbose_log = test->verbose;
 
 	pthread_attr_t  pth_attrs;
-	int threads_created = 0;
+	uint n, t, threads_created = 0;
 	struct ntttcp_stream_client *cs;
-	int rc, t, n, reply_received;
+	int rc, reply_received;
 	uint64_t nbytes = 0, total_bytes = 0;
 	void *p_retval;
 	struct timeval now;
@@ -215,9 +215,9 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	char *log = NULL;
 	bool verbose_log = test->verbose;
 
-	int threads_created = 0;
+	uint t, threads_created = 0;
 	struct ntttcp_stream_server *ss;
-	int rc, t;
+	int rc;
 	uint64_t nbytes = 0, total_bytes = 0;
 	struct timeval now;
 	double actual_test_time = 0;
@@ -332,7 +332,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		 * this "reset" is implemented by using __sync_lock_test_and_set().
 		 * reference: https://gcc.gnu.org/onlinedocs/gcc-4.4.7/gcc/Atomic-Builtins.html
 		 */
-		for (t=0; t < threads_created; t++)
+		for (t = 0; t < threads_created; t++)
 			/* discard the bytes received before test starting */
 			(uint64_t)__sync_lock_test_and_set(&(tep->server_streams[t]->total_bytes_transferred), 0);
 
