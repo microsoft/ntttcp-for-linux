@@ -200,11 +200,22 @@ int verify_args(struct ntttcp_test *test)
 		PRINT_INFO("too many connections per server port. use the max value");
 		test->conn_per_thread = MAX_CONNECTIONS_PER_THREAD;
 	}
+	
+	if (test->conn_per_thread < 1) {
+		PRINT_INFO("You specified less than one connection per thread, but the minimum is one. Using one connection per thread.");
+		test->conn_per_thread = 1;
+	}	
 
 	if (test->parallel > MAX_NUM_THREADS) {
 		PRINT_INFO("too many threads. use the max value");
 		test->parallel = MAX_NUM_THREADS;
 	}
+	
+	if (test->parallel < 1 ) {
+		PRINT_INFO("You specified less than one thread, but the minimum is one thread. Using one thread.");
+		test->parallel = 1;
+	}
+	
 
 	if (test->domain == AF_INET6 && strcmp( test->bind_address, "0.0.0.0")== 0 )
 		test->bind_address = "::";
