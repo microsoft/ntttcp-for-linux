@@ -596,7 +596,7 @@ uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 		}
 		/* try to locate the key */
 		if (strcmp(section, line) < 0) {
-			if (strstr(line, key) > 0) {
+			if (strstr(line, key) != NULL) {
 				pch = line;
 			while ((pch = strtok(pch, " "))) {
 					key_found++;
@@ -648,7 +648,7 @@ double read_value_from_proc(char *file_name, char *key)
 	 * ...
 	 */
 	while ((read = getline(&line, &len, stream)) != -1) {
-		if (strstr(line, key) > 0) {
+		if (strstr(line, key) != NULL) {
 			pch = strstr(line, ":") + 1;
 			break;
 		}
