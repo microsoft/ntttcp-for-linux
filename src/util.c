@@ -127,7 +127,7 @@ int process_mappings(struct ntttcp_test *test)
 		if (S_THREADS == state)		{
 			threads = atoi(token);
 
-			if (0 > threads) {
+			if (1 > threads) {
 				return ERROR_ARGS;
 			}
 			test->parallel = threads;
@@ -206,6 +206,16 @@ int verify_args(struct ntttcp_test *test)
 		test->parallel = MAX_NUM_THREADS;
 	}
 
+	if (test->conn_per_thread < 1) {
+		PRINT_INFO("invalid connections-per-server-port provided. use 1");
+		test->conn_per_thread = 1;
+	}
+
+	if (test->parallel < 1) {
+		PRINT_INFO("invalid number-of-server-ports provided. use 1");
+		test->parallel = 1;
+	}	
+	
 	if (test->domain == AF_INET6 && strcmp( test->bind_address, "0.0.0.0")== 0 )
 		test->bind_address = "::";
 
