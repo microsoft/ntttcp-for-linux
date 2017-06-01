@@ -16,8 +16,8 @@
 
 void *run_ntttcp_sender_udp_stream( void *ptr );
 void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc );
-void *run_ntttcp_sender_udp6_stream( struct ntttcp_stream_client * sc );
+//void *run_ntttcp_sender_udp6_stream( struct ntttcp_stream_client * sc );
 
 void *run_ntttcp_receiver_udp_stream( void *ptr );
 void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss  );
-void *run_ntttcp_receiver_udp6_stream( struct ntttcp_stream_server * ss  );
+//void *run_ntttcp_receiver_udp6_stream( struct ntttcp_stream_server * ss  );

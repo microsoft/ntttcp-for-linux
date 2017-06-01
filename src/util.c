@@ -386,7 +386,7 @@ void print_thread_result(int tid, uint64_t total_bytes, double test_duration)
 			return;
 
 		log_tmp = format_throughput(total_bytes, test_duration);
-		asprintf(&log, "\t%d\t %.2f\t %s", tid, test_duration, log_tmp);
+		ASPRINTF(&log, "\t%d\t %.2f\t %s", tid, test_duration, log_tmp);
 		free(log_tmp);
 		PRINT_INFO_FREE(log);
 	}
@@ -413,61 +413,61 @@ void print_total_result(struct ntttcp_test *test,
 	time_diff = final_cpu_usage->time - init_cpu_usage->time;
 
 	PRINT_INFO("#####  Totals:  #####");
-	asprintf(&log, "test duration\t:%.2f seconds", test_duration);
+	ASPRINTF(&log, "test duration\t:%.2f seconds", test_duration);
 	PRINT_INFO_FREE(log);
-	asprintf(&log, "total bytes\t:%" PRIu64, total_bytes);
+	ASPRINTF(&log, "total bytes\t:%" PRIu64, total_bytes);
 	PRINT_INFO_FREE(log);
 
 	log_tmp = format_throughput(total_bytes, test_duration);
-	asprintf(&log, "\t throughput\t:%s", log_tmp);
+	ASPRINTF(&log, "\t throughput\t:%s", log_tmp);
 	free(log_tmp);
 	PRINT_INFO_FREE(log);
 
 	total_cpu_usage = ((final_cpu_usage->clock - init_cpu_usage->clock) * 1000000.0 / CLOCKS_PER_SEC) / time_diff;
-	asprintf(&log, "total cpu time\t:%.2f%%", total_cpu_usage * 100);
+	ASPRINTF(&log, "total cpu time\t:%.2f%%", total_cpu_usage * 100);
 	PRINT_INFO_FREE(log);
-	asprintf(&log, "\t user time\t:%.2f%%",
+	ASPRINTF(&log, "\t user time\t:%.2f%%",
 		((final_cpu_usage->user_time - init_cpu_usage->user_time) / time_diff) * 100);
 	PRINT_INFO_FREE(log);
-	asprintf(&log, "\t system time\t:%.2f%%",
+	ASPRINTF(&log, "\t system time\t:%.2f%%",
 		((final_cpu_usage->system_time - init_cpu_usage->system_time) / time_diff) * 100);
 	PRINT_INFO_FREE(log);
 	cpu_speed_mhz = read_value_from_proc(PROC_FILE_CPUINFO, CPU_SPEED_MHZ);
-	asprintf(&log, "\t cpu speed\t:%.3fMHz",	cpu_speed_mhz);
+	ASPRINTF(&log, "\t cpu speed\t:%.3fMHz",	cpu_speed_mhz);
 	PRINT_INFO_FREE(log);
 	cycles_per_byte = total_bytes == 0 ? 0 : 
 				cpu_speed_mhz * 1000 * 1000 * test_duration * total_cpu_usage / total_bytes;
-	asprintf(&log, "\t cycles/byte\t:%.2f",	cycles_per_byte);
+	ASPRINTF(&log, "\t cycles/byte\t:%.2f",	cycles_per_byte);
 	PRINT_INFO_FREE(log);
 
 	if (test->show_tcp_retransmit) {
 		PRINT_INFO("tcp retransmit:");
 		/*
-		asprintf(&log, "\t InitRetransSegs:%" PRIu64, init_tcp_retrans->retrans_segs);
+		ASPRINTF(&log, "\t InitRetransSegs:%" PRIu64, init_tcp_retrans->retrans_segs);
 		PRINT_INFO_FREE(log);
-		asprintf(&log, "\t End RetransSegs:%" PRIu64, final_tcp_retrans->retrans_segs);
+		ASPRINTF(&log, "\t End RetransSegs:%" PRIu64, final_tcp_retrans->retrans_segs);
 		PRINT_INFO_FREE(log);
 		*/
 		counter_diff = final_tcp_retrans->retrans_segs - init_tcp_retrans->retrans_segs;
-		asprintf(&log, "\t retrans_segments/sec\t:%.2f", counter_diff / test_duration);
+		ASPRINTF(&log, "\t retrans_segments/sec\t:%.2f", counter_diff / test_duration);
 		PRINT_INFO_FREE(log);
 		counter_diff = final_tcp_retrans->tcp_lost_retransmit - init_tcp_retrans->tcp_lost_retransmit;
-		asprintf(&log, "\t lost_retrans/sec\t:%.2f", counter_diff / test_duration);
+		ASPRINTF(&log, "\t lost_retrans/sec\t:%.2f", counter_diff / test_duration);
 		PRINT_INFO_FREE(log);
 		counter_diff = final_tcp_retrans->tcp_syn_retrans - init_tcp_retrans->tcp_syn_retrans;
-		asprintf(&log, "\t syn_retrans/sec\t:%.2f", counter_diff / test_duration);
+		ASPRINTF(&log, "\t syn_retrans/sec\t:%.2f", counter_diff / test_duration);
 		PRINT_INFO_FREE(log);
 		counter_diff = final_tcp_retrans->tcp_fast_retrans - init_tcp_retrans->tcp_fast_retrans;
-		asprintf(&log, "\t fast_retrans/sec\t:%.2f", counter_diff / test_duration);
+		ASPRINTF(&log, "\t fast_retrans/sec\t:%.2f", counter_diff / test_duration);
 		PRINT_INFO_FREE(log);
 		counter_diff = final_tcp_retrans->tcp_forward_retrans - init_tcp_retrans->tcp_forward_retrans;
-		asprintf(&log, "\t forward_retrans/sec\t:%.2f", counter_diff / test_duration);
+		ASPRINTF(&log, "\t forward_retrans/sec\t:%.2f", counter_diff / test_duration);
 		PRINT_INFO_FREE(log);
 		counter_diff = final_tcp_retrans->tcp_slowStart_retrans - init_tcp_retrans->tcp_slowStart_retrans;
-		asprintf(&log, "\t slowStart_retrans/sec\t:%.2f", counter_diff / test_duration);
+		ASPRINTF(&log, "\t slowStart_retrans/sec\t:%.2f", counter_diff / test_duration);
 		PRINT_INFO_FREE(log);
 		counter_diff = final_tcp_retrans->tcp_retrans_fail - init_tcp_retrans->tcp_retrans_fail;
-		asprintf(&log, "\t retrans_fail/sec\t:%.2f", counter_diff / test_duration);
+		ASPRINTF(&log, "\t retrans_fail/sec\t:%.2f", counter_diff / test_duration);
 		PRINT_INFO_FREE(log);
 	}
 
@@ -519,7 +519,7 @@ char *format_throughput(uint64_t bytes_transferred, double test_duration)
 		unit_idx++;
 	}
 
-	asprintf(&throughput, "%.2f%s", tmp, unit_bps[unit_idx]);
+	ASPRINTF(&throughput, "%.2f%s", tmp, unit_bps[unit_idx]);
 	return throughput;
 }
 
@@ -578,7 +578,7 @@ uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 	
 	stream = fopen(file_name, "r");
 	if (!stream) {
-		asprintf(&log, "failed to open file: %s. errno = %d", file_name, errno);
+		ASPRINTF(&log, "failed to open file: %s. errno = %d", file_name, errno);
 		PRINT_ERR_FREE(log);
 		return 0;
 	}
@@ -646,7 +646,7 @@ double read_value_from_proc(char *file_name, char *key)
 
 	stream = fopen(file_name, "r");
 	if (!stream) {
-		asprintf(&log, "failed to open file: %s. errno = %d", file_name, errno);
+		ASPRINTF(&log, "failed to open file: %s. errno = %d", file_name, errno);
 		PRINT_ERR_FREE(log);
 		return 0;
 	}

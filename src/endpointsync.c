@@ -39,7 +39,7 @@ int create_sender_sync_socket( struct ntttcp_test_endpoint *tep )
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = test->domain;
 	hints.ai_socktype = TCP;
-	asprintf(&port_str, "%d", sync_port);
+	ASPRINTF(&port_str, "%d", sync_port);
 	if (getaddrinfo(test->bind_address, port_str, &hints, &serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");
 		return 0;
@@ -57,11 +57,11 @@ int create_sender_sync_socket( struct ntttcp_test_endpoint *tep )
 		ip_address_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, ip_address_str, ip_address_max_size);
 		if (( i = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
 			if (i == -1) {
-				asprintf(&log, "failed to connect to receiver: %s:%d on socket: %d. errno = %d", ip_address_str, sync_port, sockfd, errno);
+				ASPRINTF(&log, "failed to connect to receiver: %s:%d on socket: %d. errno = %d", ip_address_str, sync_port, sockfd, errno);
 				PRINT_ERR_FREE(log);
 			}
 			else {
-				asprintf(&log, "failed to connect to receiver: %s:%d on socket: %d. error code = %d", ip_address_str, sync_port, sockfd, i);
+				ASPRINTF(&log, "failed to connect to receiver: %s:%d on socket: %d. error code = %d", ip_address_str, sync_port, sockfd, i);
 				PRINT_ERR_FREE(log);
 			}
 			freeaddrinfo(serv_info);
@@ -77,11 +77,11 @@ int create_sender_sync_socket( struct ntttcp_test_endpoint *tep )
 	/* get local port number */
 	local_addr_size = sizeof(local_addr);
 	if (getsockname(sockfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0) {
-		asprintf(&log, "failed to get local address information for socket: %d", sockfd);
+		ASPRINTF(&log, "failed to get local address information for socket: %d", sockfd);
 		PRINT_ERR_FREE(log);
 	}
 
-	asprintf(&log, "Sync connection: local:%d [socket:%d] --> %s:%d",
+	ASPRINTF(&log, "Sync connection: local:%d [socket:%d] --> %s:%d",
 		ntohs(test->domain == AF_INET?
 					((struct sockaddr_in *)&local_addr)->sin_port:
 					((struct sockaddr_in6 *)&local_addr)->sin6_port),
@@ -236,7 +236,7 @@ void *create_receiver_sync_socket( void *ptr )
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = test->domain;
 	hints.ai_socktype = TCP;  //sync, only use TCP protocol
-	asprintf(&port_str, "%d", ss->server_port);
+	ASPRINTF(&port_str, "%d", ss->server_port);
 	if (getaddrinfo(test->bind_address, port_str, &hints, &serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");
 		return NULL;
@@ -284,7 +284,7 @@ void *create_receiver_sync_socket( void *ptr )
 
 				/* then we got a new connection */
 				if (set_socket_non_blocking(newfd) == -1) {
-					asprintf(&log, "cannot set the new socket as non-blocking: %d", newfd);
+					ASPRINTF(&log, "cannot set the new socket as non-blocking: %d", newfd);
 					PRINT_DBG_FREE(log);
 				}
 				FD_SET(newfd, &ss->read_set); /* add the new one to read_set */
@@ -296,11 +296,11 @@ void *create_receiver_sync_socket( void *ptr )
 				/* print out new connection info */
 				local_addr_size = sizeof(local_addr);
 				if (getsockname(newfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0) {
-					asprintf(&log, "failed to get local address information for the new socket: %d", newfd);
+					ASPRINTF(&log, "failed to get local address information for the new socket: %d", newfd);
 					PRINT_DBG_FREE(log);
 				}
 				else{
-					asprintf(&log, "Sync connection: %s:%d --> local:%d [socket %d]",
+					ASPRINTF(&log, "Sync connection: %s:%d --> local:%d [socket %d]",
 							ip_address_str = retrive_ip_address_str(&peer_addr, ip_address_str, ip_address_max_size),
 							ntohs( test->domain == AF_INET ?
 									((struct sockaddr_in *)&peer_addr)->sin_port
@@ -317,11 +317,11 @@ void *create_receiver_sync_socket( void *ptr )
 				/* got error or connection closed by client */
 				if ((nbytes = read(current_fd, &request_received, sizeof(request_received))) <= 0) {
 					if (nbytes == 0) {
-						asprintf(&log, "socket closed: %d", current_fd);
+						ASPRINTF(&log, "socket closed: %d", current_fd);
 						PRINT_DBG_FREE(log);
 					}
 					else{
-						asprintf(&log, "error: cannot read data from socket: %d", current_fd);
+						ASPRINTF(&log, "error: cannot read data from socket: %d", current_fd);
 						PRINT_INFO_FREE(log);
 					}
 					close(current_fd);
@@ -336,7 +336,7 @@ void *create_receiver_sync_socket( void *ptr )
 						if (tep->state == TEST_RUNNING){
 							turn_off_light();
 							tep->state = TEST_INTERRUPTED;
-							asprintf(&log, "test exited because sender side was interrupted");
+							ASPRINTF(&log, "test exited because sender side was interrupted");
 							PRINT_INFO_FREE(log);
 						}
 						answer_to_send = tep->state;
@@ -359,7 +359,7 @@ void *create_receiver_sync_socket( void *ptr )
 							answer_to_send = converted;
 							tep->confirmed_duration = answer_to_send;
 
-							asprintf(&log, "test duration negotiated is: %d seconds", answer_to_send);
+							ASPRINTF(&log, "test duration negotiated is: %d seconds", answer_to_send);
 							PRINT_INFO_FREE(log);
 						}
 						else {

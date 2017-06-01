@@ -84,7 +84,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			return ERROR_GENERAL;
 		}
 		if (reply_received != test->duration) {
-			asprintf(&log, "test duration negotiated is: %d seconds", reply_received);
+			ASPRINTF(&log, "test duration negotiated is: %d seconds", reply_received);
 			PRINT_INFO_FREE(log);
 		}
 		tep->confirmed_duration = reply_received;
@@ -146,7 +146,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	}
 	pthread_attr_destroy(&pth_attrs);
 
-	asprintf(&log, "%d threads created", threads_created);
+	ASPRINTF(&log, "%d threads created", threads_created);
 	PRINT_DBG_FREE(log);
 
 	turn_on_light();
@@ -309,7 +309,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		}
 	}
 
-	asprintf(&log, "%d threads created", threads_created);
+	ASPRINTF(&log, "%d threads created", threads_created);
 	PRINT_DBG_FREE(log);
 
 	while ( 1 ) {

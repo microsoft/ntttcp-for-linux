@@ -57,7 +57,7 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	(*(struct sockaddr_in*)&local_addr).sin_port = 0;
 
 	if (( i = bind(sockfd, (struct sockaddr *)&local_addr, sa_size)) < 0 ){
-		asprintf(&log, "failed to bind socket: %d to a local ephemeral port. errno = %d", sockfd, errno);
+		ASPRINTF(&log, "failed to bind socket: %d to a local ephemeral port. errno = %d", sockfd, errno);
 		PRINT_ERR_FREE(log);
 		return 0;
 	}
@@ -66,7 +66,7 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	/* wait for sync thread to finish */
 	wait_light_on();
 
-	asprintf(&log, "Running UDP stream: local:%d [socket:%d] --> %s:%d",
+	ASPRINTF(&log, "Running UDP stream: local:%d [socket:%d] --> %s:%d",
 		ntohs(((struct sockaddr_in *)&local_addr)->sin_port),
 		sockfd,
 		sc->bind_address,
@@ -99,10 +99,10 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	return 0;
 }
 
-void *run_ntttcp_sender_udp6_stream( struct ntttcp_stream_client * sc )
-{
-	return 0;
-}
+//void *run_ntttcp_sender_udp6_stream( struct ntttcp_stream_client * sc )
+//{
+//	return 0;
+//}
 
 /************************************************************/
 //		UDP receiver functions
@@ -147,7 +147,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 	hints.ai_family = ss->domain;
 	hints.ai_socktype = ss->protocol;
 
-	asprintf(&port_str, "%d", ss->server_port);
+	ASPRINTF(&port_str, "%d", ss->server_port);
 	if (getaddrinfo(ss->bind_address, port_str, &hints, &serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");
 		return 0;
@@ -172,7 +172,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 
 		/*
 		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *) &opt, sizeof(opt)) < 0) {
-			asprintf(&log, "cannot set socket options: %d", sockfd);
+			ASPRINTF(&log, "cannot set socket options: %d", sockfd);
 			PRINT_ERR_FREE(log);
 			freeaddrinfo(serv_info);
 			free(local_addr_str);
@@ -180,7 +180,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 			return 0;
 		}
 		if ( set_socket_non_blocking(sockfd) == -1) {
-			asprintf(&log, "cannot set socket as non-blocking: %d", sockfd);
+			ASPRINTF(&log, "cannot set socket as non-blocking: %d", sockfd);
 			PRINT_ERR_FREE(log);
 			freeaddrinfo(serv_info);
 			free(local_addr_str);
@@ -190,7 +190,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 		*/
 
 		if (( i = bind(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
-			asprintf(&log,
+			ASPRINTF(&log,
 				"failed to bind the socket to local address: %s on socket: %d. errcode = %d",
 				local_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr,
 									local_addr_str,
@@ -199,7 +199,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 				i );
 
 			if (i == -1) //append more info to log
-				asprintf(&log, "%s. errcode = %d", log, errno);
+				ASPRINTF(&log, "%s. errcode = %d", log, errno);
 			PRINT_DBG_FREE(log);
 			continue;
 		}
@@ -210,7 +210,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 	freeaddrinfo(serv_info);
 	free(local_addr_str);
 	if (p == NULL) {
-		asprintf(&log, "cannot bind the socket on address: %s", ss->bind_address);
+		ASPRINTF(&log, "cannot bind the socket on address: %s", ss->bind_address);
 		PRINT_ERR_FREE(log);
 		close(sockfd);
 		return 0;
@@ -232,7 +232,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 			__sync_fetch_and_add(&(ss->total_bytes_transferred), nbytes);
 		}
 		else {
-			asprintf(&log, "error: cannot read data from socket: %d", sockfd);
+			ASPRINTF(&log, "error: cannot read data from socket: %d", sockfd);
 			PRINT_INFO_FREE(log);
 		}
 	}
@@ -240,7 +240,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 	return (void *)nbytes;
 }
 
-void *run_ntttcp_receiver_udp6_stream( struct ntttcp_stream_server * ss )
-{
-	return 0;
-}
+//void *run_ntttcp_receiver_udp6_stream( struct ntttcp_stream_server * ss )
+//{
+//	return 0;
+//}

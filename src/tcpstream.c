@@ -83,7 +83,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = sc->domain;
 	hints.ai_socktype = sc->protocol;
-	asprintf(&port_str, "%d", sc->server_port);
+	ASPRINTF(&port_str, "%d", sc->server_port);
 	if (getaddrinfo(sc->bind_address, port_str, &hints, &remote_serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");
 		return 0;
@@ -115,7 +115,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 		}
 
 		if (( i = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0 ) {
-			asprintf(&log,
+			ASPRINTF(&log,
 				"failed to bind socket: %d to a local ephemeral port. errno = %d",
 				sockfd,
 				errno);
@@ -135,7 +135,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 							ip_addr_max_size);
 		if (( i = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
 			if (i == -1) {
-				asprintf(&log,
+				ASPRINTF(&log,
 					"failed to connect to receiver: %s:%d on socket: %d. errno = %d",
 					remote_addr_str,
 					sc->server_port,
@@ -144,7 +144,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 				PRINT_ERR_FREE(log);
 			}
 			else {
-				asprintf(&log,
+				ASPRINTF(&log,
 					"failed to connect to receiver: %s:%d on socket: %d. error code = %d",
 					remote_addr_str,
 					sc->server_port,
@@ -164,13 +164,13 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 
 	/* get local TCP ephemeral port number assigned, for logging */
 	if (getsockname(sockfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0) {
-		asprintf(&log,
+		ASPRINTF(&log,
 			"failed to get local address information for socket: %d",
 			sockfd);
 		PRINT_ERR_FREE(log);
 	}
 
-	asprintf(&log, "New connection: local:%d [socket:%d] --> %s:%d",
+	ASPRINTF(&log, "New connection: local:%d [socket:%d] --> %s:%d",
 			ntohs(sc->domain == AF_INET?
 					((struct sockaddr_in *)&local_addr)->sin_port:
 					((struct sockaddr_in6 *)&local_addr)->sin6_port),
@@ -229,7 +229,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = ss->domain;
 	hints.ai_socktype = ss->protocol;
-	asprintf(&port_str, "%d", ss->server_port);
+	ASPRINTF(&port_str, "%d", ss->server_port);
 	if (getaddrinfo(ss->bind_address, port_str, &hints, &serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");
 		return -1;
@@ -253,7 +253,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 		}
 
 		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *) &opt, sizeof(opt)) < 0) {
-			asprintf(&log, "cannot set socket options: %d", sockfd);
+			ASPRINTF(&log, "cannot set socket options: %d", sockfd);
 			PRINT_ERR_FREE(log);
 			freeaddrinfo(serv_info);
 			free(local_addr_str);
@@ -261,7 +261,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 			return -1;
 		}
 		if ( set_socket_non_blocking(sockfd) == -1) {
-			asprintf(&log, "cannot set socket as non-blocking: %d", sockfd);
+			ASPRINTF(&log, "cannot set socket as non-blocking: %d", sockfd);
 			PRINT_ERR_FREE(log);
 			freeaddrinfo(serv_info);
 			free(local_addr_str);
@@ -269,7 +269,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 			return -1;
 		}
 		if (( i = bind(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
-			asprintf(&log,
+			ASPRINTF(&log,
 				"failed to bind the socket to local address: %s on socket: %d. errcode = %d",
 				local_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr,
 									local_addr_str,
@@ -278,7 +278,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 				i );
 
 			if (i == -1) //append more info to log
-				asprintf(&log, "%s. errcode = %d", log, errno);
+				ASPRINTF(&log, "%s. errcode = %d", log, errno);
 			PRINT_DBG_FREE(log);
 			continue;
 		}
@@ -289,7 +289,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 	freeaddrinfo(serv_info);
 	free(local_addr_str);
 	if (p == NULL) {
-		asprintf(&log, "cannot bind the socket on address: %s", ss->bind_address);
+		ASPRINTF(&log, "cannot bind the socket on address: %s", ss->bind_address);
 		PRINT_ERR_FREE(log);
 		close(sockfd);
 		return -1;
@@ -297,7 +297,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 
 	ss->listener = sockfd;
 	if (listen(ss->listener, MAX_CONNECTIONS_PER_THREAD) < 0) {
-		asprintf(&log, "failed to listen on address: %s: %d", ss->bind_address, ss->server_port);
+		ASPRINTF(&log, "failed to listen on address: %s: %d", ss->bind_address, ss->server_port);
 		PRINT_ERR_FREE(log);
 		close(ss->listener);
 		return -1;
@@ -309,7 +309,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 	if (ss->listener > ss->max_fd)
 		ss->max_fd = ss->listener;
 
-	asprintf(&log, "ntttcp server is listening on %s:%d", ss->bind_address, ss->server_port);
+	ASPRINTF(&log, "ntttcp server is listening on %s:%d", ss->bind_address, ss->server_port);
 	PRINT_DBG_FREE(log);
 
 	return ss->listener;
@@ -397,17 +397,17 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 						}
 					}
 					if (set_socket_non_blocking(newfd) == -1) {
-						asprintf(&log, "cannot set the new socket as non-blocking: %d", newfd);
+						ASPRINTF(&log, "cannot set the new socket as non-blocking: %d", newfd);
 						PRINT_DBG_FREE(log);
 					}
 
 					local_addr_size = sizeof(local_addr);
 					if (getsockname(newfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0) {
-						asprintf(&log, "failed to get local address information for the new socket: %d", newfd);
+						ASPRINTF(&log, "failed to get local address information for the new socket: %d", newfd);
 						PRINT_DBG_FREE(log);
 					}
 					else {
-						asprintf(&log, "New connection: %s:%d --> local:%d [socket %d]",
+						ASPRINTF(&log, "New connection: %s:%d --> local:%d [socket %d]",
 								ip_address_str = retrive_ip_address_str(&peer_addr, ip_address_str, ip_addr_max_size),
 								ntohs( ss->domain == AF_INET ?
 										((struct sockaddr_in *)&peer_addr)->sin_port
@@ -438,11 +438,11 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 				/* got error or connection closed by client */
 				if ((nbytes = n_read(current_fd, buffer, bytes_to_be_read)) <= 0) {
 					if (nbytes == 0) {
-						asprintf(&log, "socket closed: %d", i);
+						ASPRINTF(&log, "socket closed: %d", i);
 						PRINT_DBG_FREE(log);
 					}
 					else {
-						asprintf(&log, "error: cannot read data from socket: %d", i);
+						ASPRINTF(&log, "error: cannot read data from socket: %d", i);
 						PRINT_INFO_FREE(log);
 						err_code = ERROR_NETWORK_READ;
 						/* need to continue ss and check other socket, so don't end the ss */
@@ -523,7 +523,7 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 
 				/* then we got a new connection */
 				if (set_socket_non_blocking(newfd) == -1) {
-					asprintf(&log, "cannot set the new socket as non-blocking: %d", newfd);
+					ASPRINTF(&log, "cannot set the new socket as non-blocking: %d", newfd);
 					PRINT_DBG_FREE(log);
 				}
 				FD_SET(newfd, &ss->read_set); /* add the new one to read_set */
@@ -535,11 +535,11 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 				/* print out new connection info */
 				local_addr_size = sizeof(local_addr);
 				if (getsockname(newfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0) {
-					asprintf(&log, "failed to get local address information for the new socket: %d", newfd);
+					ASPRINTF(&log, "failed to get local address information for the new socket: %d", newfd);
 					PRINT_DBG_FREE(log);
 				}
 				else{
-					asprintf(&log, "New connection: %s:%d --> local:%d [socket %d]",
+					ASPRINTF(&log, "New connection: %s:%d --> local:%d [socket %d]",
 							ip_address_str = retrive_ip_address_str(&peer_addr, ip_address_str, ip_addr_max_size),
 							ntohs( ss->domain == AF_INET ?
 									((struct sockaddr_in *)&peer_addr)->sin_port
@@ -564,11 +564,11 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 				/* got error or connection closed by client */
 				if ((nbytes = n_read(current_fd, buffer, bytes_to_be_read)) <= 0) {
 					if (nbytes == 0) {
-						asprintf(&log, "socket closed: %d", current_fd);
+						ASPRINTF(&log, "socket closed: %d", current_fd);
 						PRINT_DBG_FREE(log);
 					}
 					else{
-						asprintf(&log, "error: cannot read data from socket: %d", current_fd);
+						ASPRINTF(&log, "error: cannot read data from socket: %d", current_fd);
 						PRINT_INFO_FREE(log);
 						err_code = ERROR_NETWORK_READ;
 						/* need to continue test and check other socket, so don't end the test */
@@ -599,19 +599,19 @@ void *run_ntttcp_receiver_tcp_stream( void *ptr )
 
 	ss->listener = ntttcp_server_listen(ss);
 	if (ss->listener < 0) {
-		asprintf(&log, "listen error at port: %d", ss->server_port);
+		ASPRINTF(&log, "listen error at port: %d", ss->server_port);
 		PRINT_ERR_FREE(log);
 	}
 	else{
 		if (ss->use_epoll == true) {
 			if ( ntttcp_server_epoll(ss) != NO_ERROR ) {
-				asprintf(&log, "epoll error at port: %d", ss->server_port);
+				ASPRINTF(&log, "epoll error at port: %d", ss->server_port);
 				PRINT_ERR_FREE(log);
 			}
 		}
 		else {
 			if ( ntttcp_server_select(ss) != NO_ERROR ) {
-				asprintf(&log, "select error at port: %d", ss->server_port);
+				ASPRINTF(&log, "select error at port: %d", ss->server_port);
 				PRINT_ERR_FREE(log);
 			}
 		}
