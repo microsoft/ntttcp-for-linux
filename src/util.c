@@ -368,6 +368,49 @@ void get_cpu_usage(struct cpu_usage *cu)
 	cu->system_time = usage.ru_stime.tv_sec * 1000000.0 + usage.ru_stime.tv_usec;
 }
 
+void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
+{
+	unsigned long long int user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice;
+	user = nice = system = idle = iowait = irq = softirq = steal = guest = guest_nice = 0;
+
+	FILE* file = fopen(PROC_FILE_STAT, "r");
+	if (file == NULL) {
+		PRINT_ERR("Cannot open /proc/stat");
+		return;
+	}
+
+	char buffer[256];
+	int cpus = -1;
+	do {
+		cpus++;
+		char *s = fgets(buffer, 255, file);
+		/* We should not reach to the file end, because we only read lines starting with 'cpu' */
+		if (s == NULL) {
+			PRINT_ERR("Error when reading /proc/stat");
+			return;
+		}
+
+		/* Assume the first line is stat for all CPUs. */
+		if (cpus == 0) {
+			sscanf(buffer,
+			      "cpu  %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu",
+			      &user, &nice, &system, &idle, &iowait,
+			      &irq, &softirq, &steal, &guest, &guest_nice);
+		}
+	} while(buffer[0] == 'c' && buffer[1] == 'p' && buffer[2] == 'u');
+
+	fclose(file);
+
+	cups->nproc = MAX(cpus - 1, 1);
+	cups->user_time = user;
+	cups->system_time = system;
+	cups->idle_time = idle;
+	cups->iowait_time = iowait;
+	cups->softirq_time = softirq;
+
+	cups->total_time = user + nice + system + idle + iowait + irq + softirq + steal;
+}
+
 double get_time_diff(struct timeval *t1, struct timeval *t2)
 {
 	return fabs( (t1->tv_sec + (t1->tv_usec / 1000000.0)) - (t2->tv_sec + (t2->tv_usec / 1000000.0)) );
@@ -397,6 +440,8 @@ void print_total_result(struct ntttcp_test *test,
 			double test_duration,
 			struct cpu_usage *init_cpu_usage,
 			struct cpu_usage *final_cpu_usage,
+			struct cpu_usage_from_proc_stat *init_cpu_ps,
+			struct cpu_usage_from_proc_stat *final_cpu_ps,
 			struct tcp_retrans *init_tcp_retrans,
 			struct tcp_retrans *final_tcp_retrans )
 {
@@ -406,6 +451,8 @@ void print_total_result(struct ntttcp_test *test,
 	double cpu_speed_mhz;
 	double cycles_per_byte;
 	uint64_t counter_diff;
+	long double cpu_ps_total_diff;
+	double cpu_ps_user_usage, cpu_ps_system_usage, cpu_ps_iowait_usage, cpu_ps_softirq_usage, cpu_ps_idle_usage;
 
 	if (test_duration == 0)
 		return;
@@ -421,23 +468,6 @@ void print_total_result(struct ntttcp_test *test,
 	log_tmp = format_throughput(total_bytes, test_duration);
 	ASPRINTF(&log, "\t throughput\t:%s", log_tmp);
 	free(log_tmp);
-	PRINT_INFO_FREE(log);
-
-	total_cpu_usage = ((final_cpu_usage->clock - init_cpu_usage->clock) * 1000000.0 / CLOCKS_PER_SEC) / time_diff;
-	ASPRINTF(&log, "total cpu time\t:%.2f%%", total_cpu_usage * 100);
-	PRINT_INFO_FREE(log);
-	ASPRINTF(&log, "\t user time\t:%.2f%%",
-		((final_cpu_usage->user_time - init_cpu_usage->user_time) / time_diff) * 100);
-	PRINT_INFO_FREE(log);
-	ASPRINTF(&log, "\t system time\t:%.2f%%",
-		((final_cpu_usage->system_time - init_cpu_usage->system_time) / time_diff) * 100);
-	PRINT_INFO_FREE(log);
-	cpu_speed_mhz = read_value_from_proc(PROC_FILE_CPUINFO, CPU_SPEED_MHZ);
-	ASPRINTF(&log, "\t cpu speed\t:%.3fMHz",	cpu_speed_mhz);
-	PRINT_INFO_FREE(log);
-	cycles_per_byte = total_bytes == 0 ? 0 : 
-				cpu_speed_mhz * 1000 * 1000 * test_duration * total_cpu_usage / total_bytes;
-	ASPRINTF(&log, "\t cycles/byte\t:%.2f",	cycles_per_byte);
 	PRINT_INFO_FREE(log);
 
 	if (test->show_tcp_retransmit) {
@@ -471,6 +501,66 @@ void print_total_result(struct ntttcp_test *test,
 		PRINT_INFO_FREE(log);
 	}
 
+	cpu_speed_mhz = read_value_from_proc(PROC_FILE_CPUINFO, CPU_SPEED_MHZ);
+	if (test->show_cpu_ps) {
+		if (final_cpu_ps->nproc == init_cpu_ps->nproc) {
+			ASPRINTF(&log, "cpu cores\t:%d", final_cpu_ps->nproc);
+			PRINT_INFO_FREE(log);
+		} else {
+			PRINT_ERR("inconsistant number of CPUs found");
+		}
+
+		ASPRINTF(&log, "\t cpu speed\t:%.3fMHz", cpu_speed_mhz);
+		PRINT_INFO_FREE(log);
+
+		cpu_ps_total_diff = final_cpu_ps->total_time - init_cpu_ps->total_time;
+
+		cpu_ps_user_usage = (final_cpu_ps->user_time - init_cpu_ps->user_time) / cpu_ps_total_diff;
+		ASPRINTF(&log, "\t user\t\t:%.2f%%", cpu_ps_user_usage * 100);
+		PRINT_INFO_FREE(log);
+
+		cpu_ps_system_usage = (final_cpu_ps->system_time - init_cpu_ps->system_time) / cpu_ps_total_diff;
+		ASPRINTF(&log, "\t system\t\t:%.2f%%", cpu_ps_system_usage * 100);
+		PRINT_INFO_FREE(log);
+
+		cpu_ps_idle_usage = (final_cpu_ps->idle_time - init_cpu_ps->idle_time) / cpu_ps_total_diff;
+		ASPRINTF(&log, "\t idle\t\t:%.2f%%", cpu_ps_idle_usage * 100);
+		PRINT_INFO_FREE(log);
+
+		cpu_ps_iowait_usage = (final_cpu_ps->iowait_time - init_cpu_ps->iowait_time) / cpu_ps_total_diff;
+		ASPRINTF(&log, "\t iowait\t\t:%.2f%%", cpu_ps_iowait_usage * 100);
+		PRINT_INFO_FREE(log);
+
+		cpu_ps_softirq_usage = (final_cpu_ps->softirq_time - init_cpu_ps->softirq_time) / cpu_ps_total_diff;
+		ASPRINTF(&log, "\t softirq\t:%.2f%%", cpu_ps_softirq_usage * 100);
+		PRINT_INFO_FREE(log);
+
+		cycles_per_byte = total_bytes == 0 ? 0 :
+					cpu_speed_mhz * 1000 * 1000 * test_duration * (final_cpu_ps->nproc) * (1 - cpu_ps_idle_usage) / total_bytes;
+		ASPRINTF(&log, "\t cycles/byte\t:%.2f",	cycles_per_byte);
+		PRINT_INFO_FREE(log);
+	} else {
+		/* legacy code. deprecated. */
+		total_cpu_usage = ((final_cpu_usage->clock - init_cpu_usage->clock) * 1000000.0 / CLOCKS_PER_SEC) / time_diff;
+		ASPRINTF(&log, "total cpu time\t:%.2f%%", total_cpu_usage * 100);
+		PRINT_INFO_FREE(log);
+
+		ASPRINTF(&log, "\t user time\t:%.2f%%",
+			((final_cpu_usage->user_time - init_cpu_usage->user_time) / time_diff) * 100);
+		PRINT_INFO_FREE(log);
+
+		ASPRINTF(&log, "\t system time\t:%.2f%%",
+			((final_cpu_usage->system_time - init_cpu_usage->system_time) / time_diff) * 100);
+		PRINT_INFO_FREE(log);
+
+		ASPRINTF(&log, "\t cpu speed\t:%.3fMHz", cpu_speed_mhz);
+		PRINT_INFO_FREE(log);
+
+		cycles_per_byte = total_bytes == 0 ? 0 :
+					cpu_speed_mhz * 1000 * 1000 * test_duration * total_cpu_usage / total_bytes;
+		ASPRINTF(&log, "\t cycles/byte\t:%.2f",	cycles_per_byte);
+		PRINT_INFO_FREE(log);
+	}
 	printf("---------------------------------------------------------\n");
 }
 

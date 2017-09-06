@@ -57,3 +57,5 @@
 #define PROC_FILE_NETSTAT 		"/proc/net/netstat"
 #define CPU_SPEED_MHZ			"cpu MHz"
 #define PROC_FILE_CPUINFO		"/proc/cpuinfo"
+
+#define PROC_FILE_STAT			"/proc/stat"
