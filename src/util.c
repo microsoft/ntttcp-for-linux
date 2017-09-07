@@ -238,6 +238,11 @@ int verify_args(struct ntttcp_test *test)
 		test->send_buf_size = MAX_UDP_SEND_SIZE;
 	}
 
+	if (test->duration <= 0) {
+		test->duration = DEFAULT_TEST_DURATION;
+		PRINT_INFO("invalid test duration provided. use the default value");
+	}
+
 	return NO_ERROR;
 }
 
@@ -502,45 +507,46 @@ void print_total_result(struct ntttcp_test *test,
 	}
 
 	cpu_speed_mhz = read_value_from_proc(PROC_FILE_CPUINFO, CPU_SPEED_MHZ);
-	if (test->show_cpu_ps) {
-		if (final_cpu_ps->nproc == init_cpu_ps->nproc) {
-			ASPRINTF(&log, "cpu cores\t:%d", final_cpu_ps->nproc);
-			PRINT_INFO_FREE(log);
-		} else {
-			PRINT_ERR("inconsistant number of CPUs found");
-		}
-
-		ASPRINTF(&log, "\t cpu speed\t:%.3fMHz", cpu_speed_mhz);
-		PRINT_INFO_FREE(log);
-
-		cpu_ps_total_diff = final_cpu_ps->total_time - init_cpu_ps->total_time;
-
-		cpu_ps_user_usage = (final_cpu_ps->user_time - init_cpu_ps->user_time) / cpu_ps_total_diff;
-		ASPRINTF(&log, "\t user\t\t:%.2f%%", cpu_ps_user_usage * 100);
-		PRINT_INFO_FREE(log);
-
-		cpu_ps_system_usage = (final_cpu_ps->system_time - init_cpu_ps->system_time) / cpu_ps_total_diff;
-		ASPRINTF(&log, "\t system\t\t:%.2f%%", cpu_ps_system_usage * 100);
-		PRINT_INFO_FREE(log);
-
-		cpu_ps_idle_usage = (final_cpu_ps->idle_time - init_cpu_ps->idle_time) / cpu_ps_total_diff;
-		ASPRINTF(&log, "\t idle\t\t:%.2f%%", cpu_ps_idle_usage * 100);
-		PRINT_INFO_FREE(log);
-
-		cpu_ps_iowait_usage = (final_cpu_ps->iowait_time - init_cpu_ps->iowait_time) / cpu_ps_total_diff;
-		ASPRINTF(&log, "\t iowait\t\t:%.2f%%", cpu_ps_iowait_usage * 100);
-		PRINT_INFO_FREE(log);
-
-		cpu_ps_softirq_usage = (final_cpu_ps->softirq_time - init_cpu_ps->softirq_time) / cpu_ps_total_diff;
-		ASPRINTF(&log, "\t softirq\t:%.2f%%", cpu_ps_softirq_usage * 100);
-		PRINT_INFO_FREE(log);
-
-		cycles_per_byte = total_bytes == 0 ? 0 :
-					cpu_speed_mhz * 1000 * 1000 * test_duration * (final_cpu_ps->nproc) * (1 - cpu_ps_idle_usage) / total_bytes;
-		ASPRINTF(&log, "\t cycles/byte\t:%.2f",	cycles_per_byte);
+	if (final_cpu_ps->nproc == init_cpu_ps->nproc) {
+		ASPRINTF(&log, "cpu cores\t:%d", final_cpu_ps->nproc);
 		PRINT_INFO_FREE(log);
 	} else {
+		PRINT_ERR("Inconsistant number of CPUs found");
+	}
+
+	ASPRINTF(&log, "\t cpu speed\t:%.3fMHz", cpu_speed_mhz);
+	PRINT_INFO_FREE(log);
+
+	cpu_ps_total_diff = final_cpu_ps->total_time - init_cpu_ps->total_time;
+
+	cpu_ps_user_usage = (final_cpu_ps->user_time - init_cpu_ps->user_time) / cpu_ps_total_diff;
+	ASPRINTF(&log, "\t user\t\t:%.2f%%", cpu_ps_user_usage * 100);
+	PRINT_INFO_FREE(log);
+
+	cpu_ps_system_usage = (final_cpu_ps->system_time - init_cpu_ps->system_time) / cpu_ps_total_diff;
+	ASPRINTF(&log, "\t system\t\t:%.2f%%", cpu_ps_system_usage * 100);
+	PRINT_INFO_FREE(log);
+
+	cpu_ps_idle_usage = (final_cpu_ps->idle_time - init_cpu_ps->idle_time) / cpu_ps_total_diff;
+	ASPRINTF(&log, "\t idle\t\t:%.2f%%", cpu_ps_idle_usage * 100);
+	PRINT_INFO_FREE(log);
+
+	cpu_ps_iowait_usage = (final_cpu_ps->iowait_time - init_cpu_ps->iowait_time) / cpu_ps_total_diff;
+	ASPRINTF(&log, "\t iowait\t\t:%.2f%%", cpu_ps_iowait_usage * 100);
+	PRINT_INFO_FREE(log);
+
+	cpu_ps_softirq_usage = (final_cpu_ps->softirq_time - init_cpu_ps->softirq_time) / cpu_ps_total_diff;
+	ASPRINTF(&log, "\t softirq\t:%.2f%%", cpu_ps_softirq_usage * 100);
+	PRINT_INFO_FREE(log);
+
+	cycles_per_byte = total_bytes == 0 ? 0 :
+			cpu_speed_mhz * 1000 * 1000 * test_duration * (final_cpu_ps->nproc) * (1 - cpu_ps_idle_usage) / total_bytes;
+	ASPRINTF(&log, "\t cycles/byte\t:%.2f",	cycles_per_byte);
+	PRINT_INFO_FREE(log);
+
+	if (test->verbose) {
 		/* legacy code. deprecated. */
+		PRINT_INFO("legacy code for CPU usage statistics:");
 		total_cpu_usage = ((final_cpu_usage->clock - init_cpu_usage->clock) * 1000000.0 / CLOCKS_PER_SEC) / time_diff;
 		ASPRINTF(&log, "total cpu time\t:%.2f%%", total_cpu_usage * 100);
 		PRINT_INFO_FREE(log);
@@ -553,11 +559,8 @@ void print_total_result(struct ntttcp_test *test,
 			((final_cpu_usage->system_time - init_cpu_usage->system_time) / time_diff) * 100);
 		PRINT_INFO_FREE(log);
 
-		ASPRINTF(&log, "\t cpu speed\t:%.3fMHz", cpu_speed_mhz);
-		PRINT_INFO_FREE(log);
-
 		cycles_per_byte = total_bytes == 0 ? 0 :
-					cpu_speed_mhz * 1000 * 1000 * test_duration * total_cpu_usage / total_bytes;
+				cpu_speed_mhz * 1000 * 1000 * test_duration * total_cpu_usage / total_bytes;
 		ASPRINTF(&log, "\t cycles/byte\t:%.2f",	cycles_per_byte);
 		PRINT_INFO_FREE(log);
 	}
@@ -712,7 +715,7 @@ found:
 	free(line);
 	fclose(stream);
 
-	return pch? strtoull(pch, NULL, 10):0;
+	return pch ? strtoull(pch, NULL, 10) : 0;
 }
 
 void get_tcp_retrans(struct tcp_retrans *tr)
@@ -733,6 +736,7 @@ double read_value_from_proc(char *file_name, char *key)
 	char *line = NULL, *pch = NULL;
 	size_t len = 0;
 	ssize_t read;
+	double speed = 0;
 
 	stream = fopen(file_name, "r");
 	if (!stream) {
@@ -757,5 +761,9 @@ double read_value_from_proc(char *file_name, char *key)
 	free(line);
 	fclose(stream);
 
-	return pch? strtod(pch, NULL):0;
+	speed = pch ? strtod(pch, NULL) : 0;
+	if (speed == 0)
+		PRINT_ERR("Failed to read CPU speed from /proc/cpuinfo");
+
+	return speed;
 }

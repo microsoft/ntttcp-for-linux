@@ -36,7 +36,7 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->send_buf_size    = DEFAULT_SEND_BUFFER_SIZE; //128K
 	test->duration         = DEFAULT_TEST_DURATION;
 	test->no_synch         = false;
-	test->show_cpu_ps      = true;
+	test->show_tcp_retransmit = false;
 	test->verbose          = false;
 }
 
