@@ -55,7 +55,11 @@ void print_flags(struct ntttcp_test *test)
 	if (test->client_role)
 		printf("%s:\t %ld\n", "sender socket buffer (bytes)", test->send_buf_size);
 
-	printf("%s:\t\t %d\n", "test duration (sec)", test->duration);
+	if (test->duration == 0)
+		printf("%s:\t\t %s\n", "test duration (sec)", "continuous");
+	else
+		printf("%s:\t\t %d\n", "test duration (sec)", test->duration);
+
 	printf("%s:\t %s\n", "show system tcp retransmit", test->show_tcp_retransmit ? "yes" : "no");
 	printf("%s:\t\t\t %s\n", "verbose mode", test->verbose ? "enabled" : "disabled");
 	printf("---------------------------------------------------------\n");
@@ -238,9 +242,12 @@ int verify_args(struct ntttcp_test *test)
 		test->send_buf_size = MAX_UDP_SEND_SIZE;
 	}
 
-	if (test->duration <= 0) {
+	if (test->duration < 0) {
 		test->duration = DEFAULT_TEST_DURATION;
 		PRINT_INFO("invalid test duration provided. use the default value");
+	}
+	if (test->duration == 0) {
+		PRINT_INFO("running test in continuous mode. please monitor throughput by other tools");
 	}
 
 	return NO_ERROR;

@@ -67,6 +67,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 		else
 			total_threads = test->parallel * test->conn_per_thread + 1;
 
+		e->total_threads = total_threads;
 		e->client_streams = (struct ntttcp_stream_client **) malloc( sizeof( struct  ntttcp_stream_client ) * total_threads );
 		if(!e->client_streams) {
 			free (e);
@@ -93,6 +94,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 		else
 			total_threads = test->parallel + 1;
 
+		e->total_threads = total_threads;
 		e->server_streams = (struct  ntttcp_stream_server **) malloc( sizeof( struct  ntttcp_stream_server ) * total_threads );
 		if(!e->server_streams) {
 			free (e);
@@ -105,7 +107,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 
 		e->threads = malloc( total_threads * sizeof(pthread_t) );
 		if(!e->threads) {
-			for(i = 0; i < total_threads ; i++ ){
+			for(i = 0; i < total_threads; i++ ){
 				free( e->server_streams[i] );
 			}
 			free (e->server_streams);
@@ -114,6 +116,18 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 		}
 	}
 	return e;
+}
+
+void set_ntttcp_test_endpoint_test_continuous(struct ntttcp_test_endpoint* e)
+{
+	int i;
+
+	if (e->endpoint_role == ROLE_SENDER)
+		for (i = 0; i < e->total_threads; i++)
+			e->client_streams[i]->continuous_mode = true;
+	else
+		for (i = 0; i < e->total_threads; i++)
+			e->server_streams[i]->continuous_mode = true;
 }
 
 void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
@@ -166,6 +180,7 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test *test)
 	s->verbose = test->verbose;
 	s->is_sync_thread = 0;
 	s->no_synch = test->no_synch;
+	s->continuous_mode = (test->duration == 0);
 	s->total_bytes_transferred = 0;
 	return s;
 }
@@ -186,6 +201,7 @@ struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test *test)
 	s->verbose = test->verbose;
 	s->is_sync_thread = 0;
 	s->no_synch = test->no_synch;
+	s->continuous_mode = (test->duration == 0);
 	s->use_epoll = test->use_epoll;
 	s->total_bytes_transferred = 0;
 	//other fields will be assigned at run time

@@ -6,6 +6,7 @@
 
 #define _GNU_SOURCE
 #include <stdio.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -18,7 +19,7 @@ void turn_on_light( void );
 void turn_off_light( void );
 void wait_light_on( void );
 void wait_light_off( void );
-int is_light_turned_on( void );
+int is_light_turned_on( bool ignore );
 
 void sig_handler(int signo);
 void run_test_timer(int duration);

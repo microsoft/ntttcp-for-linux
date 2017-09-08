@@ -354,17 +354,34 @@ void *create_receiver_sync_socket( void *ptr )
 						PRINT_INFO("Network activity progressing...");
 						break;
 
-					default:  //negotiate test duration, use the max one
-						if (tep->test->duration < converted) {
-							answer_to_send = converted;
-							tep->confirmed_duration = answer_to_send;
+					default:
+						/* the sender request to run with "continuous_mode" (duration == 0),
+						 * receiver then will accept that mode.
+						 */
+						if (converted == 0) {
+							if (tep->test->duration !=0)
+								PRINT_INFO("test is negotiated to run with continuous mode");
+							answer_to_send = 0;
+							tep->confirmed_duration = 0;
+						} else {
+						/* if receiver is specified to run with "continuous_mode", then tell sender to do so;
+						 * else, compare and use the max time as negotiated test duration time
+						 */
+							if (tep->test->duration == 0) {
+								//then tell sender to run with "continuous_mode" too
+								answer_to_send = 0;
+								tep->confirmed_duration = 0;
+							} else if (tep->test->duration < converted) {
+								answer_to_send = converted;
+								tep->confirmed_duration = answer_to_send;
 
-							ASPRINTF(&log, "test duration negotiated is: %d seconds", answer_to_send);
-							PRINT_INFO_FREE(log);
-						}
-						else {
-							answer_to_send = tep->test->duration;
-							tep->confirmed_duration = answer_to_send;
+								ASPRINTF(&log, "test duration negotiated is: %d seconds", answer_to_send);
+								PRINT_INFO_FREE(log);
+							}
+							else {
+								answer_to_send = tep->test->duration;
+								tep->confirmed_duration = answer_to_send;
+							}
 						}
 					}
 

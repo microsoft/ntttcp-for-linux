@@ -94,16 +94,23 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			PRINT_ERR("sender: receiver is busy with another test");
 			return ERROR_GENERAL;
 		}
+
 		reply_received = negotiate_test_duration(tep->synch_socket, test->duration);
 		if (reply_received == -1) {
 			PRINT_ERR("sender: failed to negotiate test duration with receiver");
 			return ERROR_GENERAL;
 		}
 		if (reply_received != test->duration) {
-			ASPRINTF(&log, "test duration negotiated is: %d seconds", reply_received);
-			PRINT_INFO_FREE(log);
+			if (reply_received == 0) {
+				PRINT_INFO("test is negotiated to run with continuous mode");
+				set_ntttcp_test_endpoint_test_continuous(tep);
+			} else {
+				ASPRINTF(&log, "test duration negotiated is: %d seconds", reply_received);
+				PRINT_INFO_FREE(log);
+			}
 		}
 		tep->confirmed_duration = reply_received;
+
 		reply_received = request_to_start(tep->synch_socket);
 		if (reply_received == -1) {
 			PRINT_ERR("sender: failed to sync with receiver to start test");
@@ -167,18 +174,26 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 
 	turn_on_light();
 
+	/* in the case of running in continuous_mode */
+	if (tep->confirmed_duration == 0) {
+		sleep (UINT_MAX);
+		/* either sleep has elapsed, or sleep was interrupted  by a signal */
+		goto cleanup;
+	}
+
 	get_cpu_usage( init_cpu_usage );
 	get_cpu_usage_from_proc_stat( init_cpu_ps );
 	get_tcp_retrans( init_tcp_retrans );
 
 	/* run the timer. it will trigger turn_off_light() after timer timeout */
-	run_test_timer(tep->confirmed_duration );
+	run_test_timer(tep->confirmed_duration);
 	tep->state = TEST_RUNNING;
 	gettimeofday(&now, NULL);
 	tep->start_time = now;
 
 	/* wait test done */
 	wait_light_off();
+
 	tep->state = TEST_FINISHED;
 	gettimeofday(&now, NULL);
 	tep->end_time = now;
@@ -219,6 +234,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			   init_cpu_ps, final_cpu_ps,
 			   init_tcp_retrans, final_tcp_retrans);
 
+cleanup:
 	free (init_cpu_usage);
 	free (final_cpu_usage);
 	free (init_cpu_ps);
@@ -338,7 +354,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 				create_receiver_sync_socket,
 				(void*)tep);
 		if (rc) {
-				PRINT_ERR("pthread_create() create thread failed");
+			PRINT_ERR("pthread_create() create thread failed");
 			err_code = ERROR_PTHREAD_CREATE;
 		}
 		else {
@@ -372,6 +388,13 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		for (t = 0; t < threads_created; t++)
 			/* discard the bytes received before test starting */
 			(uint64_t)__sync_lock_test_and_set(&(tep->server_streams[t]->total_bytes_transferred), 0);
+
+		/* in the case of running in continuous_mode */
+		if (tep->confirmed_duration == 0) {
+			sleep (UINT_MAX);
+			/* either sleep has elapsed, or sleep was interrupted  by a signal */
+			goto cleanup;
+		}
 
 		get_cpu_usage( init_cpu_usage );
 		get_cpu_usage_from_proc_stat( init_cpu_ps );
@@ -426,6 +449,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		pthread_join(tep->threads[t], NULL);
 	}
 
+cleanup:
 	free (init_cpu_usage);
 	free (final_cpu_usage);
 	free (init_tcp_retrans);

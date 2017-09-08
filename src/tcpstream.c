@@ -192,7 +192,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	//fill_buffer(buffer, sc->send_buf_size);
 	memset(buffer, 'A', sc->send_buf_size * sizeof(char));
 
-	while (is_light_turned_on()){
+	while ( is_light_turned_on(sc->continuous_mode) ) {
 		n = n_write(sockfd, buffer, strlen(buffer));
 		if (n < 0) {
 			PRINT_ERR("cannot write data to a socket");

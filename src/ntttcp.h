@@ -34,7 +34,7 @@ struct ntttcp_test
 	uint	client_base_port;    /* '-f' to pin client source port based on this */
 	ulong	recv_buf_size;       /* '-b' for receive buffer option */
 	ulong	send_buf_size;       /* '-B' for send buffer option */
-	int	duration;            /* '-t' for total duration in sec of test */
+	int	duration;            /* '-t' for total duration in sec of test (0: continuous_mode) */
 	bool 	show_tcp_retransmit; /* '-R' to display TCP retransmit counters in log from /proc */
 	bool	verbose;             /* '-V' for verbose logging */
 };
@@ -48,6 +48,7 @@ struct ntttcp_test_endpoint{
 	struct	timeval start_time;   /* timestamp of test started on this endpoint */
 	struct	timeval end_time;     /* timestamp of test ended on this endpoint */
 	int	synch_socket;         /* the synch channel for sender/receiver sync */
+	int	total_threads;	      /* total threads, including synch thread */
 
 	struct	ntttcp_stream_client **client_streams; /* alloc memory for this if client/sender role */
 	struct	ntttcp_stream_server **server_streams; /* alloc memory for this if server/receiver role */
@@ -65,6 +66,7 @@ struct ntttcp_stream_client{
 	ulong	send_buf_size;
 	int	is_sync_thread;
 	bool	no_synch;
+	bool	continuous_mode;
 	bool	verbose;
 
 	uint64_t        total_bytes_transferred;
@@ -79,6 +81,7 @@ struct ntttcp_stream_server{
 	ulong	recv_buf_size;
 	int	is_sync_thread;
 	bool	no_synch;
+	bool    continuous_mode;
 	bool	verbose;
 	bool	use_epoll;
 
@@ -94,6 +97,7 @@ struct ntttcp_test *new_ntttcp_test();
 void default_ntttcp_test(struct ntttcp_test *test);
 
 struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, int endpoint_role);
+void set_ntttcp_test_endpoint_test_continuous(struct ntttcp_test_endpoint* e);
 void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e);
 
 struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test *test);
