@@ -764,13 +764,12 @@ double read_value_from_proc(char *file_name, char *key)
 			break;
 		}
 	}
-
-	free(line);
-	fclose(stream);
-
 	speed = pch ? strtod(pch, NULL) : 0;
 	if (speed == 0)
 		PRINT_ERR("Failed to read CPU speed from /proc/cpuinfo");
 
+	free(line);
+	fclose(stream);
+	
 	return speed;
 }
