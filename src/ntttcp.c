@@ -22,6 +22,8 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->server_role      = false;
 	test->client_role      = false;
 	test->daemon           = false;
+	test->multi_clients_mode  = false;
+	test->last_client      = false;
 	test->use_epoll        = false;
 	test->mapping          = "16,*,*";
 	test->bind_address     = "0.0.0.0";
@@ -61,6 +63,9 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	e->start_time = now;
 	e->end_time = now;
 	e->synch_socket = 0;
+	e->num_remote_endpoints = 0;
+	memset(e->remote_endpoints, -1, MAX_REMOTE_ENDPOINTS);
+
 	if (endpoint_role == ROLE_SENDER) {
 		if (test->no_synch == true)
 			total_threads = test->parallel * test->conn_per_thread;

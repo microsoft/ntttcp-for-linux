@@ -17,7 +17,13 @@ void print_flags(struct ntttcp_test *test)
 	if (test->server_role && test->use_epoll )
 		printf("%s\n", "*** use epoll()");
 
-	if (test->no_synch )
+	if (test->multi_clients_mode)
+		printf("%s:\t\t %s\n", "multiple clients", "yes");
+
+	if (test->last_client)
+		printf("%s:\t\t\t %s\n", "last client", "yes");
+
+	if (test->no_synch)
 		printf("%s\n", "*** no sender/receiver synch");
 
 	//printf("%s:\t\t\t %s\n", "mapping", test->mapping);
@@ -68,10 +74,14 @@ void print_flags(struct ntttcp_test *test)
 void print_usage()
 {
 	printf("Author: %s\n", AUTHOR_NAME);
-	printf("ntttcp: [-r|-s|-D|-m <mapping>|-n|-6|-u|-p|-b|-B|-t|-N|-V|-v|-h]\n\n");
+	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-P|-n|-6|-u|-p|-f|-b|-B|-t|-N|-R|-V|-h|-m <mapping>\n\n");
 	printf("\t-r   Run as a receiver\n");
 	printf("\t-s   Run as a sender\n");
 	printf("\t-D   Run as daemon\n");
+
+	printf("\t-M   [receiver only] multi-clients mode\n");
+	printf("\t-L   [sender only] indicates this is the last client when receiver is running with multi-clients mode\n");
+
 	printf("\t-e   [receiver only] use epoll() instead of select()\n");
 
 	printf("\t-P   Number of ports listening on receiver side\n");
@@ -200,6 +210,16 @@ int verify_args(struct ntttcp_test *test)
 		test->server_role = true;
 	}
 
+	if (test->client_role && test->multi_clients_mode) {
+		PRINT_ERR("multi-clients mode ('-M') is only for receiver role");
+		return ERROR_ARGS;
+	}
+
+	if (test->server_role && test->last_client) {
+		PRINT_ERR("last-client ('-L') is only for sender role");
+		return ERROR_ARGS;
+	}
+
 	if (test->conn_per_thread > MAX_CONNECTIONS_PER_THREAD) {
 		PRINT_INFO("too many connections per server port. use the max value");
 		test->conn_per_thread = MAX_CONNECTIONS_PER_THREAD;
@@ -260,6 +280,8 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		{"receiver", optional_argument, NULL, 'r'},
 		{"sender", optional_argument, NULL, 's'},
 		{"daemon", no_argument, NULL, 'D'},
+		{"multi-clients", no_argument, NULL, 'M'},
+		{"last-client", no_argument, NULL, 'L'},
 		{"epoll", no_argument, NULL, 'e'},
 		{"mapping", required_argument, NULL, 'm'},
 		{"nports", required_argument, NULL, 'P'},
@@ -280,7 +302,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 	int flag;
 
-	while ((flag = getopt_long(argc, argv, "r::s::Dem:P:n:6up:f::b:B:t:NRVh", longopts, NULL)) != -1) {
+	while ((flag = getopt_long(argc, argv, "r::s::DMLem:P:n:6up:f::b:B:t:NRVh", longopts, NULL)) != -1) {
 		switch (flag) {
 		case 'r':
 			test->server_role = true;
@@ -296,6 +318,14 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 		case 'D':
 			test->daemon = true;
+			break;
+
+		case 'M':
+			test->multi_clients_mode = true;
+			break;
+
+		case 'L':
+			test->last_client = true;
 			break;
 
 		case 'e':

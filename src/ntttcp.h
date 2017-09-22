@@ -19,6 +19,10 @@ struct ntttcp_test
 {
 	bool	server_role;        /* '-s' for client */
 	bool	client_role;        /* '-r' for server */
+
+	bool	multi_clients_mode;  /* '-M' server/receiver only; will server/receiver work with multi-clients mode? */
+	bool	last_client;	     /* '-L' client/sender only; indicates that this is the last client when test with multi-clients mode */
+
 	bool	daemon;             /* '-D' for daemon mode */
 	bool	use_epoll;          /* '-e' for epoll() to watch fd for events. receiver only */
 	char	*mapping;           /* '-m' for connection(s),Processor,StartReceiver IP map set */
@@ -35,6 +39,7 @@ struct ntttcp_test
 	ulong	recv_buf_size;       /* '-b' for receive buffer option */
 	ulong	send_buf_size;       /* '-B' for send buffer option */
 	int	duration;            /* '-t' for total duration in sec of test (0: continuous_mode) */
+
 	bool 	show_tcp_retransmit; /* '-R' to display TCP retransmit counters in log from /proc */
 	bool	verbose;             /* '-V' for verbose logging */
 };
@@ -54,6 +59,9 @@ struct ntttcp_test_endpoint{
 	struct	ntttcp_stream_server **server_streams; /* alloc memory for this if server/receiver role */
 
 	pthread_t	*threads;
+
+	int	num_remote_endpoints;
+	int	remote_endpoints[MAX_REMOTE_ENDPOINTS];
 };
 
 /* manage a client test connection/stream */

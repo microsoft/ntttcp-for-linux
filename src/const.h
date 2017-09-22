@@ -5,7 +5,7 @@
 // ----------------------------------------------------------------------------------
 
 #define TOOL_NAME "NTTTCP for Linux"
-#define TOOL_VERSION "1.2.0"
+#define TOOL_VERSION "1.3.0"
 #define AUTHOR_NAME "Shihua (Simon) Xiao, sixiao@microsoft.com"
 
 #define TCP 				SOCK_STREAM
@@ -23,6 +23,7 @@
 /* max values */
 #define MAX_CONNECTIONS_PER_THREAD	512
 #define MAX_NUM_THREADS			512
+#define MAX_REMOTE_ENDPOINTS		8
 #define MAX_EPOLL_EVENTS		512
 #define MAX_NUM_TOTAL_CONNECTIONS	MAX_NUM_THREADS * MAX_CONNECTIONS_PER_THREAD
 /* Maximum size of sending a UDP packet is (64K - 1) - IP header - UDP header */
@@ -49,7 +50,7 @@
 #define ERROR_EPOLL			-1107
 #define ERROR_NETWORK_READ		-1108
 #define ERROR_NETWORK_WRITE		-1109
-#define ERROR_RECEIVER_NOT_READY		-1110
+#define ERROR_RECEIVER_NOT_READY	-1110
 
 /* /proc file for re-transmit counters */
 #define TCP_SECTION			"Tcp"

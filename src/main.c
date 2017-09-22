@@ -111,7 +111,8 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		}
 		tep->confirmed_duration = reply_received;
 
-		reply_received = request_to_start(tep->synch_socket);
+		reply_received = request_to_start(tep->synch_socket,
+						  tep->test->last_client ? (int)'L' : (int)'R' );
 		if (reply_received == -1) {
 			PRINT_ERR("sender: failed to sync with receiver to start test");
 			return ERROR_GENERAL;
@@ -409,6 +410,8 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		/* wait test done */
 		wait_light_off();
 		tep->state = TEST_FINISHED;
+		tep->num_remote_endpoints = 0;
+		memset(tep->remote_endpoints, -1, MAX_REMOTE_ENDPOINTS);
 		gettimeofday(&now, NULL);
 		tep->end_time = now;
 
