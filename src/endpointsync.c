@@ -241,6 +241,8 @@ void *create_receiver_sync_socket( void *ptr )
 	char *port_str;
 	int ip_address_max_size;
 
+	int i = 0;
+
 	ss = new_ntttcp_server_stream(test);
 	if (ss == NULL) {
 		PRINT_ERR("receiver: error when creating new server stream");
@@ -402,7 +404,7 @@ void *create_receiver_sync_socket( void *ptr )
 
 							/* notify all clients to run! */
 							answer_to_send = (int)'R';
-							for (int i = 0; i < MAX_REMOTE_ENDPOINTS; i++)
+							for (i = 0; i < MAX_REMOTE_ENDPOINTS; i++)
 								if (tep->remote_endpoints[i] != -1)
 									reply_sender(tep->remote_endpoints[i], answer_to_send);
 
