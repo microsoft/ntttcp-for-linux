@@ -159,7 +159,8 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			}
 
 			if (rc) {
-				PRINT_ERR("pthread_create() create thread failed");
+				ASPRINTF(&log, "pthread_create() create thread failed. errno = %d", errno);
+				PRINT_ERR_FREE(log);
 				err_code = ERROR_PTHREAD_CREATE;
 				continue;
 			}

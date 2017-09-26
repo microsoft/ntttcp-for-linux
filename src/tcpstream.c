@@ -17,10 +17,12 @@ int n_read(int fd, char *buffer, size_t total)
 	while (left > 0) {
 		rtn = read(fd, buffer, left);
 		if (rtn < 0) {
-			if (errno == EINTR || errno == EAGAIN)
+			if (errno == EINTR || errno == EAGAIN) {
 				break;
-			else
+			} else {
+				printf("socket read error: %d\n", errno);
 				return ERROR_NETWORK_READ;
+			}
 		}
 		else if (rtn == 0)
 			break;
@@ -40,10 +42,12 @@ int n_write(int fd, const char *buffer, size_t total)
 	while (left > 0) {
 		rtn = write(fd, buffer, left);
 		if (rtn < 0) {
-			if (errno == EINTR || errno == EAGAIN)
+			if (errno == EINTR || errno == EAGAIN) {
 				return total - left;
-			else
+			} else {
+				printf("socket write error: %d\n", errno);
 				return ERROR_NETWORK_WRITE;
+			}
 		}
 		else if (rtn == 0)
 			return ERROR_NETWORK_WRITE;
@@ -101,10 +105,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 
 		local_addr_size = sizeof(local_addr);
 
-		/*
-		   2. bind this socket fd to a local random/ephemeral TCP port,
-		      so that the sender side will have randomized TCP ports.
-		*/
+		/* 2. bind this socket fd to a local (random/ephemeral, or fixed) TCP port */
 		if (sc->domain == AF_INET) {
 			(*(struct sockaddr_in*)&local_addr).sin_family = AF_INET;
 			(*(struct sockaddr_in*)&local_addr).sin_port = htons(sc->client_port);
@@ -116,8 +117,9 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 
 		if (( i = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0 ) {
 			ASPRINTF(&log,
-				"failed to bind socket: %d to a local ephemeral port. errno = %d",
+				"failed to bind socket: %d to a local port: %d. errno = %d",
 				sockfd,
+				sc->client_port,
 				errno);
 			PRINT_ERR_FREE(log);
 		}
