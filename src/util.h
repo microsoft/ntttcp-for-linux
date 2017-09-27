@@ -86,6 +86,7 @@ int set_socket_non_blocking(int fd);
 double read_value_from_proc(char *file_name, char *key);
 uint64_t read_counter_from_proc(char *file_name, char *section, char *key);
 void get_tcp_retrans(struct tcp_retrans *tr);
+bool check_resource_limit(struct ntttcp_test *test);
 
 #define MAX(a,b) \
 	({ __typeof__ (a) _a = (a); \

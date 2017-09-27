@@ -506,6 +506,12 @@ int main(int argc, char **argv)
 	if (test->verbose)
 		print_flags(test);
 
+	if (!check_resource_limit(test)) {
+		PRINT_ERR("main: error when checking resource limits");
+		free(test);
+		exit (-1);
+	}
+
 	turn_off_light();
 
 	if (test->cpu_affinity != -1) {

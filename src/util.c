@@ -803,3 +803,35 @@ double read_value_from_proc(char *file_name, char *key)
 	
 	return speed;
 }
+
+bool check_resource_limit(struct ntttcp_test *test)
+{
+	char *log;
+	unsigned long soft_limit = 0;
+	unsigned long hard_limit = 0;
+	uint total_connections = test->parallel * test->conn_per_thread;
+	bool verbose_log = test->verbose;
+
+	struct rlimit limitstruct;
+	if(-1 == getrlimit(RLIMIT_NOFILE, &limitstruct))
+		PRINT_ERR("Failed to resource limits");
+
+	soft_limit = (unsigned long)limitstruct.rlim_cur;
+	hard_limit = (unsigned long)limitstruct.rlim_max;
+
+	ASPRINTF(&log, "user limits for maximum number of open files: soft: %ld; hard: %ld",
+			soft_limit,
+			hard_limit);
+	PRINT_DBG_FREE(log);
+
+	if (total_connections > soft_limit) {
+		ASPRINTF(&log, "soft limit is too small: limit is %ld; but total connections will be %d",
+				soft_limit,
+				total_connections);
+		PRINT_ERR_FREE(log);
+
+		return false;
+	} else {
+		return true;
+	}
+}
