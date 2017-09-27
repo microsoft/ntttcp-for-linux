@@ -548,7 +548,8 @@ void print_total_result(struct ntttcp_test *test,
 		ASPRINTF(&log, "cpu cores\t:%d", final_cpu_ps->nproc);
 		PRINT_INFO_FREE(log);
 	} else {
-		PRINT_ERR("Inconsistant number of CPUs found");
+		ASPRINTF(&log, "number of CPUs does not match: initial: %d; final: %d", init_cpu_ps->nproc, final_cpu_ps->nproc);
+		PRINT_ERR_FREE(log);
 	}
 
 	ASPRINTF(&log, "\t cpu speed\t:%.3fMHz", cpu_speed_mhz);
@@ -809,12 +810,12 @@ bool check_resource_limit(struct ntttcp_test *test)
 	char *log;
 	unsigned long soft_limit = 0;
 	unsigned long hard_limit = 0;
-	uint total_connections = test->parallel * test->conn_per_thread;
+	uint total_connections = 0;
 	bool verbose_log = test->verbose;
 
 	struct rlimit limitstruct;
 	if(-1 == getrlimit(RLIMIT_NOFILE, &limitstruct))
-		PRINT_ERR("Failed to resource limits");
+		PRINT_ERR("Failed to load resource limits");
 
 	soft_limit = (unsigned long)limitstruct.rlim_cur;
 	hard_limit = (unsigned long)limitstruct.rlim_max;
@@ -824,10 +825,20 @@ bool check_resource_limit(struct ntttcp_test *test)
 			hard_limit);
 	PRINT_DBG_FREE(log);
 
+	if (test->client_role == true) {
+		total_connections = test->parallel * test->conn_per_thread;
+	} else {
+		/*
+		 * for receiver, just do a minial check;
+		 * becuase we don't know how many conn_per_thread will be used by sender.
+		 */
+		total_connections = test->parallel * 1;
+	}
+
 	if (total_connections > soft_limit) {
-		ASPRINTF(&log, "soft limit is too small: limit is %ld; but total connections will be %d",
+		ASPRINTF(&log, "soft limit is too small: limit is %ld; but total connections will be %d X n",
 				soft_limit,
-				total_connections);
+				test->parallel);
 		PRINT_ERR_FREE(log);
 
 		return false;

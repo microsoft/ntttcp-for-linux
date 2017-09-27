@@ -394,7 +394,8 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 							break;
 						}
 						else {
-							PRINT_ERR("error to accept new connections");
+							ASPRINTF(&log, "error to accept new connections. errno = %d", errno)
+							PRINT_ERR_FREE(log);
 							break;
 						}
 					}
