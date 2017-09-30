@@ -144,7 +144,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			/* If sender side is being asked to pin the client source port */
 			if (test->client_base_port > 0)
 				cs->client_port = test->client_base_port + n * test->parallel + t;
-	
+
 			if (test->protocol == TCP) {
 				rc = pthread_create(&tep->threads[threads_created],
 							&pth_attrs,
@@ -172,7 +172,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	pthread_attr_destroy(&pth_attrs);
 
 	ASPRINTF(&log, "%d threads created", threads_created);
-	PRINT_DBG_FREE(log);
+	PRINT_INFO_FREE(log);
 
 	turn_on_light();
 
@@ -203,7 +203,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	/* calculate the actual test run time */
 	actual_test_time = get_time_diff(&tep->end_time, &tep->start_time);
 
-	/* 
+	/*
 	 * if actual_test_time < tep->confirmed_duration;
 	 * then this indicates that in the sender side, test is being interrupted.
 	 * hence, tell receiver about this.
@@ -312,7 +312,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	/* create threads */
 	for (t = 0; t < test->parallel; t++) {
 		ss = tep->server_streams[t];
-		ss->server_port = test->server_base_port + t;	
+		ss->server_port = test->server_base_port + t;
 
 		if (test->protocol == TCP) {
 			rc = pthread_create(&tep->threads[t],
@@ -349,7 +349,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		ss = tep->server_streams[test->parallel];
 		ss->server_port = test->server_base_port - 1; //just for bookkeeping
 		ss->protocol = TCP; //just for bookkeeping
-		ss->is_sync_thread = 1;	
+		ss->is_sync_thread = 1;
 
 		rc = pthread_create(&tep->threads[t],
 				NULL,
@@ -365,7 +365,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	}
 
 	ASPRINTF(&log, "%d threads created", threads_created);
-	PRINT_DBG_FREE(log);
+	PRINT_INFO_FREE(log);
 
 	while ( 1 ) {
 		/* for receiver, there are two ways to trigger test start:
@@ -381,7 +381,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		 * this is to handle these cases when:
 		 * a) receiver in sync mode, but sender connected as no_sync mode;
 		 * in this case, before light-is-on, the threads have some data counted already.
-		 * b) receiver is running in a loop; the previous test has finished but the sockets are still working and 
+		 * b) receiver is running in a loop; the previous test has finished but the sockets are still working and
 		 * receiving data (data arrived with latency); so we need to reset the counter before a new test starting.
 		 *
 		 * this "reset" is implemented by using __sync_lock_test_and_set().

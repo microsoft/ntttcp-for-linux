@@ -191,7 +191,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 
 		if (( i = bind(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
 			ASPRINTF(&log,
-				"failed to bind the socket to local address: %s on socket: %d. errcode = %d",
+				"failed to bind the socket to local address: %s on socket: %d. return = %d",
 				local_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr,
 									local_addr_str,
 									ip_addr_max_size),

@@ -104,8 +104,8 @@ void tell_receiver_test_exit(int sockfd)
 		PRINT_ERR("cannot write data to the socket for sender/receiver sync");
 	}
 	if ( read(sockfd, &response, sizeof(response)) <= 0 ) {
-		PRINT_ERR("cannot read data from the socket for sender/receiver sync");	
-	}			
+		PRINT_ERR("cannot read data from the socket for sender/receiver sync");
+	}
 
 	if (ntohl(response) == TEST_INTERRUPTED || ntohl(response) == TEST_FINISHED) {
 		PRINT_INFO("receiver exited from current test");
@@ -346,7 +346,7 @@ void *create_receiver_sync_socket( void *ptr )
 					}
 					else{
 						ASPRINTF(&log, "error: cannot read data from socket: %d", current_fd);
-						PRINT_INFO_FREE(log);
+						PRINT_ERR_FREE(log);
 					}
 					close(current_fd);
 					FD_CLR(current_fd, &ss->read_set); /* remove from master set when finished */
@@ -388,7 +388,7 @@ void *create_receiver_sync_socket( void *ptr )
 							tep->state = TEST_RUNNING;
 
 							turn_on_light();
-							PRINT_INFO("Network activity progressing...");	
+							PRINT_INFO("Network activity progressing...");
 						}
 						break;
 

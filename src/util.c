@@ -74,7 +74,7 @@ void print_flags(struct ntttcp_test *test)
 void print_usage()
 {
 	printf("Author: %s\n", AUTHOR_NAME);
-	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-P|-n|-6|-u|-p|-f|-b|-B|-t|-N|-R|-V|-h|-m <mapping>\n\n");
+	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-P|-n|-6|-u|-p|-f|-b|-t|-N|-R|-V|-h|-m <mapping>\n\n");
 	printf("\t-r   Run as a receiver\n");
 	printf("\t-s   Run as a sender\n");
 	printf("\t-D   Run as daemon\n");
@@ -91,8 +91,8 @@ void print_usage()
 	printf("\t-u   UDP mode     [default: TCP]\n");
 	printf("\t-p   Destination port number, or starting port number    [default: %d]\n", DEFAULT_BASE_DST_PORT);
 	printf("\t-f   Fixed source port number, or starting port number    [default: %d]\n", DEFAULT_BASE_SRC_PORT);
-	printf("\t-b   <recv buffer size>    [default: %d]\n", DEFAULT_RECV_BUFFER_SIZE);
-	printf("\t-B   <send buffer size>    [default: %d]\n", DEFAULT_SEND_BUFFER_SIZE);
+	printf("\t-b   <buffer size>    [default: %d (receiver); %d (sender)]\n", DEFAULT_RECV_BUFFER_SIZE, DEFAULT_SEND_BUFFER_SIZE);
+
 	printf("\t-t   Time of test duration in seconds    [default: %d]\n", DEFAULT_TEST_DURATION);
 	printf("\t-N   No sync, senders will start sending as soon as possible\n");
 	printf("\t     Otherwise, will use 'destination port - 1' as sync port	[default: %d]\n", DEFAULT_BASE_DST_PORT - 1);
@@ -238,8 +238,8 @@ int verify_args(struct ntttcp_test *test)
 	if (test->parallel < 1) {
 		PRINT_INFO("invalid number-of-server-ports provided. use 1");
 		test->parallel = 1;
-	}	
-	
+	}
+
 	if (test->domain == AF_INET6 && strcmp( test->bind_address, "0.0.0.0")== 0 )
 		test->bind_address = "::";
 
@@ -290,8 +290,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		{"udp", no_argument, NULL, 'u'},
 		{"base-dst-port", required_argument, NULL, 'p'},
 		{"base-src-port", optional_argument, NULL, 'f'},
-		{"receiver-buffer", required_argument, NULL, 'b'},
-		{"send-buffer", required_argument, NULL, 'B'},
+		{"buffer", required_argument, NULL, 'b'},
 		{"duration", required_argument, NULL, 't'},
 		{"no-synch", no_argument, NULL, 'N'},
 		{"show-retrans", no_argument, NULL, 'R'},
@@ -302,7 +301,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 	int flag;
 
-	while ((flag = getopt_long(argc, argv, "r::s::DMLem:P:n:6up:f::b:B:t:NRVh", longopts, NULL)) != -1) {
+	while ((flag = getopt_long(argc, argv, "r::s::DMLem:P:n:6up:f::b:t:NRVh", longopts, NULL)) != -1) {
 		switch (flag) {
 		case 'r':
 			test->server_role = true;
@@ -366,9 +365,6 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 		case 'b':
 			test->recv_buf_size = unit_atod(optarg);
-			break;
-
-		case 'B':
 			test->send_buf_size = unit_atod(optarg);
 			break;
 
@@ -706,7 +702,7 @@ uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 	size_t len = 0;
 	ssize_t read;
 	int key_found = 0;
-	
+
 	stream = fopen(file_name, "r");
 	if (!stream) {
 		ASPRINTF(&log, "failed to open file: %s. errno = %d", file_name, errno);
@@ -801,7 +797,7 @@ double read_value_from_proc(char *file_name, char *key)
 
 	free(line);
 	fclose(stream);
-	
+
 	return speed;
 }
 
