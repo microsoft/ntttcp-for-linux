@@ -375,7 +375,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 			if ((events[i].events & EPOLLERR) ||
 			    (events[i].events & EPOLLHUP) ||
 			    (!(events[i].events & EPOLLIN))) {
-				/* An error has occured on this fd, or the socket is not ready for reading */
+				/* An error has occurred on this fd, or the socket is not ready for reading */
 				PRINT_ERR("error happened on the associated connection");
 				close (current_fd);
 				continue;

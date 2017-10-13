@@ -826,7 +826,7 @@ bool check_resource_limit(struct ntttcp_test *test)
 	} else {
 		/*
 		 * for receiver, just do a minial check;
-		 * becuase we don't know how many conn_per_thread will be used by sender.
+		 * because we don't know how many conn_per_thread will be used by sender.
 		 */
 		total_connections = test->parallel * 1;
 	}

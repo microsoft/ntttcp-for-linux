@@ -377,7 +377,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		wait_light_on();
 
 		/* reset the counter?
-		 * yes. we need to reset server side perf counters at the begining, after light-is-on;
+		 * yes. we need to reset server side perf counters at the beginning, after light-is-on;
 		 * this is to handle these cases when:
 		 * a) receiver in sync mode, but sender connected as no_sync mode;
 		 * in this case, before light-is-on, the threads have some data counted already.
