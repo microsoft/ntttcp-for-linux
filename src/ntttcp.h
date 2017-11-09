@@ -1,3 +1,4 @@
+
 // ----------------------------------------------------------------------------------
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
@@ -11,6 +12,7 @@
 #include <inttypes.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include "const.h"
 #include "logger.h"
 
