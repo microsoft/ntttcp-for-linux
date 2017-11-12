@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include "const.h"
 #include "logger.h"
 
