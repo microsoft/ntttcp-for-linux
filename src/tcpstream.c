@@ -80,6 +80,8 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	char *port_str;        //used to get remote peer's port number
 	struct addrinfo hints, *remote_serv_info, *p; //to get remote peer's sockaddr
 
+	struct timeval timeout = {5, 0}; //set socket timeout
+
 	sc = (struct ntttcp_stream_client *) ptr;
 	verbose_log = sc->verbose;
 
@@ -101,6 +103,23 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 			PRINT_ERR("cannot create socket ednpoint");
 			freeaddrinfo(remote_serv_info);
 			return 0;
+		}
+		else{
+		/* 1a. set socket timeout */
+			if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
+				ASPRINTF(&log, "cannot set socket options: %d", sockfd);
+				PRINT_ERR_FREE(log);
+				freeaddrinfo(remote_serv_info);
+				close(sockfd);
+				return 0;
+			}
+			if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+				ASPRINTF(&log, "cannot set socket options: %d", sockfd);
+				PRINT_ERR_FREE(log);
+				freeaddrinfo(remote_serv_info);
+				close(sockfd);
+				return 0;
+			}
 		}
 
 		local_addr_size = sizeof(local_addr);
