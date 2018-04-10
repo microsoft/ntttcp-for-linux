@@ -107,7 +107,7 @@ void tell_receiver_test_exit(int sockfd)
 		PRINT_ERR("cannot read data from the socket for sender/receiver sync");
 	}
 
-	if (ntohl(response) == TEST_INTERRUPTED || ntohl(response) == TEST_FINISHED) {
+	if (ntohl(response) == TEST_FINISHED) {
 		PRINT_INFO("receiver exited from current test");
 	} else {
 		PRINT_ERR("receiver is not able to handle this interrupt");
@@ -359,7 +359,7 @@ void *create_receiver_sync_socket( void *ptr )
 					case (int)'E':  //Exit current test
 						if (tep->state == TEST_RUNNING){
 							turn_off_light();
-							tep->state = TEST_INTERRUPTED;
+							tep->state = TEST_FINISHED;
 							ASPRINTF(&log, "test exited because sender side was interrupted");
 							PRINT_INFO_FREE(log);
 						}

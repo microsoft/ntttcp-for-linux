@@ -18,7 +18,6 @@
 #define TEST_NOT_STARTED		11
 #define TEST_RUNNING			12
 #define TEST_FINISHED			13
-#define TEST_INTERRUPTED		14
 
 /* max values */
 #define MAX_CONNECTIONS_PER_THREAD	512
