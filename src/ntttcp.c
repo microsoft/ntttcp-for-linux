@@ -59,6 +59,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	e->endpoint_role = endpoint_role;
 	e->test = test;
 	e->state = TEST_NOT_STARTED;
+	e->receiver_exit_after_done = true;
 	e->confirmed_duration = test->duration;
 	e->start_time = now;
 	e->end_time = now;
@@ -80,7 +81,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 		}
 		memset(e->client_streams, 0, sizeof( struct  ntttcp_stream_client ) * total_threads );
 		for(i = 0; i < total_threads ; i++ ) {
-			e->client_streams[i] = new_ntttcp_client_stream(test);
+			e->client_streams[i] = new_ntttcp_client_stream(e);
 		}
 
 		e->threads = malloc( total_threads * sizeof(pthread_t) );
@@ -107,7 +108,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 		}
 		memset(e->server_streams, 0, sizeof( struct  ntttcp_stream_server) * total_threads );
 		for(i = 0; i < total_threads; i++ ){
-			e->server_streams[i] = new_ntttcp_server_stream(test);
+			e->server_streams[i] = new_ntttcp_server_stream(e);
 		}
 
 		e->threads = malloc( total_threads * sizeof(pthread_t) );
@@ -168,14 +169,17 @@ void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
 	free( e );
 }
 
-struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test *test)
+struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoint *ept)
 {
 	struct ntttcp_stream_client *s;
+	struct ntttcp_test *test = ept->test;
+
 	s = (struct ntttcp_stream_client *) malloc(sizeof(struct ntttcp_stream_client));
 	if (!s)
 		return NULL;
 
 	memset(s, 0, sizeof(struct ntttcp_stream_client));
+	s->endpoint = ept;
 	s->domain = test->domain;
 	s->protocol = test->protocol;
 	s->bind_address = test->bind_address;
@@ -190,14 +194,17 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test *test)
 	return s;
 }
 
-struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test *test)
+struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test_endpoint *ept)
 {
 	struct ntttcp_stream_server *s;
+	struct ntttcp_test *test = ept->test;
+
 	s = (struct ntttcp_stream_server *) malloc(sizeof(struct ntttcp_stream_server));
 	if (!s)
 	 	return NULL;
 
 	memset(s, 0, sizeof(struct ntttcp_stream_server));
+	s->endpoint = ept;
 	s->domain = test->domain;
 	s->protocol = test->protocol;
 	s->bind_address = test->bind_address;

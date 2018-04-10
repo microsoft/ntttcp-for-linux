@@ -243,7 +243,7 @@ void *create_receiver_sync_socket( void *ptr )
 
 	int i = 0;
 
-	ss = new_ntttcp_server_stream(test);
+	ss = new_ntttcp_server_stream(tep);
 	if (ss == NULL) {
 		PRINT_ERR("receiver: error when creating new server stream");
 		return NULL;
@@ -282,6 +282,10 @@ void *create_receiver_sync_socket( void *ptr )
 
 	/* accept new client, receive data from client */
 	while (1) {
+		if (ss->endpoint->receiver_exit_after_done &&
+		    ss->endpoint->state == TEST_FINISHED)
+			break;
+
 		memcpy(&read_set, &ss->read_set, sizeof(fd_set));
 		memcpy(&write_set, &ss->write_set, sizeof(fd_set));
 

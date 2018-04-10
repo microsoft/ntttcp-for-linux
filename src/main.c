@@ -446,9 +446,11 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 				   init_cpu_usage, final_cpu_usage,
 				   init_cpu_ps, final_cpu_ps,
 				   init_tcp_retrans, final_tcp_retrans);
+
+		if (tep->receiver_exit_after_done)
+			break;
 	}
 
-	/* as receiver threads will keep listening on ports, so they will not exit */
 	for (t=0; t < threads_created; t++) {
 		pthread_join(tep->threads[t], NULL);
 	}

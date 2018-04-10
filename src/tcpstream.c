@@ -45,7 +45,7 @@ int n_write(int fd, const char *buffer, size_t total)
 			if (errno == EINTR || errno == EAGAIN) {
 				return total - left;
 			} else {
-				printf("socket write error: %d\n", errno);
+//				printf("socket write error: %d\n", errno);
 				return ERROR_NETWORK_WRITE;
 			}
 		}
@@ -216,7 +216,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	while ( is_light_turned_on(sc->continuous_mode) ) {
 		n = n_write(sockfd, buffer, strlen(buffer));
 		if (n < 0) {
-			PRINT_ERR("cannot write data to a socket");
+//			PRINT_ERR("cannot write data to a socket");
 			free(buffer);
 			close(sockfd);
 			return 0;
@@ -387,6 +387,10 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 	events = calloc (MAX_EPOLL_EVENTS, sizeof event);
 
 	while (1) {
+		if (ss->endpoint->receiver_exit_after_done &&
+		    ss->endpoint->state == TEST_FINISHED)
+			break;
+
 		n_fds = epoll_wait (efd, events, MAX_EPOLL_EVENTS, -1);
 		for (i = 0; i < n_fds; i++) {
 			current_fd = events[i].data.fd;
@@ -517,6 +521,10 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 
 	/* accept new client, receive data from client */
 	while (1) {
+		if (ss->endpoint->receiver_exit_after_done &&
+		    ss->endpoint->state == TEST_FINISHED)
+			break;
+
 		memcpy(&read_set, &ss->read_set, sizeof(fd_set));
 		memcpy(&write_set, &ss->write_set, sizeof(fd_set));
 

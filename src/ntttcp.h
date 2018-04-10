@@ -55,6 +55,7 @@ struct ntttcp_test_endpoint{
 	struct	timeval end_time;     /* timestamp of test ended on this endpoint */
 	int	synch_socket;         /* the synch channel for sender/receiver sync */
 	int	total_threads;	      /* total threads, including synch thread */
+	bool    receiver_exit_after_done;       /* the receiver will exit after test done, or not */
 
 	struct	ntttcp_stream_client **client_streams; /* alloc memory for this if client/sender role */
 	struct	ntttcp_stream_server **server_streams; /* alloc memory for this if server/receiver role */
@@ -68,6 +69,7 @@ struct ntttcp_test_endpoint{
 
 /* manage a client test connection/stream */
 struct ntttcp_stream_client{
+	struct	ntttcp_test_endpoint *endpoint;
 	int	domain;
 	int	protocol;
 	char	*bind_address;
@@ -84,6 +86,7 @@ struct ntttcp_stream_client{
 
 /* manage a server test connection/stream */
 struct ntttcp_stream_server{
+	struct  ntttcp_test_endpoint *endpoint;
 	int	domain;
 	int	protocol;
 	char	*bind_address;
@@ -110,5 +113,5 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 void set_ntttcp_test_endpoint_test_continuous(struct ntttcp_test_endpoint* e);
 void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e);
 
-struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test *test);
-struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test *test);
+struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoint *endpoint);
+struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test_endpoint *endpoint);
