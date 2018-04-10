@@ -61,8 +61,9 @@ struct ntttcp_test_endpoint{
 
 	pthread_t	*threads;
 
-	int	num_remote_endpoints;
-	int	remote_endpoints[MAX_REMOTE_ENDPOINTS];
+	/* to support testing with multiple senders */
+	int	num_remote_endpoints; /* number to test client/sender endpoints */
+	int	remote_endpoints[MAX_REMOTE_ENDPOINTS]; /* list of the TCP listeners of those endpoints */
 };
 
 /* manage a client test connection/stream */
