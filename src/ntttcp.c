@@ -25,6 +25,7 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->multi_clients_mode  = false;
 	test->last_client      = false;
 	test->use_epoll        = false;
+	test->exit_after_done  = true;
 	test->mapping          = "16,*,*";
 	test->bind_address     = "0.0.0.0";
 	test->parallel         = DEFAULT_NUM_THREADS;
@@ -59,7 +60,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	e->endpoint_role = endpoint_role;
 	e->test = test;
 	e->state = TEST_NOT_STARTED;
-	e->receiver_exit_after_done = true;
+	e->receiver_exit_after_done = test->exit_after_done;
 	e->confirmed_duration = test->duration;
 	e->start_time = now;
 	e->end_time = now;

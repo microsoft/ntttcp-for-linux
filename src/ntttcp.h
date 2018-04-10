@@ -26,6 +26,7 @@ struct ntttcp_test
 
 	bool	daemon;             /* '-D' for daemon mode */
 	bool	use_epoll;          /* '-e' for epoll() to watch fd for events. receiver only */
+	bool	exit_after_done;    /* exit receiver after test done. use '-H' to hold receiver always running. receiver only */
 	char	*mapping;           /* '-m' for connection(s),Processor,StartReceiver IP map set */
 	uint	parallel;           /*    Parallel connections, from -m flag */
 	int	cpu_affinity;       /*    CPU affinity, from -m flag */
