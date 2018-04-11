@@ -255,7 +255,7 @@ int verify_args(struct ntttcp_test *test)
 	if (test->client_role) {
 		if (test->use_epoll)
 			PRINT_DBG("ignore '-e' on sender role");
-		if (test->exit_after_done)
+		if (!test->exit_after_done)
 			PRINT_DBG("ignore '-H' on sender role");
 	}
 
