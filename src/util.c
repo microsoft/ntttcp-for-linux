@@ -562,7 +562,8 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	tepr->packets_sent = 0;
 	tepr->packets_received = 0;
 	tepr->packets_retransmitted = tepr->final_tcp_retrans->retrans_segs - tepr->init_tcp_retrans->retrans_segs;
-	tepr->cpu_busy_percent = ((tepr->final_cpu_usage->clock - tepr->init_cpu_usage->clock) * 1000000.0 / CLOCKS_PER_SEC) / test_duration * 100;
+	tepr->cpu_busy_percent = ((tepr->final_cpu_usage->clock - tepr->init_cpu_usage->clock) * 1000000.0 / CLOCKS_PER_SEC)
+				 / (tepr->final_cpu_usage->time - tepr->init_cpu_usage->time);	
 	tepr->errors = 0;
 
 	return 0;
@@ -645,6 +646,8 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 	ASPRINTF(&log, "\t softirq\t:%.2f%%", tepr->cpu_ps_softirq_usage * 100);
 	PRINT_INFO_FREE(log);
 	ASPRINTF(&log, "\t cycles/byte\t:%.2f", tepr->cycles_per_byte);
+	PRINT_INFO_FREE(log);
+	ASPRINTF(&log, "cpu busy (all)\t:%.2f%%", tepr->cpu_busy_percent * 100);
 	PRINT_INFO_FREE(log);
 
 	printf("---------------------------------------------------------\n");
@@ -730,7 +733,7 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<packets_received>%lu</packets_received>\n", tepr->packets_received);
 	fprintf(logfile, "	<packets_retransmitted>%lu</packets_retransmitted>\n", tepr->packets_retransmitted);
 	fprintf(logfile, "	<errors>%d</errors>\n", tepr->errors);
-	fprintf(logfile, "	<cpu metric=\"%%\">%.3f</cpu>\n", tepr->cpu_busy_percent);
+	fprintf(logfile, "	<cpu metric=\"%%\">%.3f</cpu>\n", tepr->cpu_busy_percent * 100);
 	fprintf(logfile, "	<bufferCount>%u</bufferCount>\n", 0);
 	fprintf(logfile, "	<bufferLen>%u</bufferLen>\n", 0);
 	fprintf(logfile, "	<io>%u</io>\n", 0);
