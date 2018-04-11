@@ -104,10 +104,10 @@ void tell_receiver_test_exit(int sockfd)
 		PRINT_ERR("cannot write data to the socket for sender/receiver sync");
 	}
 	if ( read(sockfd, &response, sizeof(response)) <= 0 ) {
-		PRINT_ERR("cannot read data from the socket for sender/receiver sync");	
-	}			
+		PRINT_ERR("cannot read data from the socket for sender/receiver sync");
+	}
 
-	if (ntohl(response) == TEST_INTERRUPTED || ntohl(response) == TEST_FINISHED) {
+	if (ntohl(response) == TEST_FINISHED) {
 		PRINT_INFO("receiver exited from current test");
 	} else {
 		PRINT_ERR("receiver is not able to handle this interrupt");
@@ -168,9 +168,13 @@ int negotiate_test_duration(int sockfd, int proposed_time)
  *  0: failed, receiver is not ready;
  *  1: success, start the test immediately;
  */
-int request_to_start(int sockfd)
+int request_to_start(int sockfd, int request)
 {
-	int request = (int)'R'; //the int to be sent
+	/*
+	 * the 'request' can be either one of below:
+	 * 1) 'R': request receiver to start running the test;
+	 * 1) 'L': I am the last client and request receiver to start running the test with all clients.
+	 */
 	int converted = htonl(request);
 	int response = 0; //the int to be received
 
@@ -182,13 +186,31 @@ int request_to_start(int sockfd)
 		PRINT_ERR("cannot read data from the socket for sender/receiver sync");
 		return -1;
 	}
-
+	if (ntohl(response) == (int)'W') {
+		PRINT_INFO ("waiting for the last client to join the test");
+		if ( read(sockfd, &response, sizeof(response)) <= 0 ) {
+			PRINT_ERR("cannot read data from the socket for sender/receiver sync");
+			return -1;
+		}
+	}
 	if (ntohl(response) != (int)'R') {
-		PRINT_ERR("receiver is not ready to run this test");
+		PRINT_ERR("receiver is not ready to run test with this sender");
 		return 0;   //server is not ready
 	}
 
 	return 1;
+}
+
+void reply_sender( int fd, int answer_to_send )
+{
+	int converted = 0;
+	int nbytes;
+
+	converted = htonl(answer_to_send);
+	nbytes = write(fd, &converted, sizeof(converted));
+	if (nbytes < 0) {
+		PRINT_ERR("cannot write ack data to the socket for sender/receiver sync");
+	}
 }
 
 /************************************************************/
@@ -219,7 +241,9 @@ void *create_receiver_sync_socket( void *ptr )
 	char *port_str;
 	int ip_address_max_size;
 
-	ss = new_ntttcp_server_stream(test);
+	int i = 0;
+
+	ss = new_ntttcp_server_stream(tep);
 	if (ss == NULL) {
 		PRINT_ERR("receiver: error when creating new server stream");
 		return NULL;
@@ -258,6 +282,10 @@ void *create_receiver_sync_socket( void *ptr )
 
 	/* accept new client, receive data from client */
 	while (1) {
+		if (ss->endpoint->receiver_exit_after_done &&
+		    ss->endpoint->state == TEST_FINISHED)
+			break;
+
 		memcpy(&read_set, &ss->read_set, sizeof(fd_set));
 		memcpy(&write_set, &ss->write_set, sizeof(fd_set));
 
@@ -322,7 +350,7 @@ void *create_receiver_sync_socket( void *ptr )
 					}
 					else{
 						ASPRINTF(&log, "error: cannot read data from socket: %d", current_fd);
-						PRINT_INFO_FREE(log);
+						PRINT_ERR_FREE(log);
 					}
 					close(current_fd);
 					FD_CLR(current_fd, &ss->read_set); /* remove from master set when finished */
@@ -335,7 +363,7 @@ void *create_receiver_sync_socket( void *ptr )
 					case (int)'E':  //Exit current test
 						if (tep->state == TEST_RUNNING){
 							turn_off_light();
-							tep->state = TEST_INTERRUPTED;
+							tep->state = TEST_FINISHED;
 							ASPRINTF(&log, "test exited because sender side was interrupted");
 							PRINT_INFO_FREE(log);
 						}
@@ -347,32 +375,91 @@ void *create_receiver_sync_socket( void *ptr )
 						break;
 
 					case (int)'R':  //request to start test
-						answer_to_send = (int)'R';
-						tep->state = TEST_RUNNING;
+						if (tep->test->multi_clients_mode == true) {
+							if (tep->num_remote_endpoints >= MAX_REMOTE_ENDPOINTS - 1) {
+								/* this client wants to seat at the last position;
+								 * but, the last position is reserved for the client with '-L' flag;
+								 * so, reject this client.
+								 */
+								PRINT_ERR("too many client endpoints. reject one.");
+								answer_to_send = (int)'E'; //'E': ERROR
+							} else {
+								answer_to_send = (int)'W'; //'W': PLEASE WAIT
+								tep->remote_endpoints[ tep->num_remote_endpoints++ ] = current_fd;
+							}
+						} else {
+							answer_to_send = (int)'R'; //'R': RUN
+							tep->state = TEST_RUNNING;
 
-						turn_on_light();
-						PRINT_INFO("Network activity progressing...");
+							turn_on_light();
+							PRINT_INFO("Network activity progressing...");
+						}
 						break;
 
-					default:  //negotiate test duration, use the max one
-						if (tep->test->duration < converted) {
-							answer_to_send = converted;
-							tep->confirmed_duration = answer_to_send;
+					case (int)'L':  //the last client joined, and request to start the test
+						if (tep->test->multi_clients_mode == true) {
+							if (tep->num_remote_endpoints >= MAX_REMOTE_ENDPOINTS) {
+								/* the last seat has been taken; too many client! */
+								answer_to_send = (int)'E'; //'E': ERROR
+							}
 
-							ASPRINTF(&log, "test duration negotiated is: %d seconds", answer_to_send);
-							PRINT_INFO_FREE(log);
+							/* firstly, add this client into the client collection */
+							tep->remote_endpoints[ tep->num_remote_endpoints++ ] = current_fd;
+
+							/* notify all clients to run! */
+							answer_to_send = (int)'R';
+							for (i = 0; i < MAX_REMOTE_ENDPOINTS; i++)
+								if (tep->remote_endpoints[i] != -1)
+									reply_sender(tep->remote_endpoints[i], answer_to_send);
+
+							tep->state = TEST_RUNNING;
+							turn_on_light();
+							PRINT_INFO("Network activity progressing...");
+						} else {
+							PRINT_ERR("one sender endpoint says it is the last client ('-L');");
+							PRINT_ERR("but receiver currently is not running in multi-clients mode ('-M');");
+							PRINT_ERR("this sender endpoint will be ignored.");
 						}
-						else {
+						break;
+
+					default:
+						if (tep->test->multi_clients_mode == true) {
+							/* in multi-clients mode,
+							 * all sender clients use the test duration specified by receiver.
+							 */
 							answer_to_send = tep->test->duration;
 							tep->confirmed_duration = answer_to_send;
+						} else if (converted == 0) {
+							/* the sender request to run with "continuous_mode" (duration == 0),
+							 * receiver then will accept that mode.
+							 */
+							if (tep->test->duration !=0)
+								PRINT_INFO("test is negotiated to run with continuous mode");
+							answer_to_send = 0;
+							tep->confirmed_duration = 0;
+						} else {
+							/* if receiver is specified to run with "continuous_mode", then tell sender to do so;
+							 * else, compare and use the max time as negotiated test duration time
+							 */
+							if (tep->test->duration == 0) {
+								//then tell sender to run with "continuous_mode" too
+								answer_to_send = 0;
+								tep->confirmed_duration = 0;
+							} else if (tep->test->duration < converted) {
+								answer_to_send = converted;
+								tep->confirmed_duration = answer_to_send;
+
+								ASPRINTF(&log, "test duration negotiated is: %d seconds", answer_to_send);
+								PRINT_INFO_FREE(log);
+							}
+							else {
+								answer_to_send = tep->test->duration;
+								tep->confirmed_duration = answer_to_send;
+							}
 						}
 					}
 
-					converted = htonl(answer_to_send);
-					nbytes = write(current_fd, &converted, sizeof(converted));
-					if (nbytes < 0) {
-						PRINT_ERR("cannot write ack data to the socket for sender/receiver sync");
-					}
+					reply_sender(current_fd, answer_to_send);
 				}
 			}
 		}

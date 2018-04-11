@@ -4,7 +4,8 @@
 // Author: Shihua (Simon) Xiao, sixiao@microsoft.com
 // ----------------------------------------------------------------------------------
 
-#include "ntttcp.h"
+//include "ntttcp.h"
+#include "util.h"
 
 struct ntttcp_test *new_ntttcp_test()
 {
@@ -22,7 +23,10 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->server_role      = false;
 	test->client_role      = false;
 	test->daemon           = false;
+	test->multi_clients_mode  = false;
+	test->last_client      = false;
 	test->use_epoll        = false;
+	test->exit_after_done  = true;
 	test->mapping          = "16,*,*";
 	test->bind_address     = "0.0.0.0";
 	test->parallel         = DEFAULT_NUM_THREADS;
@@ -36,17 +40,20 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->send_buf_size    = DEFAULT_SEND_BUFFER_SIZE; //128K
 	test->duration         = DEFAULT_TEST_DURATION;
 	test->no_synch         = false;
+	test->show_tcp_retransmit = false;
+	test->save_xml_log     = false;
+	test->xml_log_filename = "ntttcp-for-linux-log.xml";
 	test->verbose          = false;
 }
 
 struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, int endpoint_role)
 {
-	int i = 0;
+	unsigned int i = 0;
 	struct timeval now;
-	int total_threads = 0;
+	unsigned int total_threads = 0;
 
 	struct ntttcp_test_endpoint *e;
-	e = (struct ntttcp_test_endpoint *) malloc(sizeof(struct ntttcp_test_endpoint ));
+	e = (struct ntttcp_test_endpoint *) malloc(sizeof(struct ntttcp_test_endpoint));
 	if(!e)
 		return NULL;
 
@@ -56,16 +63,20 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	e->endpoint_role = endpoint_role;
 	e->test = test;
 	e->state = TEST_NOT_STARTED;
+	e->receiver_exit_after_done = test->exit_after_done;
 	e->confirmed_duration = test->duration;
 	e->start_time = now;
 	e->end_time = now;
 	e->synch_socket = 0;
-	if (endpoint_role == ROLE_SENDER) {
-		if (test->no_synch == true)
-			total_threads = test->parallel * test->conn_per_thread;
-		else
-			total_threads = test->parallel * test->conn_per_thread + 1;
+	e->num_remote_endpoints = 0;
+	memset(e->remote_endpoints, -1, MAX_REMOTE_ENDPOINTS);
 
+	if (endpoint_role == ROLE_SENDER) {
+		/* for sender, even used synch mechanism, the main thread will do the synch.
+		   no specially created thread for synch. */
+		total_threads = test->parallel * test->conn_per_thread;
+
+		e->total_threads = total_threads;
 		e->client_streams = (struct ntttcp_stream_client **) malloc( sizeof( struct  ntttcp_stream_client *) * total_threads );
 		if(!e->client_streams) {
 			free (e);
@@ -73,7 +84,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 		}
 		memset(e->client_streams, 0, sizeof( struct  ntttcp_stream_client *) * total_threads );
 		for(i = 0; i < total_threads ; i++ ) {
-			e->client_streams[i] = new_ntttcp_client_stream(test);
+			e->client_streams[i] = new_ntttcp_client_stream(e);
 		}
 
 		e->threads = malloc( total_threads * sizeof(pthread_t) );
@@ -90,21 +101,22 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 		if (test->no_synch == true)
 			total_threads = test->parallel;
 		else
-			total_threads = test->parallel + 1;
+			total_threads = test->parallel + 1; /* the last one is synch thread */
 
-		e->server_streams = (struct  ntttcp_stream_server **) malloc( sizeof( struct  ntttcp_stream_server *) * total_threads );
+		e->total_threads = total_threads;
+		e->server_streams = (struct ntttcp_stream_server **) malloc( sizeof( struct ntttcp_stream_server *) * total_threads );
 		if(!e->server_streams) {
 			free (e);
 			return NULL;
 		}
 		memset(e->server_streams, 0, sizeof( struct  ntttcp_stream_server *) * total_threads );
 		for(i = 0; i < total_threads; i++ ){
-			e->server_streams[i] = new_ntttcp_server_stream(test);
+			e->server_streams[i] = new_ntttcp_server_stream(e);
 		}
 
 		e->threads = malloc( total_threads * sizeof(pthread_t) );
 		if(!e->threads) {
-			for(i = 0; i < total_threads ; i++ ){
+			for(i = 0; i < total_threads; i++ ){
 				free( e->server_streams[i] );
 			}
 			free (e->server_streams);
@@ -112,7 +124,54 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 			return NULL;
 		}
 	}
+
+	/* for test results */
+	e->results = (struct ntttcp_test_endpoint_results *) malloc(sizeof(struct ntttcp_test_endpoint_results));
+	memset(e->results, 0 , sizeof(struct ntttcp_test_endpoint_results));
+
+	e->results->threads = (struct ntttcp_test_endpoint_thread_result **) malloc(
+			       sizeof( struct ntttcp_test_endpoint_thread_result *) * total_threads);
+	memset(e->results->threads, 0, sizeof( struct ntttcp_test_endpoint_thread_result *) * total_threads );
+
+	for(i = 0; i < total_threads; i++ ){
+		e->results->threads[i] = (struct ntttcp_test_endpoint_thread_result *) malloc( sizeof( struct ntttcp_test_endpoint_thread_result ) );
+
+		/* For receiver role, if synch mechanism is being used (the last thread in the list is synch thread),
+		   then mark that one;
+		   Note: for sender role, if synch mechanism is being used, we will use the main thread to sync with receiver,
+		   so thers is no specially created thread for synch;
+		   all threads are testing threads which will transfer test data*/
+		if (i == (total_threads - 1)
+		    && e->endpoint_role == ROLE_RECEIVER
+		    && e->test->no_synch == false)
+			e->results->threads[i]->is_sync_thread = true;
+		else
+			e->results->threads[i]->is_sync_thread = false;
+	}
+
+	/* for calculate the resource utilization */
+	e->results->init_cpu_usage = (struct cpu_usage *) malloc(sizeof(struct cpu_usage));
+	e->results->final_cpu_usage = (struct cpu_usage *) malloc(sizeof(struct cpu_usage));
+	e->results->init_cpu_ps = (struct cpu_usage_from_proc_stat *) malloc(sizeof(struct cpu_usage_from_proc_stat));
+	e->results->final_cpu_ps = (struct cpu_usage_from_proc_stat *) malloc(sizeof(struct cpu_usage_from_proc_stat));
+
+	/* for calculate the TCP re-transmit */
+	e->results->init_tcp_retrans = (struct tcp_retrans *) malloc(sizeof(struct tcp_retrans));
+	e->results->final_tcp_retrans = (struct tcp_retrans *) malloc(sizeof(struct tcp_retrans));
+
 	return e;
+}
+
+void set_ntttcp_test_endpoint_test_continuous(struct ntttcp_test_endpoint* e)
+{
+	unsigned int i;
+
+	if (e->endpoint_role == ROLE_SENDER)
+		for (i = 0; i < e->total_threads; i++)
+			e->client_streams[i]->continuous_mode = true;
+	else
+		for (i = 0; i < e->total_threads; i++)
+			e->server_streams[i]->continuous_mode = true;
 }
 
 void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
@@ -127,9 +186,9 @@ void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
 		else
 			total_threads = e->test->parallel * e->test->conn_per_thread + 1;
 
-		for(i = 0; i < total_threads ; i++ ){
+		for(i = 0; i < total_threads ; i++ )
 			free( e->client_streams[i] );
-		}
+
 		free( e->client_streams );
 	}
 	else {
@@ -138,24 +197,37 @@ void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
 		else
 			total_threads = e->test->parallel + 1;
 
-		for(i = 0; i < total_threads ; i++ ){
+		for(i = 0; i < total_threads ; i++ )
 			free( e->server_streams[i] );
-		}
+
 		free( e->server_streams );
 	}
+
+	for(i = 0; i < total_threads ; i++ )
+		free( e->results->threads[i] );
+	free( e->results->init_cpu_usage );
+	free( e->results->init_cpu_ps );
+	free( e->results->init_tcp_retrans);
+	free( e->results->final_cpu_usage );
+	free( e->results->final_cpu_ps );
+	free( e->results->final_tcp_retrans);
+	free( e->results );
 	free( e->threads );
 	free( e->test );
 	free( e );
 }
 
-struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test *test)
+struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoint *ept)
 {
 	struct ntttcp_stream_client *s;
+	struct ntttcp_test *test = ept->test;
+
 	s = (struct ntttcp_stream_client *) malloc(sizeof(struct ntttcp_stream_client));
 	if (!s)
 		return NULL;
 
 	memset(s, 0, sizeof(struct ntttcp_stream_client));
+	s->endpoint = ept;
 	s->domain = test->domain;
 	s->protocol = test->protocol;
 	s->bind_address = test->bind_address;
@@ -163,28 +235,33 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test *test)
 	//s->client_port, should be specified by caller
 	s->send_buf_size = test->send_buf_size;
 	s->verbose = test->verbose;
-	s->is_sync_thread = 0;
+	s->is_sync_thread = false;
 	s->no_synch = test->no_synch;
+	s->continuous_mode = (test->duration == 0);
 	s->total_bytes_transferred = 0;
 	return s;
 }
 
-struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test *test)
+struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test_endpoint *ept)
 {
 	struct ntttcp_stream_server *s;
+	struct ntttcp_test *test = ept->test;
+
 	s = (struct ntttcp_stream_server *) malloc(sizeof(struct ntttcp_stream_server));
 	if (!s)
 	 	return NULL;
 
 	memset(s, 0, sizeof(struct ntttcp_stream_server));
+	s->endpoint = ept;
 	s->domain = test->domain;
 	s->protocol = test->protocol;
 	s->bind_address = test->bind_address;
 	//s->server_port, should be specified by caller
 	s->recv_buf_size = test->recv_buf_size;
 	s->verbose = test->verbose;
-	s->is_sync_thread = 0;
+	s->is_sync_thread = false;
 	s->no_synch = test->no_synch;
+	s->continuous_mode = (test->duration == 0);
 	s->use_epoll = test->use_epoll;
 	s->total_bytes_transferred = 0;
 	//other fields will be assigned at run time

@@ -14,10 +14,18 @@ void print_flags(struct ntttcp_test *test)
 		printf("%s\n", "*** sender role");
 	if (test->daemon)
 		printf("%s\n", "*** run as daemon");
-	if (test->server_role && test->use_epoll )
+	if (test->server_role && test->use_epoll)
 		printf("%s\n", "*** use epoll()");
+	if (test->server_role && !test->exit_after_done)
+		printf("%s\n", "*** hold receiver always running");
 
-	if (test->no_synch )
+	if (test->multi_clients_mode)
+		printf("%s:\t\t %s\n", "multiple clients", "yes");
+
+	if (test->last_client)
+		printf("%s:\t\t\t %s\n", "last client", "yes");
+
+	if (test->no_synch)
 		printf("%s\n", "*** no sender/receiver synch");
 
 	//printf("%s:\t\t\t %s\n", "mapping", test->mapping);
@@ -55,8 +63,16 @@ void print_flags(struct ntttcp_test *test)
 	if (test->client_role)
 		printf("%s:\t %ld\n", "sender socket buffer (bytes)", test->send_buf_size);
 
-	printf("%s:\t\t %d\n", "test duration (sec)", test->duration);
+	if (test->duration == 0)
+		printf("%s:\t\t %s\n", "test duration (sec)", "continuous");
+	else
+		printf("%s:\t\t %d\n", "test duration (sec)", test->duration);
+
 	printf("%s:\t %s\n", "show system tcp retransmit", test->show_tcp_retransmit ? "yes" : "no");
+
+	if (test->save_xml_log)
+		printf("%s:\t %s\n", "save output to xml file:", test->xml_log_filename);
+
 	printf("%s:\t\t\t %s\n", "verbose mode", test->verbose ? "enabled" : "disabled");
 	printf("---------------------------------------------------------\n");
 }
@@ -64,36 +80,42 @@ void print_flags(struct ntttcp_test *test)
 void print_usage()
 {
 	printf("Author: %s\n", AUTHOR_NAME);
-	printf("ntttcp: [-r|-s|-D|-m <mapping>|-n|-6|-u|-p|-b|-B|-t|-N|-V|-v|-h]\n\n");
+	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-6|-u|-p|-f|-b|-t|-N|-R|-x|-V|-h|-m <mapping>\n\n");
 	printf("\t-r   Run as a receiver\n");
 	printf("\t-s   Run as a sender\n");
 	printf("\t-D   Run as daemon\n");
+
+	printf("\t-M   [receiver only] multi-clients mode\n");
+	printf("\t-L   [sender only] indicates this is the last client when receiver is running with multi-clients mode\n");
+
 	printf("\t-e   [receiver only] use epoll() instead of select()\n");
+	printf("\t-H   [receiver only] hold receiver always running even after one test finished\n");
 
 	printf("\t-P   Number of ports listening on receiver side\n");
-	printf("\t-n   [sender only] number of connections per receiver port    [default: %d]  [max: %d]\n", DEFAULT_CONN_PER_THREAD, MAX_CONNECTIONS_PER_THREAD);
+	printf("\t-n   [sender only] number of connections(threads) per receiver port    [default: %d]  [max: %d]\n", DEFAULT_CONN_PER_THREAD, MAX_CONNECTIONS_PER_THREAD);
 
 	printf("\t-6   IPv6 mode    [default: IPv4]\n");
 	printf("\t-u   UDP mode     [default: TCP]\n");
 	printf("\t-p   Destination port number, or starting port number    [default: %d]\n", DEFAULT_BASE_DST_PORT);
 	printf("\t-f   Fixed source port number, or starting port number    [default: %d]\n", DEFAULT_BASE_SRC_PORT);
-	printf("\t-b   <recv buffer size>    [default: %d]\n", DEFAULT_RECV_BUFFER_SIZE);
-	printf("\t-B   <send buffer size>    [default: %d]\n", DEFAULT_SEND_BUFFER_SIZE);
+	printf("\t-b   <buffer size>    [default: %d (receiver); %d (sender)]\n", DEFAULT_RECV_BUFFER_SIZE, DEFAULT_SEND_BUFFER_SIZE);
+
 	printf("\t-t   Time of test duration in seconds    [default: %d]\n", DEFAULT_TEST_DURATION);
 	printf("\t-N   No sync, senders will start sending as soon as possible\n");
 	printf("\t     Otherwise, will use 'destination port - 1' as sync port	[default: %d]\n", DEFAULT_BASE_DST_PORT - 1);
 
 	printf("\t-R   Show system TCP retransmit counters in log from /proc\n");
+	printf("\t-x   Save output to XML file, by default saves to ntttcp-for-linux-log.xml\n");
 	printf("\t-V   Verbose mode\n");
 	printf("\t-h   Help, tool usage\n");
 
 	printf("\t-m   <mapping>\tfor the purpose of compatible with Windows ntttcp usage\n");
-	printf("\t     Where a mapping is a NumberOfReceiverPorts,Processor,BindingIPAddress set:\n");
+	printf("\t     Where a mapping is a 3-tuple of NumberOfReceiverPorts, Processor, ReceiverAddress:\n");
 	printf("\t     NumberOfReceiverPorts:    [default: %d]  [max: %d]\n", DEFAULT_NUM_THREADS, MAX_NUM_THREADS);
 	printf("\t     Processor:\t\t*, or cpuid such as 0, 1, etc \n");
 	printf("\t     e.g. -m 8,*,192.168.1.1\n");
-	printf("\t\t    If receiver role: 8 threads running on all processors;\n\t\t\tand listening on 8 ports of network on 192.168.1.1.\n");
-	printf("\t\t    If sender role: receiver has 8 threads running and listening on 8 ports of network on 192.168.1.1;\n\t\t\tand all sender threads will run on all processors\n");
+	printf("\t\t    If for receiver role: 8 threads listening on 8 ports (one port per thread) on the network 192.168.1.1;\n\t\t\tand those threads will run on all processors.\n");
+	printf("\t\t    If for sender role: receiver has 8 ports listening on the network 192.168.1.1;\n\t\t\tsender will create 8 threads to talk to all of those receiver ports\n\t\t\t(1 sender thread to one receiver port; this can be overridden by '-n');\n\t\t\tand all sender threads will run on all processors.\n");
 
 	printf("Example:\n");
 	printf("\treceiver:\n");
@@ -131,6 +153,7 @@ int process_mappings(struct ntttcp_test *test)
 				return ERROR_ARGS;
 			}
 			test->parallel = threads;
+			test->conn_per_thread = 1;
 			++state;
 		}
 		else if (S_PROCESSOR == state) {
@@ -196,6 +219,16 @@ int verify_args(struct ntttcp_test *test)
 		test->server_role = true;
 	}
 
+	if (test->client_role && test->multi_clients_mode) {
+		PRINT_ERR("multi-clients mode ('-M') is only for receiver role");
+		return ERROR_ARGS;
+	}
+
+	if (test->server_role && test->last_client) {
+		PRINT_ERR("last-client ('-L') is only for sender role");
+		return ERROR_ARGS;
+	}
+
 	if (test->conn_per_thread > MAX_CONNECTIONS_PER_THREAD) {
 		PRINT_INFO("too many connections per server port. use the max value");
 		test->conn_per_thread = MAX_CONNECTIONS_PER_THREAD;
@@ -214,14 +247,16 @@ int verify_args(struct ntttcp_test *test)
 	if (test->parallel < 1) {
 		PRINT_INFO("invalid number-of-server-ports provided. use 1");
 		test->parallel = 1;
-	}	
-	
+	}
+
 	if (test->domain == AF_INET6 && strcmp( test->bind_address, "0.0.0.0")== 0 )
 		test->bind_address = "::";
 
 	if (test->client_role) {
 		if (test->use_epoll)
 			PRINT_DBG("ignore '-e' on sender role");
+		if (!test->exit_after_done)
+			PRINT_DBG("ignore '-H' on sender role");
 	}
 
 	if (test->server_role && test->client_base_port > 0) {
@@ -238,6 +273,14 @@ int verify_args(struct ntttcp_test *test)
 		test->send_buf_size = MAX_UDP_SEND_SIZE;
 	}
 
+	if (test->duration < 0) {
+		test->duration = DEFAULT_TEST_DURATION;
+		PRINT_INFO("invalid test duration provided. use the default value");
+	}
+	if (test->duration == 0) {
+		PRINT_INFO("running test in continuous mode. please monitor throughput by other tools");
+	}
+
 	return NO_ERROR;
 }
 
@@ -248,7 +291,10 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		{"receiver", optional_argument, NULL, 'r'},
 		{"sender", optional_argument, NULL, 's'},
 		{"daemon", no_argument, NULL, 'D'},
+		{"multi-clients", no_argument, NULL, 'M'},
+		{"last-client", no_argument, NULL, 'L'},
 		{"epoll", no_argument, NULL, 'e'},
+		{"hold", no_argument, NULL, 'H'},
 		{"mapping", required_argument, NULL, 'm'},
 		{"nports", required_argument, NULL, 'P'},
 		{"nconn", required_argument, NULL, 'n'},
@@ -256,11 +302,11 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		{"udp", no_argument, NULL, 'u'},
 		{"base-dst-port", required_argument, NULL, 'p'},
 		{"base-src-port", optional_argument, NULL, 'f'},
-		{"receiver-buffer", required_argument, NULL, 'b'},
-		{"send-buffer", required_argument, NULL, 'B'},
+		{"buffer", required_argument, NULL, 'b'},
 		{"duration", required_argument, NULL, 't'},
 		{"no-synch", no_argument, NULL, 'N'},
 		{"show-retrans", no_argument, NULL, 'R'},
+		{"save-xml", optional_argument, NULL, 'x'},
 		{"verbose", no_argument, NULL, 'V'},
 		{"help", no_argument, NULL, 'h'},
 		{0, 0, 0, 0}
@@ -268,7 +314,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 	int flag;
 
-	while ((flag = getopt_long(argc, argv, "r::s::Dem:P:n:6up:f::b:B:t:NRVh", longopts, NULL)) != -1) {
+	while ((flag = getopt_long(argc, argv, "r::s::DMLeHm:P:n:6up:f::b:t:NRx::Vh", longopts, NULL)) != -1) {
 		switch (flag) {
 		case 'r':
 			test->server_role = true;
@@ -286,8 +332,20 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			test->daemon = true;
 			break;
 
+		case 'M':
+			test->multi_clients_mode = true;
+			break;
+
+		case 'L':
+			test->last_client = true;
+			break;
+
 		case 'e':
 			test->use_epoll = true;
+			break;
+
+		case 'H':
+			test->exit_after_done = false;
 			break;
 
 		case 'm':
@@ -324,9 +382,6 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 		case 'b':
 			test->recv_buf_size = unit_atod(optarg);
-			break;
-
-		case 'B':
 			test->send_buf_size = unit_atod(optarg);
 			break;
 
@@ -340,6 +395,12 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 		case 'R':
 			test->show_tcp_retransmit = true;
+			break;
+
+		case 'x':
+			test->save_xml_log = true;
+			if (optarg)
+				test->xml_log_filename = optarg;
 			break;
 
 		case 'V':
@@ -368,115 +429,59 @@ void get_cpu_usage(struct cpu_usage *cu)
 	cu->system_time = usage.ru_stime.tv_sec * 1000000.0 + usage.ru_stime.tv_usec;
 }
 
+void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
+{
+	unsigned long long int user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice;
+	user = nice = system = idle = iowait = irq = softirq = steal = guest = guest_nice = 0;
+
+	FILE* file = fopen(PROC_FILE_STAT, "r");
+	if (file == NULL) {
+		PRINT_ERR("Cannot open /proc/stat");
+		return;
+	}
+
+	char buffer[256];
+	int cpus = -1;
+	do {
+		cpus++;
+		char *s = fgets(buffer, 255, file);
+		/* We should not reach to the file end, because we only read lines starting with 'cpu' */
+		if (s == NULL) {
+			PRINT_ERR("Error when reading /proc/stat");
+			return;
+		}
+
+		/* Assume the first line is stat for all CPUs. */
+		if (cpus == 0) {
+			sscanf(buffer,
+			      "cpu  %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu",
+			      &user, &nice, &system, &idle, &iowait,
+			      &irq, &softirq, &steal, &guest, &guest_nice);
+		}
+	} while(buffer[0] == 'c' && buffer[1] == 'p' && buffer[2] == 'u');
+
+	fclose(file);
+
+	cups->nproc = MAX(cpus - 1, 1);
+	cups->user_time = user;
+	cups->system_time = system;
+	cups->idle_time = idle;
+	cups->iowait_time = iowait;
+	cups->softirq_time = softirq;
+
+	cups->total_time = user + nice + system + idle + iowait + irq + softirq + steal;
+}
+
 double get_time_diff(struct timeval *t1, struct timeval *t2)
 {
 	return fabs( (t1->tv_sec + (t1->tv_usec / 1000000.0)) - (t2->tv_sec + (t2->tv_usec / 1000000.0)) );
 }
 
-void print_thread_result(int tid, uint64_t total_bytes, double test_duration)
-{
-	char *log = NULL, *log_tmp = NULL;
-
-	if (tid == -1) {
-		PRINT_INFO("\tThread\tTime(s)\tThroughput");
-		PRINT_INFO("\t======\t=======\t==========");
-	}
-	else{
-		if (test_duration == 0)
-			return;
-
-		log_tmp = format_throughput(total_bytes, test_duration);
-		ASPRINTF(&log, "\t%d\t %.2f\t %s", tid, test_duration, log_tmp);
-		free(log_tmp);
-		PRINT_INFO_FREE(log);
-	}
-}
-
-void print_total_result(struct ntttcp_test *test,
-			uint64_t total_bytes,
-			double test_duration,
-			struct cpu_usage *init_cpu_usage,
-			struct cpu_usage *final_cpu_usage,
-			struct tcp_retrans *init_tcp_retrans,
-			struct tcp_retrans *final_tcp_retrans )
-{
-	char *log = NULL, *log_tmp = NULL;
-	double time_diff;
-	double total_cpu_usage;
-	double cpu_speed_mhz;
-	double cycles_per_byte;
-	uint64_t counter_diff;
-
-	if (test_duration == 0)
-		return;
-
-	time_diff = final_cpu_usage->time - init_cpu_usage->time;
-
-	PRINT_INFO("#####  Totals:  #####");
-	ASPRINTF(&log, "test duration\t:%.2f seconds", test_duration);
-	PRINT_INFO_FREE(log);
-	ASPRINTF(&log, "total bytes\t:%" PRIu64, total_bytes);
-	PRINT_INFO_FREE(log);
-
-	log_tmp = format_throughput(total_bytes, test_duration);
-	ASPRINTF(&log, "\t throughput\t:%s", log_tmp);
-	free(log_tmp);
-	PRINT_INFO_FREE(log);
-
-	total_cpu_usage = ((final_cpu_usage->clock - init_cpu_usage->clock) * 1000000.0 / CLOCKS_PER_SEC) / time_diff;
-	ASPRINTF(&log, "total cpu time\t:%.2f%%", total_cpu_usage * 100);
-	PRINT_INFO_FREE(log);
-	ASPRINTF(&log, "\t user time\t:%.2f%%",
-		((final_cpu_usage->user_time - init_cpu_usage->user_time) / time_diff) * 100);
-	PRINT_INFO_FREE(log);
-	ASPRINTF(&log, "\t system time\t:%.2f%%",
-		((final_cpu_usage->system_time - init_cpu_usage->system_time) / time_diff) * 100);
-	PRINT_INFO_FREE(log);
-	cpu_speed_mhz = read_value_from_proc(PROC_FILE_CPUINFO, CPU_SPEED_MHZ);
-	ASPRINTF(&log, "\t cpu speed\t:%.3fMHz",	cpu_speed_mhz);
-	PRINT_INFO_FREE(log);
-	cycles_per_byte = total_bytes == 0 ? 0 : 
-				cpu_speed_mhz * 1000 * 1000 * test_duration * total_cpu_usage / total_bytes;
-	ASPRINTF(&log, "\t cycles/byte\t:%.2f",	cycles_per_byte);
-	PRINT_INFO_FREE(log);
-
-	if (test->show_tcp_retransmit) {
-		PRINT_INFO("tcp retransmit:");
-		/*
-		ASPRINTF(&log, "\t InitRetransSegs:%" PRIu64, init_tcp_retrans->retrans_segs);
-		PRINT_INFO_FREE(log);
-		ASPRINTF(&log, "\t End RetransSegs:%" PRIu64, final_tcp_retrans->retrans_segs);
-		PRINT_INFO_FREE(log);
-		*/
-		counter_diff = final_tcp_retrans->retrans_segs - init_tcp_retrans->retrans_segs;
-		ASPRINTF(&log, "\t retrans_segments/sec\t:%.2f", counter_diff / test_duration);
-		PRINT_INFO_FREE(log);
-		counter_diff = final_tcp_retrans->tcp_lost_retransmit - init_tcp_retrans->tcp_lost_retransmit;
-		ASPRINTF(&log, "\t lost_retrans/sec\t:%.2f", counter_diff / test_duration);
-		PRINT_INFO_FREE(log);
-		counter_diff = final_tcp_retrans->tcp_syn_retrans - init_tcp_retrans->tcp_syn_retrans;
-		ASPRINTF(&log, "\t syn_retrans/sec\t:%.2f", counter_diff / test_duration);
-		PRINT_INFO_FREE(log);
-		counter_diff = final_tcp_retrans->tcp_fast_retrans - init_tcp_retrans->tcp_fast_retrans;
-		ASPRINTF(&log, "\t fast_retrans/sec\t:%.2f", counter_diff / test_duration);
-		PRINT_INFO_FREE(log);
-		counter_diff = final_tcp_retrans->tcp_forward_retrans - init_tcp_retrans->tcp_forward_retrans;
-		ASPRINTF(&log, "\t forward_retrans/sec\t:%.2f", counter_diff / test_duration);
-		PRINT_INFO_FREE(log);
-		counter_diff = final_tcp_retrans->tcp_slowStart_retrans - init_tcp_retrans->tcp_slowStart_retrans;
-		ASPRINTF(&log, "\t slowStart_retrans/sec\t:%.2f", counter_diff / test_duration);
-		PRINT_INFO_FREE(log);
-		counter_diff = final_tcp_retrans->tcp_retrans_fail - init_tcp_retrans->tcp_retrans_fail;
-		ASPRINTF(&log, "\t retrans_fail/sec\t:%.2f", counter_diff / test_duration);
-		PRINT_INFO_FREE(log);
-	}
-
-	printf("---------------------------------------------------------\n");
-}
-
 const long KIBI = 1<<10;
 const long MEBI = 1<<20;
 const long GIBI = 1<<30;
+const int BYTE_TO_BITS = 8;
+
 double unit_atod(const char *s)
 {
 	double n;
@@ -506,6 +511,237 @@ const char *unit_bps[] =
 	"Mbps",
 	"Gbps"
 };
+
+int process_test_results(struct ntttcp_test_endpoint *tep)
+{
+	struct ntttcp_test_endpoint_results *tepr = tep->results;
+	unsigned int i;
+	double cpu_speed_mhz;
+	double test_duration = tepr->actual_test_time;
+	uint64_t total_bytes = tepr->total_bytes;
+	long double cpu_ps_total_diff;
+
+	if (test_duration == 0)
+		return -1;
+
+	/* calculate for per-thread counters */
+	for (i=0; i<tep->total_threads; i++){
+		if (tep->results->threads[i]->is_sync_thread == true)
+			continue;
+
+		tepr->threads[i]->KBps = tepr->threads[i]->total_bytes / KIBI / tepr->threads[i]->actual_test_time;
+		tepr->threads[i]->MBps = tepr->threads[i]->KBps / KIBI;
+		tepr->threads[i]->mbps = tepr->threads[i]->MBps * BYTE_TO_BITS;
+	}
+
+	/* calculate for overall counters */
+	cpu_speed_mhz = read_value_from_proc(PROC_FILE_CPUINFO, CPU_SPEED_MHZ);
+	tepr->cpu_speed_mhz = cpu_speed_mhz;
+
+	tepr->retrans_segments_per_sec = (tepr->final_tcp_retrans->retrans_segs - tepr->init_tcp_retrans->retrans_segs) / test_duration;
+	tepr->tcp_lost_retransmit_per_sec = (tepr->final_tcp_retrans->tcp_lost_retransmit - tepr->init_tcp_retrans->tcp_lost_retransmit) / test_duration;
+	tepr->tcp_syn_retrans_per_sec = (tepr->final_tcp_retrans->tcp_syn_retrans - tepr->init_tcp_retrans->tcp_syn_retrans) / test_duration;
+	tepr->tcp_fast_retrans_per_sec = (tepr->final_tcp_retrans->tcp_fast_retrans - tepr->init_tcp_retrans->tcp_fast_retrans) / test_duration;
+	tepr->tcp_forward_retrans_per_sec = (tepr->final_tcp_retrans->tcp_forward_retrans - tepr->init_tcp_retrans->tcp_forward_retrans) / test_duration;
+	tepr->tcp_slowStart_retrans_per_sec = (tepr->final_tcp_retrans->tcp_slowStart_retrans - tepr->init_tcp_retrans->tcp_slowStart_retrans) / test_duration;
+	tepr->tcp_retrans_fail_per_sec = (tepr->final_tcp_retrans->tcp_retrans_fail - tepr->init_tcp_retrans->tcp_retrans_fail) / test_duration;
+
+	cpu_ps_total_diff = tepr->final_cpu_ps->total_time - tepr->init_cpu_ps->total_time;
+	tepr->cpu_ps_user_usage = (tepr->final_cpu_ps->user_time - tepr->init_cpu_ps->user_time) / cpu_ps_total_diff;
+	tepr->cpu_ps_system_usage = (tepr->final_cpu_ps->system_time - tepr->init_cpu_ps->system_time) / cpu_ps_total_diff;
+	tepr->cpu_ps_idle_usage = (tepr->final_cpu_ps->idle_time - tepr->init_cpu_ps->idle_time) / cpu_ps_total_diff;
+	tepr->cpu_ps_iowait_usage = (tepr->final_cpu_ps->iowait_time - tepr->init_cpu_ps->iowait_time) / cpu_ps_total_diff;
+	tepr->cpu_ps_softirq_usage = (tepr->final_cpu_ps->softirq_time - tepr->init_cpu_ps->softirq_time) / cpu_ps_total_diff;
+
+	/* calculate for counters for xml log (compatiable with Windows ntttcp.exe) */
+	tepr->total_bytes_MB = total_bytes / MEBI;
+	tepr->throughput_MBps = tepr->total_bytes_MB / test_duration;
+	tepr->throughput_mbps = tepr->throughput_MBps * BYTE_TO_BITS;
+	tepr->cycles_per_byte = total_bytes == 0 ? 0 :
+			cpu_speed_mhz * 1000 * 1000 * test_duration * (tepr->final_cpu_ps->nproc) * (1 - tepr->cpu_ps_idle_usage) / total_bytes;
+	tepr->packets_sent = 0;
+	tepr->packets_received = 0;
+	tepr->packets_retransmitted = tepr->final_tcp_retrans->retrans_segs - tepr->init_tcp_retrans->retrans_segs;
+	tepr->cpu_busy_percent = ((tepr->final_cpu_usage->clock - tepr->init_cpu_usage->clock) * 1000000.0 / CLOCKS_PER_SEC)
+				 / (tepr->final_cpu_usage->time - tepr->init_cpu_usage->time);	
+	tepr->errors = 0;
+
+	return 0;
+}
+
+void print_test_results(struct ntttcp_test_endpoint *tep)
+{
+	struct ntttcp_test_endpoint_results *tepr = tep->results;
+	uint64_t total_bytes = tepr->total_bytes;
+	double test_duration = tepr->actual_test_time;
+
+	unsigned int i;
+	char *log = NULL, *log_tmp = NULL;
+
+	if (test_duration == 0)
+		return;
+
+	if (tep->test->verbose) {
+		PRINT_INFO("\tThread\tTime(s)\tThroughput");
+		PRINT_INFO("\t======\t=======\t==========");
+		for (i=0; i<tep->total_threads; i++) {
+			if (tep->results->threads[i]->is_sync_thread == true)
+				continue;
+
+			log_tmp = format_throughput(tepr->threads[i]->total_bytes,
+							tepr->threads[i]->actual_test_time);
+			ASPRINTF(&log, "\t%d\t %.2f\t %s", i, tepr->threads[i]->actual_test_time, log_tmp);
+			free(log_tmp);
+			PRINT_INFO_FREE(log);
+		}
+	}
+
+	PRINT_INFO("#####  Totals:  #####");
+	ASPRINTF(&log, "test duration\t:%.2f seconds", test_duration);
+	PRINT_INFO_FREE(log);
+	ASPRINTF(&log, "total bytes\t:%" PRIu64, total_bytes);
+	PRINT_INFO_FREE(log);
+
+	log_tmp = format_throughput(total_bytes, test_duration);
+	ASPRINTF(&log, "\t throughput\t:%s", log_tmp);
+	free(log_tmp);
+	PRINT_INFO_FREE(log);
+
+	if (tep->test->show_tcp_retransmit) {
+		PRINT_INFO("tcp retransmit:");
+		ASPRINTF(&log, "\t retrans_segments/sec\t:%.2f", tepr->retrans_segments_per_sec);
+		PRINT_INFO_FREE(log);
+		ASPRINTF(&log, "\t lost_retrans/sec\t:%.2f", tepr->tcp_lost_retransmit_per_sec);
+		PRINT_INFO_FREE(log);
+		ASPRINTF(&log, "\t syn_retrans/sec\t:%.2f", tepr->tcp_syn_retrans_per_sec);
+		PRINT_INFO_FREE(log);
+		ASPRINTF(&log, "\t fast_retrans/sec\t:%.2f", tepr->tcp_fast_retrans_per_sec);
+		PRINT_INFO_FREE(log);
+		ASPRINTF(&log, "\t forward_retrans/sec\t:%.2f", tepr->tcp_forward_retrans_per_sec);
+		PRINT_INFO_FREE(log);
+		ASPRINTF(&log, "\t slowStart_retrans/sec\t:%.2f", tepr->tcp_slowStart_retrans_per_sec);
+		PRINT_INFO_FREE(log);
+		ASPRINTF(&log, "\t retrans_fail/sec\t:%.2f", tepr->tcp_retrans_fail_per_sec);
+		PRINT_INFO_FREE(log);
+	}
+
+	if (tepr->final_cpu_ps->nproc == tepr->init_cpu_ps->nproc) {
+		ASPRINTF(&log, "cpu cores\t:%d", tepr->final_cpu_ps->nproc);
+		PRINT_INFO_FREE(log);
+	} else {
+		ASPRINTF(&log, "number of CPUs does not match: initial: %d; final: %d", tepr->init_cpu_ps->nproc, tepr->final_cpu_ps->nproc);
+		PRINT_ERR_FREE(log);
+	}
+
+	ASPRINTF(&log, "\t cpu speed\t:%.3fMHz", tepr->cpu_speed_mhz);
+	PRINT_INFO_FREE(log);
+	ASPRINTF(&log, "\t user\t\t:%.2f%%", tepr->cpu_ps_user_usage * 100);
+	PRINT_INFO_FREE(log);
+	ASPRINTF(&log, "\t system\t\t:%.2f%%", tepr->cpu_ps_system_usage * 100);
+	PRINT_INFO_FREE(log);
+	ASPRINTF(&log, "\t idle\t\t:%.2f%%", tepr->cpu_ps_idle_usage * 100);
+	PRINT_INFO_FREE(log);
+	ASPRINTF(&log, "\t iowait\t\t:%.2f%%", tepr->cpu_ps_iowait_usage * 100);
+	PRINT_INFO_FREE(log);
+	ASPRINTF(&log, "\t softirq\t:%.2f%%", tepr->cpu_ps_softirq_usage * 100);
+	PRINT_INFO_FREE(log);
+	ASPRINTF(&log, "\t cycles/byte\t:%.2f", tepr->cycles_per_byte);
+	PRINT_INFO_FREE(log);
+	ASPRINTF(&log, "cpu busy (all)\t:%.2f%%", tepr->cpu_busy_percent * 100);
+	PRINT_INFO_FREE(log);
+
+	printf("---------------------------------------------------------\n");
+}
+
+int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
+{
+	struct ntttcp_test *test = tep->test;
+	struct ntttcp_test_endpoint_results *tepr = tep->results;
+	char str[2014];
+	unsigned int i;
+
+	FILE *logfile = fopen(test->xml_log_filename, "w");
+	if (logfile == NULL) {
+		PRINT_ERR("Error opening file to write log");
+		return -1;
+	}
+
+	gethostname(str, 1024);
+	fprintf(logfile, "<ntttcp%s computername=\"%s\" version=\"5.33\">\n", tep->endpoint_role == ROLE_RECEIVER ? "r" : "s", str);
+	fprintf(logfile, "	<parameters>\n");
+	fprintf(logfile, "		<send_socket_buff>%lu</send_socket_buff>\n", test->send_buf_size);
+	fprintf(logfile, "		<recv_socket_buff>%lu</recv_socket_buff>\n", test->recv_buf_size);
+	fprintf(logfile, "		<port>%d</port>\n", test->server_base_port);
+	fprintf(logfile, "		<sync_port>%s</sync_port>\n", "False");
+	fprintf(logfile, "		<no_sync>%s</no_sync>\n", "False");
+	fprintf(logfile, "		<wait_timeout_milliseconds>%d</wait_timeout_milliseconds>\n", 0);
+	fprintf(logfile, "		<async>%s</async>\n", "False");
+	fprintf(logfile, "		<verbose>%s</verbose>\n", test->verbose ? "True":"False");
+	fprintf(logfile, "		<wsa>%s</wsa>\n", "False");
+	fprintf(logfile, "		<use_ipv6>%s</use_ipv6>\n", test->domain == AF_INET6 ? "True":"False");
+	fprintf(logfile, "		<udp>%s</udp>\n", test->protocol == UDP? "True":"False");
+	fprintf(logfile, "		<verify_data>%s</verify_data>\n", "False");
+	fprintf(logfile, "		<wait_all>%s</wait_all>\n", "False");
+	fprintf(logfile, "		<run_time>%d</run_time>\n", test->duration);
+	fprintf(logfile, "		<warmup_time>%d</warmup_time>\n", 0);
+	fprintf(logfile, "		<cooldown_time>%d</cooldown_time>\n", 0);
+	fprintf(logfile, "		<dash_n_timeout>%d</dash_n_timeout>\n", 0);
+	fprintf(logfile, "		<bind_sender>%s</bind_sender>\n", "False");
+	fprintf(logfile, "		<sender_name>%s</sender_name>\n", "NA");
+	fprintf(logfile, "		<max_active_threads>%d</max_active_threads>\n", 0);
+	fprintf(logfile, "		<tp>%s</tp>\n", "False");
+	fprintf(logfile, "		<no_stdio_buffer>%s</no_stdio_buffer>\n", "False");
+	fprintf(logfile, "		<throughput_Bpms>%d</throughput_Bpms>\n", 0);
+	fprintf(logfile, "		<cpu_burn>%d</cpu_burn>\n", 0);
+	fprintf(logfile, "		<latency_measurement>%s</latency_measurement>\n", "False");
+	fprintf(logfile, "		<use_io_compl_ports>%s</use_io_compl_ports>\n", "NA");
+	fprintf(logfile, "		<cpu_from_idle_flag>%s</cpu_from_idle_flag>\n", "False");
+	fprintf(logfile, "		<get_estats>%s</get_estats>\n", "False");
+	fprintf(logfile, "		<qos_flag>%s</qos_flag>\n", "False");
+	fprintf(logfile, "		<jitter_measurement>%s</jitter_measurement>\n", "False");
+	fprintf(logfile, "		<packet_spacing>%d</packet_spacing>\n", 0);
+	fprintf(logfile, "	</parameters>\n");
+
+	for(i = 0; i < tep->total_threads; i++ ){
+		if (tep->results->threads[i]->is_sync_thread == true)
+			continue;
+
+		fprintf(logfile, "	<thread index=\"%i\">\n", i);
+		fprintf(logfile, "		<realtime metric=\"s\">%.3f</realtime>\n", tepr->threads[i]->actual_test_time);
+		fprintf(logfile, "		<throughput metric=\"KB/s\">%.3f</throughput>\n", tepr->threads[i]->KBps);
+		fprintf(logfile, "		<throughput metric=\"MB/s\">%.3f</throughput>\n", tepr->threads[i]->MBps);
+		fprintf(logfile, "		<throughput metric=\"mbps\">%.3f</throughput>\n", tepr->threads[i]->mbps);
+		fprintf(logfile, "		<avg_bytes_per_compl metric=\"B\">%.3f</avg_bytes_per_compl>\n", 0.000);
+		fprintf(logfile, "	</thread>\n");
+	}
+
+	fprintf(logfile, "	<total_bytes metric=\"MB\">%.6f</total_bytes>\n", tepr->total_bytes_MB);
+	fprintf(logfile, "	<realtime metric=\"s\">%.6f</realtime>\n", tepr->actual_test_time);
+	fprintf(logfile, "	<avg_bytes_per_compl metric=\"B\">%.3f</avg_bytes_per_compl>\n", 0.000);
+	fprintf(logfile, "	<threads_avg_bytes_per_compl metric=\"B\">%.3f</threads_avg_bytes_per_compl>\n", 0.000);
+	fprintf(logfile, "	<avg_frame_size metric=\"B\">%.3f</avg_frame_size>\n", 0.000);
+	fprintf(logfile, "	<throughput metric=\"MB/s\">%.3f</throughput>\n", tepr->throughput_MBps);
+	fprintf(logfile, "	<throughput metric=\"mbps\">%.3f</throughput>\n", tepr->throughput_mbps);
+	fprintf(logfile, "	<total_buffers>%.3f</total_buffers>\n", 0.000);
+	fprintf(logfile, "	<throughput metric=\"buffers/s\">%.3f</throughput>\n", 0.000);
+	fprintf(logfile, "	<avg_packets_per_interrupt metric=\"packets/interrupt\">%.3f</avg_packets_per_interrupt>\n", 0.000);
+	fprintf(logfile, "	<interrupts metric=\"count/sec\">%.3f</interrupts>\n", 0.000);
+	fprintf(logfile, "	<dpcs metric=\"count/sec\">%.3f</dpcs>\n", 0.000);
+	fprintf(logfile, "	<avg_packets_per_dpc metric=\"packets/dpc\">%.3f</avg_packets_per_dpc>\n", 0.000);
+	fprintf(logfile, "	<cycles metric=\"cycles/byte\">%.3f</cycles>\n", tepr->cycles_per_byte);
+	fprintf(logfile, "	<packets_sent>%lu</packets_sent>\n", tepr->packets_sent);
+	fprintf(logfile, "	<packets_received>%lu</packets_received>\n", tepr->packets_received);
+	fprintf(logfile, "	<packets_retransmitted>%lu</packets_retransmitted>\n", tepr->packets_retransmitted);
+	fprintf(logfile, "	<errors>%d</errors>\n", tepr->errors);
+	fprintf(logfile, "	<cpu metric=\"%%\">%.3f</cpu>\n", tepr->cpu_busy_percent * 100);
+	fprintf(logfile, "	<bufferCount>%u</bufferCount>\n", 0);
+	fprintf(logfile, "	<bufferLen>%u</bufferLen>\n", 0);
+	fprintf(logfile, "	<io>%u</io>\n", 0);
+	fprintf(logfile, "</ntttcp%s>\n", tep->endpoint_role == ROLE_RECEIVER ? "r": "s");
+
+	fclose(logfile);
+	return 0;
+}
 
 char *format_throughput(uint64_t bytes_transferred, double test_duration)
 {
@@ -575,7 +811,7 @@ uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 	size_t len = 0;
 	ssize_t read;
 	int key_found = 0;
-	
+
 	stream = fopen(file_name, "r");
 	if (!stream) {
 		ASPRINTF(&log, "failed to open file: %s. errno = %d", file_name, errno);
@@ -622,7 +858,7 @@ found:
 	free(line);
 	fclose(stream);
 
-	return pch? strtoull(pch, NULL, 10):0;
+	return pch ? strtoull(pch, NULL, 10) : 0;
 }
 
 void get_tcp_retrans(struct tcp_retrans *tr)
@@ -643,6 +879,7 @@ double read_value_from_proc(char *file_name, char *key)
 	char *line = NULL, *pch = NULL;
 	size_t len = 0;
 	ssize_t read;
+	double speed = 0;
 
 	stream = fopen(file_name, "r");
 	if (!stream) {
@@ -663,9 +900,54 @@ double read_value_from_proc(char *file_name, char *key)
 			break;
 		}
 	}
+	speed = pch ? strtod(pch, NULL) : 0;
+	if (speed == 0)
+		PRINT_ERR("Failed to read CPU speed from /proc/cpuinfo");
 
 	free(line);
 	fclose(stream);
 
-	return pch? strtod(pch, NULL):0;
+	return speed;
+}
+
+bool check_resource_limit(struct ntttcp_test *test)
+{
+	char *log;
+	unsigned long soft_limit = 0;
+	unsigned long hard_limit = 0;
+	uint total_connections = 0;
+	bool verbose_log = test->verbose;
+
+	struct rlimit limitstruct;
+	if(-1 == getrlimit(RLIMIT_NOFILE, &limitstruct))
+		PRINT_ERR("Failed to load resource limits");
+
+	soft_limit = (unsigned long)limitstruct.rlim_cur;
+	hard_limit = (unsigned long)limitstruct.rlim_max;
+
+	ASPRINTF(&log, "user limits for maximum number of open files: soft: %ld; hard: %ld",
+			soft_limit,
+			hard_limit);
+	PRINT_DBG_FREE(log);
+
+	if (test->client_role == true) {
+		total_connections = test->parallel * test->conn_per_thread;
+	} else {
+		/*
+		 * for receiver, just do a minial check;
+		 * because we don't know how many conn_per_thread will be used by sender.
+		 */
+		total_connections = test->parallel * 1;
+	}
+
+	if (total_connections > soft_limit) {
+		ASPRINTF(&log, "soft limit is too small: limit is %ld; but total connections will be %d X n",
+				soft_limit,
+				test->parallel);
+		PRINT_ERR_FREE(log);
+
+		return false;
+	} else {
+		return true;
+	}
 }

@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include "const.h"
 #include "logger.h"
 
@@ -19,8 +20,13 @@ struct ntttcp_test
 {
 	bool	server_role;        /* '-s' for client */
 	bool	client_role;        /* '-r' for server */
+
+	bool	multi_clients_mode;  /* '-M' server/receiver only; will server/receiver work with multi-clients mode? */
+	bool	last_client;	     /* '-L' client/sender only; indicates that this is the last client when test with multi-clients mode */
+
 	bool	daemon;             /* '-D' for daemon mode */
 	bool	use_epoll;          /* '-e' for epoll() to watch fd for events. receiver only */
+	bool	exit_after_done;    /* exit receiver after test done. use '-H' to hold receiver always running. receiver only */
 	char	*mapping;           /* '-m' for connection(s),Processor,StartReceiver IP map set */
 	uint	parallel;           /*    Parallel connections, from -m flag */
 	int	cpu_affinity;       /*    CPU affinity, from -m flag */
@@ -34,8 +40,11 @@ struct ntttcp_test
 	uint	client_base_port;    /* '-f' to pin client source port based on this */
 	ulong	recv_buf_size;       /* '-b' for receive buffer option */
 	ulong	send_buf_size;       /* '-B' for send buffer option */
-	int	duration;            /* '-t' for total duration in sec of test */
+	int	duration;            /* '-t' for total duration in sec of test (0: continuous_mode) */
+
 	bool 	show_tcp_retransmit; /* '-R' to display TCP retransmit counters in log from /proc */
+	bool	save_xml_log;        /* '-x' to save output to XML file */
+	char	*xml_log_filename;   /* the xml log file name */
 	bool	verbose;             /* '-V' for verbose logging */
 };
 
@@ -48,23 +57,32 @@ struct ntttcp_test_endpoint{
 	struct	timeval start_time;   /* timestamp of test started on this endpoint */
 	struct	timeval end_time;     /* timestamp of test ended on this endpoint */
 	int	synch_socket;         /* the synch channel for sender/receiver sync */
+	unsigned int	total_threads;	      /* total threads, including synch thread */
+	bool    receiver_exit_after_done;       /* the receiver will exit after test done, or not */
 
 	struct	ntttcp_stream_client **client_streams; /* alloc memory for this if client/sender role */
 	struct	ntttcp_stream_server **server_streams; /* alloc memory for this if server/receiver role */
 
 	pthread_t	*threads;
+	struct	ntttcp_test_endpoint_results	*results;	/* test results */
+
+	/* to support testing with multiple senders */
+	int	num_remote_endpoints; /* number to test client/sender endpoints */
+	int	remote_endpoints[MAX_REMOTE_ENDPOINTS]; /* list of the TCP listeners of those endpoints */
 };
 
 /* manage a client test connection/stream */
 struct ntttcp_stream_client{
+	struct	ntttcp_test_endpoint *endpoint;
 	int	domain;
 	int	protocol;
 	char	*bind_address;
 	uint	server_port;
 	uint	client_port;
 	ulong	send_buf_size;
-	int	is_sync_thread;
+	bool	is_sync_thread;
 	bool	no_synch;
+	bool	continuous_mode;
 	bool	verbose;
 
 	uint64_t        total_bytes_transferred;
@@ -72,13 +90,15 @@ struct ntttcp_stream_client{
 
 /* manage a server test connection/stream */
 struct ntttcp_stream_server{
+	struct  ntttcp_test_endpoint *endpoint;
 	int	domain;
 	int	protocol;
 	char	*bind_address;
 	uint	server_port;
 	ulong	recv_buf_size;
-	int	is_sync_thread;
+	bool	is_sync_thread;
 	bool	no_synch;
+	bool    continuous_mode;
 	bool	verbose;
 	bool	use_epoll;
 
@@ -94,7 +114,8 @@ struct ntttcp_test *new_ntttcp_test();
 void default_ntttcp_test(struct ntttcp_test *test);
 
 struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, int endpoint_role);
+void set_ntttcp_test_endpoint_test_continuous(struct ntttcp_test_endpoint* e);
 void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e);
 
-struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test *test);
-struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test *test);
+struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoint *endpoint);
+struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test_endpoint *endpoint);

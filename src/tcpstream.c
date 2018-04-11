@@ -17,10 +17,12 @@ int n_read(int fd, char *buffer, size_t total)
 	while (left > 0) {
 		rtn = read(fd, buffer, left);
 		if (rtn < 0) {
-			if (errno == EINTR || errno == EAGAIN)
+			if (errno == EINTR || errno == EAGAIN) {
 				break;
-			else
+			} else {
+				printf("socket read error: %d\n", errno);
 				return ERROR_NETWORK_READ;
+			}
 		}
 		else if (rtn == 0)
 			break;
@@ -40,10 +42,12 @@ int n_write(int fd, const char *buffer, size_t total)
 	while (left > 0) {
 		rtn = write(fd, buffer, left);
 		if (rtn < 0) {
-			if (errno == EINTR || errno == EAGAIN)
+			if (errno == EINTR || errno == EAGAIN) {
 				return total - left;
-			else
+			} else {
+//				printf("socket write error: %d\n", errno);
 				return ERROR_NETWORK_WRITE;
+			}
 		}
 		else if (rtn == 0)
 			return ERROR_NETWORK_WRITE;
@@ -76,6 +80,8 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	char *port_str;        //used to get remote peer's port number
 	struct addrinfo hints, *remote_serv_info, *p; //to get remote peer's sockaddr
 
+	struct timeval timeout = {5, 0}; //set socket timeout
+
 	sc = (struct ntttcp_stream_client *) ptr;
 	verbose_log = sc->verbose;
 
@@ -98,13 +104,27 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 			freeaddrinfo(remote_serv_info);
 			return 0;
 		}
+		else{
+		/* 1a. set socket timeout */
+			if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
+				ASPRINTF(&log, "cannot set socket options: %d", sockfd);
+				PRINT_ERR_FREE(log);
+				freeaddrinfo(remote_serv_info);
+				close(sockfd);
+				return 0;
+			}
+			if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+				ASPRINTF(&log, "cannot set socket options: %d", sockfd);
+				PRINT_ERR_FREE(log);
+				freeaddrinfo(remote_serv_info);
+				close(sockfd);
+				return 0;
+			}
+		}
 
 		local_addr_size = sizeof(local_addr);
 
-		/*
-		   2. bind this socket fd to a local random/ephemeral TCP port,
-		      so that the sender side will have randomized TCP ports.
-		*/
+		/* 2. bind this socket fd to a local (random/ephemeral, or fixed) TCP port */
 		if (sc->domain == AF_INET) {
 			(*(struct sockaddr_in*)&local_addr).sin_family = AF_INET;
 			(*(struct sockaddr_in*)&local_addr).sin_port = htons(sc->client_port);
@@ -116,8 +136,9 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 
 		if (( i = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0 ) {
 			ASPRINTF(&log,
-				"failed to bind socket: %d to a local ephemeral port. errno = %d",
+				"failed to bind socket: %d to a local port: %d. errno = %d",
 				sockfd,
+				sc->client_port,
 				errno);
 			PRINT_ERR_FREE(log);
 		}
@@ -192,10 +213,10 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	//fill_buffer(buffer, sc->send_buf_size);
 	memset(buffer, 'A', sc->send_buf_size * sizeof(char));
 
-	while (is_light_turned_on()){
+	while ( is_light_turned_on(sc->continuous_mode) ) {
 		n = n_write(sockfd, buffer, strlen(buffer));
 		if (n < 0) {
-			PRINT_ERR("cannot write data to a socket");
+//			PRINT_ERR("cannot write data to a socket");
 			free(buffer);
 			close(sockfd);
 			return 0;
@@ -270,7 +291,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 		}
 		if (( i = bind(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
 			ASPRINTF(&log,
-				"failed to bind the socket to local address: %s on socket: %d. errcode = %d",
+				"failed to bind the socket to local address: %s on socket: %d. return = %d",
 				local_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr,
 									local_addr_str,
 									ip_addr_max_size),
@@ -366,6 +387,10 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 	events = calloc (MAX_EPOLL_EVENTS, sizeof event);
 
 	while (1) {
+		if (ss->endpoint->receiver_exit_after_done &&
+		    ss->endpoint->state == TEST_FINISHED)
+			break;
+
 		n_fds = epoll_wait (efd, events, MAX_EPOLL_EVENTS, -1);
 		for (i = 0; i < n_fds; i++) {
 			current_fd = events[i].data.fd;
@@ -373,7 +398,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 			if ((events[i].events & EPOLLERR) ||
 			    (events[i].events & EPOLLHUP) ||
 			    (!(events[i].events & EPOLLIN))) {
-				/* An error has occured on this fd, or the socket is not ready for reading */
+				/* An error has occurred on this fd, or the socket is not ready for reading */
 				PRINT_ERR("error happened on the associated connection");
 				close (current_fd);
 				continue;
@@ -392,7 +417,8 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 							break;
 						}
 						else {
-							PRINT_ERR("error to accept new connections");
+							ASPRINTF(&log, "error to accept new connections. errno = %d", errno)
+							PRINT_ERR_FREE(log);
 							break;
 						}
 					}
@@ -495,6 +521,10 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 
 	/* accept new client, receive data from client */
 	while (1) {
+		if (ss->endpoint->receiver_exit_after_done &&
+		    ss->endpoint->state == TEST_FINISHED)
+			break;
+
 		memcpy(&read_set, &ss->read_set, sizeof(fd_set));
 		memcpy(&write_set, &ss->write_set, sizeof(fd_set));
 
