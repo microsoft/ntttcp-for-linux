@@ -80,7 +80,7 @@ struct ntttcp_stream_client{
 	uint	server_port;
 	uint	client_port;
 	ulong	send_buf_size;
-	int	is_sync_thread;
+	bool	is_sync_thread;
 	bool	no_synch;
 	bool	continuous_mode;
 	bool	verbose;
@@ -96,7 +96,7 @@ struct ntttcp_stream_server{
 	char	*bind_address;
 	uint	server_port;
 	ulong	recv_buf_size;
-	int	is_sync_thread;
+	bool	is_sync_thread;
 	bool	no_synch;
 	bool    continuous_mode;
 	bool	verbose;

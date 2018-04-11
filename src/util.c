@@ -526,7 +526,7 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 
 	/* calculate for per-thread counters */
 	for (i=0; i<tep->total_threads; i++){
-		if (tep->results->threads[i]->is_sync_thread == 1)
+		if (tep->results->threads[i]->is_sync_thread == true)
 			continue;
 
 		tepr->threads[i]->KBps = tepr->threads[i]->total_bytes / KIBI / tepr->threads[i]->actual_test_time;
@@ -584,7 +584,7 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 		PRINT_INFO("\tThread\tTime(s)\tThroughput");
 		PRINT_INFO("\t======\t=======\t==========");
 		for (i=0; i<tep->total_threads; i++) {
-			if (tep->results->threads[i]->is_sync_thread == 1)
+			if (tep->results->threads[i]->is_sync_thread == true)
 				continue;
 
 			log_tmp = format_throughput(tepr->threads[i]->total_bytes,
@@ -700,7 +700,7 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	</parameters>\n");
 
 	for(i = 0; i < tep->total_threads; i++ ){
-		if (tep->results->threads[i]->is_sync_thread == 1)
+		if (tep->results->threads[i]->is_sync_thread == true)
 			continue;
 
 		fprintf(logfile, "	<thread index=\"%i\">\n", i);

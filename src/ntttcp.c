@@ -144,9 +144,9 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 		if (i == (total_threads - 1)
 		    && e->endpoint_role == ROLE_RECEIVER
 		    && e->test->no_synch == false)
-			e->results->threads[i]->is_sync_thread = 1;
+			e->results->threads[i]->is_sync_thread = true;
 		else
-			e->results->threads[i]->is_sync_thread = 0;
+			e->results->threads[i]->is_sync_thread = false;
 	}
 
 	/* for calculate the resource utilization */
@@ -235,7 +235,7 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoin
 	//s->client_port, should be specified by caller
 	s->send_buf_size = test->send_buf_size;
 	s->verbose = test->verbose;
-	s->is_sync_thread = 0;
+	s->is_sync_thread = false;
 	s->no_synch = test->no_synch;
 	s->continuous_mode = (test->duration == 0);
 	s->total_bytes_transferred = 0;
@@ -259,7 +259,7 @@ struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test_endpoin
 	//s->server_port, should be specified by caller
 	s->recv_buf_size = test->recv_buf_size;
 	s->verbose = test->verbose;
-	s->is_sync_thread = 0;
+	s->is_sync_thread = false;
 	s->no_synch = test->no_synch;
 	s->continuous_mode = (test->duration == 0);
 	s->use_epoll = test->use_epoll;

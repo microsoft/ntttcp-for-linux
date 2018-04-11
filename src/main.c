@@ -246,7 +246,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		ss = tep->server_streams[test->parallel];
 		ss->server_port = test->server_base_port - 1; //just for bookkeeping
 		ss->protocol = TCP; //just for bookkeeping
-		ss->is_sync_thread = 1;
+		ss->is_sync_thread = true;
 
 		rc = pthread_create(&tep->threads[t],
 				NULL,
@@ -327,7 +327,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		total_bytes = 0;
 		for (t=0; t < threads_created; t++){
 			/* exclude the sync thread */
-			if (tep->server_streams[t]->is_sync_thread)
+			if (tep->server_streams[t]->is_sync_thread == true)
 				continue;
 
 			/* read and reset the counter */

@@ -55,15 +55,15 @@ struct tcp_retrans{
 };
 
 struct ntttcp_test_endpoint_thread_result{
-	int		is_sync_thread;
+	bool	is_sync_thread;
 	/* raw data of counters collected before and after test run */
 	uint64_t	total_bytes;
-	double		actual_test_time;
+	double	actual_test_time;
 
 	/* fields can be calculated with above raw data */
-	double		KBps;
-	double		MBps;
-	double		mbps;
+	double	KBps;
+	double	MBps;
+	double	mbps;
 };
 
 struct ntttcp_test_endpoint_results{
