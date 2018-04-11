@@ -43,6 +43,8 @@ struct ntttcp_test
 	int	duration;            /* '-t' for total duration in sec of test (0: continuous_mode) */
 
 	bool 	show_tcp_retransmit; /* '-R' to display TCP retransmit counters in log from /proc */
+	bool	save_xml_log;        /* '-x' to save output to XML file */
+	char	*xml_log_filename;   /* the xml log file name */
 	bool	verbose;             /* '-V' for verbose logging */
 };
 
@@ -55,13 +57,14 @@ struct ntttcp_test_endpoint{
 	struct	timeval start_time;   /* timestamp of test started on this endpoint */
 	struct	timeval end_time;     /* timestamp of test ended on this endpoint */
 	int	synch_socket;         /* the synch channel for sender/receiver sync */
-	int	total_threads;	      /* total threads, including synch thread */
+	unsigned int	total_threads;	      /* total threads, including synch thread */
 	bool    receiver_exit_after_done;       /* the receiver will exit after test done, or not */
 
 	struct	ntttcp_stream_client **client_streams; /* alloc memory for this if client/sender role */
 	struct	ntttcp_stream_server **server_streams; /* alloc memory for this if server/receiver role */
 
 	pthread_t	*threads;
+	struct	ntttcp_test_endpoint_results	*results;	/* test results */
 
 	/* to support testing with multiple senders */
 	int	num_remote_endpoints; /* number to test client/sender endpoints */
