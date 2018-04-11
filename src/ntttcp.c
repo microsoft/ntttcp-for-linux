@@ -77,12 +77,12 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 		total_threads = test->parallel * test->conn_per_thread;
 
 		e->total_threads = total_threads;
-		e->client_streams = (struct ntttcp_stream_client **) malloc( sizeof( struct  ntttcp_stream_client ) * total_threads );
+		e->client_streams = (struct ntttcp_stream_client **) malloc( sizeof( struct  ntttcp_stream_client *) * total_threads );
 		if(!e->client_streams) {
 			free (e);
 			return NULL;
 		}
-		memset(e->client_streams, 0, sizeof( struct  ntttcp_stream_client ) * total_threads );
+		memset(e->client_streams, 0, sizeof( struct  ntttcp_stream_client *) * total_threads );
 		for(i = 0; i < total_threads ; i++ ) {
 			e->client_streams[i] = new_ntttcp_client_stream(e);
 		}
@@ -104,12 +104,12 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 			total_threads = test->parallel + 1; /* the last one is synch thread */
 
 		e->total_threads = total_threads;
-		e->server_streams = (struct ntttcp_stream_server **) malloc( sizeof( struct ntttcp_stream_server ) * total_threads );
+		e->server_streams = (struct ntttcp_stream_server **) malloc( sizeof( struct ntttcp_stream_server *) * total_threads );
 		if(!e->server_streams) {
 			free (e);
 			return NULL;
 		}
-		memset(e->server_streams, 0, sizeof( struct  ntttcp_stream_server) * total_threads );
+		memset(e->server_streams, 0, sizeof( struct  ntttcp_stream_server *) * total_threads );
 		for(i = 0; i < total_threads; i++ ){
 			e->server_streams[i] = new_ntttcp_server_stream(e);
 		}
@@ -130,8 +130,8 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	memset(e->results, 0 , sizeof(struct ntttcp_test_endpoint_results));
 
 	e->results->threads = (struct ntttcp_test_endpoint_thread_result **) malloc(
-			       sizeof( struct ntttcp_test_endpoint_thread_result ) * total_threads);
-	memset(e->results->threads, 0, sizeof( struct ntttcp_test_endpoint_thread_result) * total_threads );
+			       sizeof( struct ntttcp_test_endpoint_thread_result *) * total_threads);
+	memset(e->results->threads, 0, sizeof( struct ntttcp_test_endpoint_thread_result *) * total_threads );
 
 	for(i = 0; i < total_threads; i++ ){
 		e->results->threads[i] = (struct ntttcp_test_endpoint_thread_result *) malloc( sizeof( struct ntttcp_test_endpoint_thread_result ) );
