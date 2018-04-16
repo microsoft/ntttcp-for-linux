@@ -286,6 +286,8 @@ int verify_args(struct ntttcp_test *test)
 
 int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 {
+	/* long options, deprecated */ 
+	/*
 	static struct option longopts[] =
 	{
 		{"receiver", optional_argument, NULL, 'r'},
@@ -311,15 +313,23 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		{"help", no_argument, NULL, 'h'},
 		{0, 0, 0, 0}
 	};
+	*/
 
-	int flag;
+	int opt;
 
-	while ((flag = getopt_long(argc, argv, "r::s::DMLeHm:P:n:6up:f::b:t:NRx::Vh", longopts, NULL)) != -1) {
-		switch (flag) {
+	while ((opt = getopt(argc, argv, "r::s::DMLeHm:P:n:6up:f::b:t:NRx::Vh")) != -1) {
+		switch (opt) {
 		case 'r':
 			test->server_role = true;
-			if (optarg)
+			if (optarg) {
 				test->bind_address = optarg;
+			} else {
+				if(optind < argc
+				   && NULL != argv[optind]
+				   && '\0' != argv[optind][0]
+				   && '-'  != argv[optind][0])
+					test->bind_address = argv[optind++];
+			}
 			break;
 
 		case 's':
@@ -399,8 +409,15 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 		case 'x':
 			test->save_xml_log = true;
-			if (optarg)
+			if (optarg){
 				test->xml_log_filename = optarg;
+			} else {
+				if(optind < argc
+				   && NULL != argv[optind]
+				   && '\0' != argv[optind][0]
+				   && '-'  != argv[optind][0])
+					test->xml_log_filename = argv[optind++];
+			}
 			break;
 
 		case 'V':
