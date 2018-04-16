@@ -139,6 +139,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 	struct sockaddr_in remote_addr;	          // remote address
 	socklen_t addrlen = sizeof(remote_addr);  // length of addresses
 	ssize_t nbytes    = 0; //bytes received
+	struct timeval timeout = {5, 0}; //set socket timeout
 
 	verbose_log = ss->verbose;
 
@@ -170,8 +171,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 			return 0;
 		}
 
-		/*
-		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *) &opt, sizeof(opt)) < 0) {
+		if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
 			ASPRINTF(&log, "cannot set socket options: %d", sockfd);
 			PRINT_ERR_FREE(log);
 			freeaddrinfo(serv_info);
@@ -179,6 +179,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 			close(sockfd);
 			return 0;
 		}
+		/*
 		if ( set_socket_non_blocking(sockfd) == -1) {
 			ASPRINTF(&log, "cannot set socket as non-blocking: %d", sockfd);
 			PRINT_ERR_FREE(log);
@@ -225,7 +226,11 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 	/* wait for sync thread to finish */
 	wait_light_on();
 
-	for (;;) {
+	while(1) {
+		if (ss->endpoint->receiver_exit_after_done &&
+		    ss->endpoint->state == TEST_FINISHED)
+			break;
+
 		bzero(buffer, ss->recv_buf_size);
 		nbytes = recvfrom(sockfd, buffer, ss->recv_buf_size, 0, (struct sockaddr *)&remote_addr, &addrlen);
 		if (nbytes > 0) {
@@ -236,7 +241,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 			PRINT_INFO_FREE(log);
 		}
 	}
-	/* never exits */
+
 	return (void *)nbytes;
 }
 
