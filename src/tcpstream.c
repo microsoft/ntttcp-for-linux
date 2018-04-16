@@ -80,7 +80,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	char *port_str;        //used to get remote peer's port number
 	struct addrinfo hints, *remote_serv_info, *p; //to get remote peer's sockaddr
 
-	struct timeval timeout = {5, 0}; //set socket timeout
+	struct timeval timeout = {SOCKET_TIMEOUT_SEC, 0}; //set socket timeout
 
 	sc = (struct ntttcp_stream_client *) ptr;
 	verbose_log = sc->verbose;

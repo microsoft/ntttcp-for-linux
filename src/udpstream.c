@@ -139,7 +139,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 	struct sockaddr_in remote_addr;	          // remote address
 	socklen_t addrlen = sizeof(remote_addr);  // length of addresses
 	ssize_t nbytes    = 0; //bytes received
-	struct timeval timeout = {5, 0}; //set socket timeout
+	struct timeval timeout = {SOCKET_TIMEOUT_SEC, 0}; //set socket timeout
 
 	verbose_log = ss->verbose;
 
