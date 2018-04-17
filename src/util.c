@@ -669,12 +669,73 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 	printf("---------------------------------------------------------\n");
 }
 
+size_t execute_system_cmd_by_process(char *command, char *type, char *output)
+{
+	FILE *pfp;
+	size_t count, len;
+
+	pfp = popen(command, type);
+	if (pfp == NULL) {
+		PRINT_ERR("Error opening process to execute command");
+		return 0;
+	}
+
+	count = getline(&output, &len, pfp);
+
+	fclose(pfp);
+	return count;
+}
+
+unsigned int escape_char_for_xml(char *in, char *out)
+{
+	unsigned int count = 0;
+	size_t pos_in = 0, pos_out = 0;
+
+	for(pos_in = 0; in[pos_in]; pos_in++) {
+		count++;
+		switch (in[pos_in]) {
+		case '>':
+			memcpy(out+pos_out, "&gt;", 4);
+			pos_out = pos_out + 4;
+			break;
+		case '<':
+			memcpy(out+pos_out, "&lt;", 4);
+			pos_out = pos_out + 4;
+			break;
+		case '&':
+			memcpy(out+pos_out, "&amp;", 5);
+			pos_out = pos_out + 5;
+			break;
+		case '\'':
+			memcpy(out+pos_out, "&apos;", 6);
+			pos_out = pos_out + 6;
+			break;
+		case '\"':
+			memcpy(out+pos_out, "&quot;", 6);
+			pos_out = pos_out + 6;
+			break;
+		case '\n':
+			break;
+		default:
+			count--;
+			memcpy(out+pos_out, in+pos_in, 1);
+			pos_out++;
+		}
+	}
+	return count;
+}
+
 int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 {
 	struct ntttcp_test *test = tep->test;
 	struct ntttcp_test_endpoint_results *tepr = tep->results;
-	char str[2014];
+	char str_temp1[256];
+	char str_temp2[2048];
+	size_t count = 0;
 	unsigned int i;
+
+	memset(str_temp1, '\0', sizeof(char) * 256);
+	memset(str_temp2, '\0', sizeof(char) * 2048);
 
 	FILE *logfile = fopen(test->xml_log_filename, "w");
 	if (logfile == NULL) {
@@ -682,8 +743,8 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 		return -1;
 	}
 
-	gethostname(str, 1024);
-	fprintf(logfile, "<ntttcp%s computername=\"%s\" version=\"5.33\">\n", tep->endpoint_role == ROLE_RECEIVER ? "r" : "s", str);
+	gethostname(str_temp1, 256);
+	fprintf(logfile, "<ntttcp%s computername=\"%s\" version=\"5.33-linux\">\n", tep->endpoint_role == ROLE_RECEIVER ? "r" : "s", str_temp1);
 	fprintf(logfile, "	<parameters>\n");
 	fprintf(logfile, "		<send_socket_buff>%lu</send_socket_buff>\n", test->send_buf_size);
 	fprintf(logfile, "		<recv_socket_buff>%lu</recv_socket_buff>\n", test->recv_buf_size);
@@ -753,6 +814,11 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<bufferCount>%u</bufferCount>\n", 0);
 	fprintf(logfile, "	<bufferLen>%u</bufferLen>\n", 0);
 	fprintf(logfile, "	<io>%u</io>\n", 0);
+
+	count = execute_system_cmd_by_process("uname -a", "r", str_temp1);
+	escape_char_for_xml(str_temp1, str_temp2);
+	fprintf(logfile, "	<os>%s</os>\n", count == 0 ? "Unknown" : str_temp2);
+
 	fprintf(logfile, "</ntttcp%s>\n", tep->endpoint_role == ROLE_RECEIVER ? "r": "s");
 
 	fclose(logfile);
@@ -860,7 +926,7 @@ uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 		if (strcmp(section, line) < 0) {
 			if (strstr(line, key) != NULL) {
 				pch = line;
-			while ((pch = strtok(pch, " "))) {
+				while ((pch = strtok(pch, " "))) {
 					key_found++;
 					if (strcmp(pch, key) == 0)
 						break;
