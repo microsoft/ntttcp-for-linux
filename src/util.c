@@ -286,7 +286,7 @@ int verify_args(struct ntttcp_test *test)
 
 int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 {
-	/* long options, deprecated */ 
+	/* long options, deprecated */
 	/*
 	static struct option longopts[] =
 	{
@@ -324,10 +324,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			if (optarg) {
 				test->bind_address = optarg;
 			} else {
-				if(optind < argc
-				   && NULL != argv[optind]
-				   && '\0' != argv[optind][0]
-				   && '-'  != argv[optind][0])
+				if(optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
 					test->bind_address = argv[optind++];
 			}
 			break;
@@ -384,10 +381,15 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			break;
 
 		case 'f':
-			if (optarg)
+			if (optarg) {
 				test->client_base_port = atoi(optarg);
-			else
-				test->client_base_port = DEFAULT_BASE_SRC_PORT;
+			} else {
+				if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0]) {
+				        test->client_base_port = atoi(argv[optind++]);
+				} else {
+				        test->client_base_port = DEFAULT_BASE_SRC_PORT;
+				}
+			}
 			break;
 
 		case 'b':
@@ -412,10 +414,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			if (optarg){
 				test->xml_log_filename = optarg;
 			} else {
-				if(optind < argc
-				   && NULL != argv[optind]
-				   && '\0' != argv[optind][0]
-				   && '-'  != argv[optind][0])
+				if(optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
 					test->xml_log_filename = argv[optind++];
 			}
 			break;
@@ -580,7 +579,7 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	tepr->packets_received = 0;
 	tepr->packets_retransmitted = tepr->final_tcp_retrans->retrans_segs - tepr->init_tcp_retrans->retrans_segs;
 	tepr->cpu_busy_percent = ((tepr->final_cpu_usage->clock - tepr->init_cpu_usage->clock) * 1000000.0 / CLOCKS_PER_SEC)
-				 / (tepr->final_cpu_usage->time - tepr->init_cpu_usage->time);	
+				 / (tepr->final_cpu_usage->time - tepr->init_cpu_usage->time);
 	tepr->errors = 0;
 
 	return 0;
