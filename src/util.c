@@ -105,7 +105,7 @@ void print_usage()
 	printf("\t     Otherwise, will use 'destination port - 1' as sync port	[default: %d]\n", DEFAULT_BASE_DST_PORT - 1);
 
 	printf("\t-R   Show system TCP retransmit counters in log from /proc\n");
-	printf("\t-x   Save output to XML file, by default saves to ntttcp-for-linux-log.xml\n");
+	printf("\t-x   Save output to XML file, by default saves to %s\n", DEFAULT_LOG_FILE_NAME);
 	printf("\t-V   Verbose mode\n");
 	printf("\t-h   Help, tool usage\n");
 

@@ -60,3 +60,5 @@
 #define PROC_FILE_CPUINFO		"/proc/cpuinfo"
 
 #define PROC_FILE_STAT			"/proc/stat"
+
+#define DEFAULT_LOG_FILE_NAME		"ntttcp-for-linux-log.xml"

@@ -42,7 +42,7 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->no_synch         = false;
 	test->show_tcp_retransmit = false;
 	test->save_xml_log     = false;
-	test->xml_log_filename = "ntttcp-for-linux-log.xml";
+	test->xml_log_filename = DEFAULT_LOG_FILE_NAME;	   //"ntttcp-for-linux-log.xml"
 	test->verbose          = false;
 }
 
