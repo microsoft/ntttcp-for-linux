@@ -320,19 +320,19 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 	while ((opt = getopt(argc, argv, "r::s::DMLeHm:P:n:6up:f::b:t:NRx::Vh")) != -1) {
 		switch (opt) {
 		case 'r':
-			test->server_role = true;
+		case 's':
+			if (opt == 'r') {
+				test->server_role = true;
+			} else {
+				test->client_role = true;
+			}
+
 			if (optarg) {
 				test->bind_address = optarg;
 			} else {
 				if(optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
 					test->bind_address = argv[optind++];
 			}
-			break;
-
-		case 's':
-			test->client_role = true;
-			if (optarg)
-				test->bind_address = optarg;
 			break;
 
 		case 'D':
