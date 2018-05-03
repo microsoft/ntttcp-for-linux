@@ -181,10 +181,9 @@ void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
 	int endpoint_role = e->endpoint_role;
 
 	if (endpoint_role == ROLE_SENDER) {
-		if (e->test->no_synch == true)
-			total_threads = e->test->parallel * e->test->conn_per_thread;
-		else
-			total_threads = e->test->parallel * e->test->conn_per_thread + 1;
+		/* for sender, even used synch mechanism, the main thread will do the synch.
+		   no specially created thread for synch. */
+		total_threads = e->test->parallel * e->test->conn_per_thread;
 
 		for(i = 0; i < total_threads ; i++ )
 			free( e->client_streams[i] );
