@@ -217,9 +217,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 		n = n_write(sockfd, buffer, strlen(buffer));
 		if (n < 0) {
 //			PRINT_ERR("cannot write data to a socket");
-			free(buffer);
-			close(sockfd);
-			return 0;
+			break;
 		}
 		nbytes += n;
 	}

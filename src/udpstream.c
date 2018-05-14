@@ -83,11 +83,9 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	while (is_light_turned_on(sc->continuous_mode)){
 		n = sendto(sockfd, buffer, sc->send_buf_size, 0, (struct sockaddr *)&serv_addr, sa_size);
 		if (n < 0) {
-			PRINT_ERR("cannot write data to a socket");
-			printf("error: %d \n", errno);
-			free(buffer);
-			close(sockfd);
-			return 0;
+//			PRINT_ERR("cannot write data to a socket");
+//			printf("error: %d \n", errno);
+			break;
 		}
 		nbytes += n;
 	}
