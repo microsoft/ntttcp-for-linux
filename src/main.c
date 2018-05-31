@@ -309,7 +309,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		wait_light_off();
 		tep->state = TEST_FINISHED;
 		tep->num_remote_endpoints = 0;
-		memset(tep->remote_endpoints, -1, MAX_REMOTE_ENDPOINTS);
+		for (t=0; t<MAX_REMOTE_ENDPOINTS; t++) tep->remote_endpoints[t] = -1;
 		gettimeofday(&now, NULL);
 		tep->end_time = now;
 

@@ -69,7 +69,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	e->end_time = now;
 	e->synch_socket = 0;
 	e->num_remote_endpoints = 0;
-	memset(e->remote_endpoints, -1, MAX_REMOTE_ENDPOINTS);
+	for (i=0; i<MAX_REMOTE_ENDPOINTS; i++) e->remote_endpoints[i] = -1;
 
 	if (endpoint_role == ROLE_SENDER) {
 		/* for sender, even used synch mechanism, the main thread will do the synch.
