@@ -94,7 +94,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 
 			/* If sender side is being asked to pin the client source port */
 			if (test->client_base_port > 0)
-				cs->client_port = test->client_base_port + n * test->server_ports + t;
+				cs->client_port = test->client_base_port + t * test->server_ports + n;
 
 			if (test->protocol == TCP) {
 				rc = pthread_create(&tep->threads[threads_created],
