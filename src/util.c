@@ -92,7 +92,7 @@ void print_usage()
 	printf("\t-H   [receiver only] hold receiver always running even after one test finished\n");
 
 	printf("\t-P   Number of ports listening on receiver side\n");
-	printf("\t-n   [sender only] number of connections(threads) per receiver port    [default: %d]  [max: %d]\n", DEFAULT_CONN_PER_THREAD, MAX_CONNECTIONS_PER_THREAD);
+	printf("\t-n   [sender only] number of connections(threads) per receiver port    [default: %d]  [max: %d]\n", DEFAULT_CONN_PER_THREAD, MAX_CONNS_PER_SERVER_PORT);
 
 	printf("\t-6   IPv6 mode    [default: IPv4]\n");
 	printf("\t-u   UDP mode     [default: TCP]\n");
@@ -111,7 +111,7 @@ void print_usage()
 
 	printf("\t-m   <mapping>\tfor the purpose of compatible with Windows ntttcp usage\n");
 	printf("\t     Where a mapping is a 3-tuple of NumberOfReceiverPorts, Processor, ReceiverAddress:\n");
-	printf("\t     NumberOfReceiverPorts:    [default: %d]  [max: %d]\n", DEFAULT_NUM_THREADS, MAX_NUM_THREADS);
+	printf("\t     NumberOfReceiverPorts:    [default: %d]  [max: %d]\n", DEFAULT_NUM_THREADS, MAX_NUM_SERVER_PORTS);
 	printf("\t     Processor:\t\t*, or cpuid such as 0, 1, etc \n");
 	printf("\t     e.g. -m 8,*,192.168.1.1\n");
 	printf("\t\t    If for receiver role: 8 threads listening on 8 ports (one port per thread) on the network 192.168.1.1;\n\t\t\tand those threads will run on all processors.\n");
@@ -229,14 +229,14 @@ int verify_args(struct ntttcp_test *test)
 		return ERROR_ARGS;
 	}
 
-	if (test->conn_per_server_port > MAX_CONNECTIONS_PER_THREAD) {
+	if (test->conn_per_server_port > MAX_CONNS_PER_SERVER_PORT) {
 		PRINT_INFO("too many connections per server port. use the max value");
-		test->conn_per_server_port = MAX_CONNECTIONS_PER_THREAD;
+		test->conn_per_server_port = MAX_CONNS_PER_SERVER_PORT;
 	}
 
-	if (test->server_ports > MAX_NUM_THREADS) {
+	if (test->server_ports > MAX_NUM_SERVER_PORTS) {
 		PRINT_INFO("too many threads. use the max value");
-		test->server_ports = MAX_NUM_THREADS;
+		test->server_ports = MAX_NUM_SERVER_PORTS;
 	}
 
 	if (test->conn_per_server_port < 1) {

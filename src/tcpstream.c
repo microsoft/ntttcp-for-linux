@@ -315,7 +315,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 	}
 
 	ss->listener = sockfd;
-	if (listen(ss->listener, MAX_CONNECTIONS_PER_THREAD) < 0) {
+	if (listen(ss->listener, MAX_CONNS_PER_SERVER_PORT) < 0) {
 		ASPRINTF(&log, "failed to listen on address: %s: %d", ss->bind_address, ss->server_port);
 		PRINT_ERR_FREE(log);
 		close(ss->listener);
