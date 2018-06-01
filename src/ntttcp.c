@@ -29,9 +29,9 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->exit_after_done  = true;
 	test->mapping          = "16,*,*";
 	test->bind_address     = "0.0.0.0";
-	test->server_ports     = DEFAULT_NUM_THREADS;
+	test->server_ports     = DEFAULT_NUM_SERVER_PORTS;
 	test->cpu_affinity     = -1; //no hard cpu affinity
-	test->conn_per_server_port = DEFAULT_CONN_PER_THREAD;
+	test->conn_per_server_port = DEFAULT_CONNS_PER_SERVER_PORT;
 	test->domain           = AF_INET; //IPV4
 	test->protocol         = TCP;
 	test->server_base_port = DEFAULT_BASE_DST_PORT;
