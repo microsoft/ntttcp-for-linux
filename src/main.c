@@ -84,9 +84,9 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	pthread_attr_init(&pth_attrs);
 	pthread_attr_setstacksize(&pth_attrs, THREAD_STACK_SIZE);
 
-	for (t = 0; t < test->parallel; t++) {
-		for (n = 0; n < test->conn_per_thread; n++ ) {
-			cs = tep->client_streams[t * test->conn_per_thread + n];
+	for (t = 0; t < test->server_ports; t++) {
+		for (n = 0; n < test->conn_per_server_port; n++ ) {
+			cs = tep->client_streams[t * test->conn_per_server_port + n];
 			/* in client side, multiple connections will (one thread for one connection)
 			 * connect to same port on server
 			 */
@@ -94,7 +94,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 
 			/* If sender side is being asked to pin the client source port */
 			if (test->client_base_port > 0)
-				cs->client_port = test->client_base_port + n * test->parallel + t;
+				cs->client_port = test->client_base_port + n * test->server_ports + t;
 
 			if (test->protocol == TCP) {
 				rc = pthread_create(&tep->threads[threads_created],
@@ -207,7 +207,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	double actual_test_time = 0;
 
 	/* create threads */
-	for (t = 0; t < test->parallel; t++) {
+	for (t = 0; t < test->server_ports; t++) {
 		ss = tep->server_streams[t];
 		ss->server_port = test->server_base_port + t;
 
@@ -243,7 +243,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		 *   the synch_port = base_port -1
 		 * 2) we will assign the protocol for synch stream to TCP, always, in create_receiver_sync_socket()
 		 */
-		ss = tep->server_streams[test->parallel];
+		ss = tep->server_streams[test->server_ports];
 		ss->server_port = test->server_base_port - 1; //just for bookkeeping
 		ss->protocol = TCP; //just for bookkeeping
 		ss->is_sync_thread = true;

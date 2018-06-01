@@ -29,9 +29,9 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->exit_after_done  = true;
 	test->mapping          = "16,*,*";
 	test->bind_address     = "0.0.0.0";
-	test->parallel         = DEFAULT_NUM_THREADS;
+	test->server_ports     = DEFAULT_NUM_THREADS;
 	test->cpu_affinity     = -1; //no hard cpu affinity
-	test->conn_per_thread  = DEFAULT_CONN_PER_THREAD;
+	test->conn_per_server_port = DEFAULT_CONN_PER_THREAD;
 	test->domain           = AF_INET; //IPV4
 	test->protocol         = TCP;
 	test->server_base_port = DEFAULT_BASE_DST_PORT;
@@ -74,7 +74,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	if (endpoint_role == ROLE_SENDER) {
 		/* for sender, even used synch mechanism, the main thread will do the synch.
 		   no specially created thread for synch. */
-		total_threads = test->parallel * test->conn_per_thread;
+		total_threads = test->server_ports * test->conn_per_server_port;
 
 		e->total_threads = total_threads;
 		e->client_streams = (struct ntttcp_stream_client **) malloc( sizeof( struct  ntttcp_stream_client *) * total_threads );
@@ -99,9 +99,9 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	}
 	else {
 		if (test->no_synch == true)
-			total_threads = test->parallel;
+			total_threads = test->server_ports;
 		else
-			total_threads = test->parallel + 1; /* the last one is synch thread */
+			total_threads = test->server_ports + 1; /* the last one is synch thread */
 
 		e->total_threads = total_threads;
 		e->server_streams = (struct ntttcp_stream_server **) malloc( sizeof( struct ntttcp_stream_server *) * total_threads );
@@ -182,9 +182,9 @@ void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
 
 	if (endpoint_role == ROLE_SENDER) {
 		if (e->test->no_synch == true)
-			total_threads = e->test->parallel * e->test->conn_per_thread;
+			total_threads = e->test->server_ports * e->test->conn_per_server_port;
 		else
-			total_threads = e->test->parallel * e->test->conn_per_thread + 1;
+			total_threads = e->test->server_ports * e->test->conn_per_server_port + 1;
 
 		for(i = 0; i < total_threads ; i++ )
 			free( e->client_streams[i] );
@@ -193,9 +193,9 @@ void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
 	}
 	else {
 		if (e->test->no_synch == true)
-			total_threads = e->test->parallel;
+			total_threads = e->test->server_ports;
 		else
-			total_threads = e->test->parallel + 1;
+			total_threads = e->test->server_ports + 1;
 
 		for(i = 0; i < total_threads ; i++ )
 			free( e->server_streams[i] );

@@ -301,7 +301,7 @@ void *create_receiver_sync_socket( void *ptr )
 			if ( !FD_ISSET(current_fd, &read_set) )
 				continue;
 
-			/* then, we got one fd to hanle */
+			/* then, we got one fd to handle */
 			/* a NEW connection coming */
 			if (current_fd == ss->listener) {
  				/* handle new connections */

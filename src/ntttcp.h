@@ -28,10 +28,10 @@ struct ntttcp_test
 	bool	use_epoll;          /* '-e' for epoll() to watch fd for events. receiver only */
 	bool	exit_after_done;    /* exit receiver after test done. use '-H' to hold receiver always running. receiver only */
 	char	*mapping;           /* '-m' for connection(s),Processor,StartReceiver IP map set */
-	uint	parallel;           /*    Parallel connections, from -m flag */
+	uint	server_ports;       /*    How many ports opening in receiver side, from -m flag, or -P flag */
 	int	cpu_affinity;       /*    CPU affinity, from -m flag */
 	char	*bind_address;      /*    Socket binding address */
-	uint	conn_per_thread;    /* '-n' for number of connections per thread. sender only */
+	uint	conn_per_server_port; /* '-n' for number of connections per server port. sender only */
 	bool	no_synch;           /* '-N' to disable sender/receiver synch */
 
 	int	domain;              /* default for AF_INET, or '-6' for AF_INET6 */

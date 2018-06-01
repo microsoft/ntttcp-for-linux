@@ -31,9 +31,9 @@ void print_flags(struct ntttcp_test *test)
 	//printf("%s:\t\t\t %s\n", "mapping", test->mapping);
 
 	if (test->client_role)
-		printf("%s:\t\t\t %d X %d\n", "threads", test->parallel, test->conn_per_thread);
+		printf("%s:\t\t\t %d X %d\n", "threads", test->server_ports, test->conn_per_server_port);
 	else
-		printf("%s:\t\t\t %d\n", "threads", test->parallel);
+		printf("%s:\t\t\t %d\n", "threads", test->server_ports);
 
 	if (test->cpu_affinity == -1)
 		printf("%s:\t\t\t %s\n", "cpu affinity", "*" );
@@ -152,8 +152,8 @@ int process_mappings(struct ntttcp_test *test)
 			if (1 > threads) {
 				return ERROR_ARGS;
 			}
-			test->parallel = threads;
-			test->conn_per_thread = 1;
+			test->server_ports = threads;
+			test->conn_per_server_port = 1;
 			++state;
 		}
 		else if (S_PROCESSOR == state) {
@@ -229,24 +229,24 @@ int verify_args(struct ntttcp_test *test)
 		return ERROR_ARGS;
 	}
 
-	if (test->conn_per_thread > MAX_CONNECTIONS_PER_THREAD) {
+	if (test->conn_per_server_port > MAX_CONNECTIONS_PER_THREAD) {
 		PRINT_INFO("too many connections per server port. use the max value");
-		test->conn_per_thread = MAX_CONNECTIONS_PER_THREAD;
+		test->conn_per_server_port = MAX_CONNECTIONS_PER_THREAD;
 	}
 
-	if (test->parallel > MAX_NUM_THREADS) {
+	if (test->server_ports > MAX_NUM_THREADS) {
 		PRINT_INFO("too many threads. use the max value");
-		test->parallel = MAX_NUM_THREADS;
+		test->server_ports = MAX_NUM_THREADS;
 	}
 
-	if (test->conn_per_thread < 1) {
+	if (test->conn_per_server_port < 1) {
 		PRINT_INFO("invalid connections-per-server-port provided. use 1");
-		test->conn_per_thread = 1;
+		test->conn_per_server_port = 1;
 	}
 
-	if (test->parallel < 1) {
+	if (test->server_ports < 1) {
 		PRINT_INFO("invalid number-of-server-ports provided. use 1");
-		test->parallel = 1;
+		test->server_ports = 1;
 	}
 
 	if (test->domain == AF_INET6 && strcmp( test->bind_address, "0.0.0.0")== 0 )
@@ -361,11 +361,11 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			break;
 
 		case 'P':
-			test->parallel = atoi(optarg);
+			test->server_ports = atoi(optarg);
 			break;
 
 		case 'n':
-			test->conn_per_thread = atoi(optarg);
+			test->conn_per_server_port = atoi(optarg);
 			break;
 
 		case '6':
@@ -1013,19 +1013,19 @@ bool check_resource_limit(struct ntttcp_test *test)
 	PRINT_DBG_FREE(log);
 
 	if (test->client_role == true) {
-		total_connections = test->parallel * test->conn_per_thread;
+		total_connections = test->server_ports * test->conn_per_server_port;
 	} else {
 		/*
 		 * for receiver, just do a minial check;
-		 * because we don't know how many conn_per_thread will be used by sender.
+		 * because we don't know how many conn_per_server_port will be used by sender.
 		 */
-		total_connections = test->parallel * 1;
+		total_connections = test->server_ports * 1;
 	}
 
 	if (total_connections > soft_limit) {
 		ASPRINTF(&log, "soft limit is too small: limit is %ld; but total connections will be %d X n",
 				soft_limit,
-				test->parallel);
+				test->server_ports);
 		PRINT_ERR_FREE(log);
 
 		return false;
