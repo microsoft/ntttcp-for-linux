@@ -274,9 +274,16 @@ int verify_args(struct ntttcp_test *test)
 		PRINT_DBG("ignore '-f' on receiver role");
 	}
 
-	if (test->client_role && test->client_base_port > 0 && test->client_base_port <= 1024) {
-		test->client_base_port = DEFAULT_BASE_SRC_PORT;
-		PRINT_DBG("source port is too small. use the default value");
+	if (test->client_role) {
+		if (test->client_base_port > 0 && test->client_base_port <= 1024) {
+			test->client_base_port = DEFAULT_BASE_SRC_PORT;
+			PRINT_DBG("source port is too small. use the default value");
+		}
+
+		if ((int)(MAX_LOCAL_IP_PORT - test->client_base_port)
+		    < (int)(test->server_ports * test->threads_per_server_port * test->conns_per_thread)) {
+			PRINT_ERR("source port is too high to provide a sufficient range of ports for your test");
+		}
 	}
 
 	if (test->protocol == UDP && test->send_buf_size > MAX_UDP_SEND_SIZE) {

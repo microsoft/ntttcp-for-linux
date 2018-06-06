@@ -74,6 +74,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	uint total_sub_conn_created = 0; //track how many sub connections created in this thread
 	struct ntttcp_stream_client *sc;
 
+	uint client_port = 0;
 	int sockfds[DEFAULT_CLIENT_CONNS_PER_THREAD] = {-1};
 	struct sockaddr_storage local_addr; //for local address
 	socklen_t local_addr_size;    //local address size
@@ -113,22 +114,22 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	for (p = remote_serv_info; p != NULL; p = p->ai_next) {
 		/* 1. create socket fd */
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
-			PRINT_ERR("warning: cannot create a socket ednpoint");
+			PRINT_ERR("cannot create a socket ednpoint");
 			sockfds[i] = -1;
 			continue;;
 		}
 		else{
 		/* 1a. set socket timeout */
 			if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
-				ASPRINTF(&log, "warning: cannot set option SO_SNDTIMEO for socket[%d]", sockfd);
-				PRINT_ERR_FREE(log);
+				ASPRINTF(&log, "cannot set option SO_SNDTIMEO for socket[%d]", sockfd);
+				PRINT_INFO_FREE(log);
 				close(sockfd);
 				sockfds[i] = -1;
 				continue;
 			}
 			if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-				ASPRINTF(&log, "warning: cannot set option SO_RCVTIMEO for socket[%d]", sockfd);
-				PRINT_ERR_FREE(log);
+				ASPRINTF(&log, "cannot set option SO_RCVTIMEO for socket[%d]", sockfd);
+				PRINT_INFO_FREE(log);
 				close(sockfd);
 				sockfds[i] = -1;
 				continue;
@@ -136,26 +137,30 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 		}
 
 		/* 2. bind this socket fd to a local (random/ephemeral, or fixed) TCP port */
+		client_port = (sc->num_connections > 1 && sc->client_port != 0 )
+				? sc->client_port + i
+				: sc->client_port;
+
 		if (sc->domain == AF_INET) {
 			(*(struct sockaddr_in*)&local_addr).sin_family = AF_INET; //local_addrs[i].ss_family = AF_INET;
 		//	(*(struct sockaddr_in*)&local_addr).sin_addr.s_addr = inet_addr(INADDR_ANY);
-			(*(struct sockaddr_in*)&local_addr).sin_port = htons(sc->client_port);
+			(*(struct sockaddr_in*)&local_addr).sin_port = htons(client_port);
 		}
 		else{
 			(*(struct sockaddr_in6*)&local_addr).sin6_family = AF_INET6; //local_addrs[i].ss_family = AF_INET6;
-			(*(struct sockaddr_in6*)&local_addr).sin6_port = htons(sc->client_port);
+			(*(struct sockaddr_in6*)&local_addr).sin6_port = htons(client_port);
 		}
 
 		local_addr_size = sizeof(local_addr);
 		if (( ret = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0 ) {
 			ASPRINTF(&log,
-				"warning: failed to bind socket[%d] to a local port: [%s:%d]. errno = %d",
+				"failed to bind socket[%d] to a local port: [%s:%d]. errno = %d. Ignored",
 				sockfd,
 				sc->domain == AF_INET ? inet_ntoa((*(struct sockaddr_in*)&local_addr).sin_addr)
-						      : "::",
+						      : "::", //TODO - get the IPv6 addr string
 				sc->client_port,
 				errno);
-			PRINT_ERR_FREE(log);
+			PRINT_INFO_FREE(log);
 		}
 
 		/* 3. connect to receiver */
@@ -164,13 +169,13 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 							  ip_addr_max_size);
 		if (( ret = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
 			ASPRINTF(&log,
-				"warning: failed to connect to receiver: %s:%d on socket[%d]. return = %d, errno = %d",
+				"failed to connect to receiver: %s:%d on socket[%d]. return = %d, errno = %d",
 				remote_addr_str,
 				sc->server_port,
 				sockfd,
 				ret,
 				errno);
-			PRINT_ERR_FREE(log);
+			PRINT_INFO_FREE(log);
 			close(sockfd);
 			sockfds[i] = -1;
 			continue;
@@ -179,9 +184,9 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 		/* get the local TCP ephemeral port number assigned to this socket, for logging purpose */
 		if (getsockname(sockfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0) {
 			ASPRINTF(&log,
-				"warning: failed to get local address information for socket[%d]",
+				"failed to get local address information for socket[%d]",
 				sockfd);
-			PRINT_ERR_FREE(log);
+			PRINT_INFO_FREE(log);
 		}
 		ASPRINTF(&log, "New connection: local:%d [socket:%d] --> %s:%d",
 				ntohs(sc->domain == AF_INET?

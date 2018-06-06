@@ -37,6 +37,7 @@
 #define MAX_NUM_TOTAL_CONNECTIONS	MAX_NUM_SERVER_PORTS * MAX_THREADS_PER_SERVER_PORT
 /* Maximum size of sending a UDP packet is (64K - 1) - IP header - UDP header */
 #define MAX_UDP_SEND_SIZE		(65535 - 8 - 20)
+#define MAX_LOCAL_IP_PORT		65535
 
 /* default values */
 #define DEFAULT_NUM_SERVER_PORTS	16
