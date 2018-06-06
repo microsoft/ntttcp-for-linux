@@ -230,17 +230,27 @@ int verify_args(struct ntttcp_test *test)
 		return ERROR_ARGS;
 	}
 
+	if (test->server_role && test->threads_per_server_port != -1) {
+		PRINT_ERR("threads-per-server-port ('-n') is only for sender role");
+		return ERROR_ARGS;
+	}
+
+	if (test->server_role && test->conns_per_thread != -1) {
+		PRINT_ERR("connections-per-thread ('-l') is only for sender role");
+		return ERROR_ARGS;
+	}
+
 	if (test->server_ports > MAX_NUM_SERVER_PORTS) {
 		PRINT_INFO("too many number-of-server-ports. use the max value");
 		test->server_ports = MAX_NUM_SERVER_PORTS;
 	}
 
-	if (test->client_role && test->threads_per_server_port > MAX_THREADS_PER_SERVER_PORT) {
+	if (test->threads_per_server_port > MAX_THREADS_PER_SERVER_PORT) {
 		PRINT_INFO("too many threads-per-server-port. use the max value");
 		test->threads_per_server_port = MAX_THREADS_PER_SERVER_PORT;
 	}
 
-	if (test->client_role && test->conns_per_thread > MAX_CLIENT_CONNS_PER_THREAD) {
+	if (test->conns_per_thread > MAX_CLIENT_CONNS_PER_THREAD) {
 		PRINT_INFO("too many connections-per-thread. use the max value");
 		test->conns_per_thread = MAX_CLIENT_CONNS_PER_THREAD;
 	}
@@ -250,14 +260,14 @@ int verify_args(struct ntttcp_test *test)
 		test->server_ports = 1;
 	}
 
-	if (test->client_role && test->threads_per_server_port < 1) {
+	if (test->threads_per_server_port < 1) {
 		PRINT_INFO("invalid threads-per-server-port provided. use 1");
 		test->threads_per_server_port = 1;
 	}
 
-	if (test->client_role && test->conns_per_thread < 1) {
+	if (test->conns_per_thread < 1) {
 		PRINT_INFO("invalid connections-per-thread provided. use 1");
-		test->conns_per_thread = 1;
+		test->server_ports = 1;
 	}
 
 	if (test->domain == AF_INET6 && strcmp( test->bind_address, "0.0.0.0")== 0 )
@@ -1049,4 +1059,3 @@ bool check_resource_limit(struct ntttcp_test *test)
 		return true;
 	}
 }
-

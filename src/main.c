@@ -16,7 +16,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	char *log = NULL;
 
 	pthread_attr_t  pth_attrs;
-	uint n, t, threads_created = 0;
+	uint n, t, threads_created = 0, total_conns_created = 0;
 	struct ntttcp_stream_client *cs;
 	int rc, reply_received;
 	uint64_t nbytes = 0, total_bytes = 0;
@@ -85,8 +85,8 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	pthread_attr_setstacksize(&pth_attrs, THREAD_STACK_SIZE);
 
 	for (t = 0; t < test->server_ports; t++) {
-		for (n = 0; n < test->conn_per_server_port; n++ ) {
-			cs = tep->client_streams[t * test->conn_per_server_port + n];
+		for (n = 0; n < test->threads_per_server_port; n++ ) {
+			cs = tep->client_streams[t * test->threads_per_server_port + n];
 			/* in client side, multiple connections will (one thread for one connection)
 			 * connect to same port on server
 			 */
@@ -175,12 +175,16 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			PRINT_ERR("sender: error when pthread_join");
 			continue;
 		}
+		total_conns_created += tep->client_streams[n]->num_conns_created;
 		nbytes = tep->client_streams[n]->total_bytes_transferred;
 		total_bytes += nbytes;
 
 		tep->results->threads[n]->total_bytes = nbytes;
 		tep->results->threads[n]->actual_test_time = actual_test_time;
 	}
+	ASPRINTF(&log, "%d connections tested", total_conns_created);
+	PRINT_INFO_FREE(log);
+
 	tep->results->total_bytes = total_bytes;
 	tep->results->actual_test_time = actual_test_time;
 

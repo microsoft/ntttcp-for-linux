@@ -31,7 +31,8 @@ struct ntttcp_test
 	uint	server_ports;       /*    How many ports opening in receiver side, from -m flag, or -P flag */
 	int	cpu_affinity;       /*    CPU affinity, from -m flag */
 	char	*bind_address;      /*    Socket binding address */
-	uint	conn_per_server_port; /* '-n' for number of connections per server port. sender only */
+	uint	threads_per_server_port;  /* '-n' for number of threads per each server port. sender only */
+	uint	conns_per_thread;   /* '-l' for number of connections in each sender thread. sender only */
 	bool	no_synch;           /* '-N' to disable sender/receiver synch */
 
 	int	domain;              /* default for AF_INET, or '-6' for AF_INET6 */
@@ -79,13 +80,15 @@ struct ntttcp_stream_client{
 	char	*bind_address;
 	uint	server_port;
 	uint	client_port;
+	uint	num_connections;
 	ulong	send_buf_size;
 	bool	is_sync_thread;
 	bool	no_synch;
 	bool	continuous_mode;
 	bool	verbose;
 
-	uint64_t        total_bytes_transferred;
+	uint	  num_conns_created;
+	uint64_t  total_bytes_transferred;
 };
 
 /* manage a server test connection/stream */

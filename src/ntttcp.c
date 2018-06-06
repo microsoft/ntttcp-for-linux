@@ -29,15 +29,16 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->exit_after_done  = true;
 	test->mapping          = "16,*,*";
 	test->bind_address     = "0.0.0.0";
-	test->server_ports     = DEFAULT_NUM_SERVER_PORTS;
-	test->cpu_affinity     = -1; //no hard cpu affinity
-	test->conn_per_server_port = DEFAULT_CONNS_PER_SERVER_PORT;
+	test->cpu_affinity     = -1;      //no hard cpu affinity
+	test->server_ports            = DEFAULT_NUM_SERVER_PORTS;         //default:16
+	test->threads_per_server_port = DEFAULT_THREADS_PER_SERVER_PORT;  //default: 4, sender only
+	test->conns_per_thread        = DEFAULT_CLIENT_CONNS_PER_THREAD;  //default: 1, sender only
 	test->domain           = AF_INET; //IPV4
 	test->protocol         = TCP;
 	test->server_base_port = DEFAULT_BASE_DST_PORT;
-	test->client_base_port = 0;                        //random/ephemeral port
-	test->recv_buf_size    = DEFAULT_RECV_BUFFER_SIZE; //64K
-	test->send_buf_size    = DEFAULT_SEND_BUFFER_SIZE; //128K
+	test->client_base_port = 0;       //random/ephemeral port
+	test->recv_buf_size    = DEFAULT_RECV_BUFFER_SIZE;  //64K
+	test->send_buf_size    = DEFAULT_SEND_BUFFER_SIZE;  //128K
 	test->duration         = DEFAULT_TEST_DURATION;
 	test->no_synch         = false;
 	test->show_tcp_retransmit = false;
@@ -74,7 +75,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	if (endpoint_role == ROLE_SENDER) {
 		/* for sender, even used synch mechanism, the main thread will do the synch.
 		   no specially created thread for synch. */
-		total_threads = test->server_ports * test->conn_per_server_port;
+		total_threads = test->server_ports * test->threads_per_server_port;
 
 		e->total_threads = total_threads;
 		e->client_streams = (struct ntttcp_stream_client **) malloc( sizeof( struct  ntttcp_stream_client *) * total_threads );
@@ -182,9 +183,9 @@ void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
 
 	if (endpoint_role == ROLE_SENDER) {
 		if (e->test->no_synch == true)
-			total_threads = e->test->server_ports * e->test->conn_per_server_port;
+			total_threads = e->test->server_ports * e->test->threads_per_server_port;
 		else
-			total_threads = e->test->server_ports * e->test->conn_per_server_port + 1;
+			total_threads = e->test->server_ports * e->test->threads_per_server_port + 1;
 
 		for(i = 0; i < total_threads ; i++ )
 			free( e->client_streams[i] );
@@ -233,11 +234,14 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoin
 	s->bind_address = test->bind_address;
 	//s->server_port, should be specified by caller
 	//s->client_port, should be specified by caller
+	s->num_connections = test->conns_per_thread;
 	s->send_buf_size = test->send_buf_size;
 	s->verbose = test->verbose;
 	s->is_sync_thread = false;
 	s->no_synch = test->no_synch;
 	s->continuous_mode = (test->duration == 0);
+
+	s->num_conns_created = 0;
 	s->total_bytes_transferred = 0;
 	return s;
 }

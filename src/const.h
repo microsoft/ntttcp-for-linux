@@ -5,7 +5,7 @@
 // ----------------------------------------------------------------------------------
 
 #define TOOL_NAME "NTTTCP for Linux"
-#define TOOL_VERSION "1.3.1"
+#define TOOL_VERSION "1.3.2"
 #define AUTHOR_NAME "Shihua (Simon) Xiao, sixiao@microsoft.com"
 
 #define TCP 				SOCK_STREAM
@@ -19,25 +19,36 @@
 #define TEST_RUNNING			12
 #define TEST_FINISHED			13
 
+
+/*
+ * NUM_SERVER_PORTS:		how many PORTs opened by receiver;
+ * CONNS_PER_SERVER_PORT: 	how many THREADs on sender side will be created for each receiver PORT;
+ * CLIENT_SCONN_PER_CONN: 	how many real CONNECTIONs on sender side will be made in each sender THREAD.
+ * Sender-total-number-of-connections   = NUM_SERVER_PORTS * CONNS_PER_SERVER_PORT * CLIENT_SCONN_PER_CONN
+ * Receiver-total-number-of-connections = Sender-total-number-of-connections * REMOTE_ENDPOINTS
+ */
+
 /* max values */
 #define MAX_NUM_SERVER_PORTS		512
-#define MAX_CONNS_PER_SERVER_PORT	25600
+#define MAX_THREADS_PER_SERVER_PORT	25600
+#define MAX_CLIENT_CONNS_PER_THREAD	1000
 #define MAX_REMOTE_ENDPOINTS		8
 #define MAX_EPOLL_EVENTS		512
-#define MAX_NUM_TOTAL_CONNECTIONS	MAX_NUM_SERVER_PORTS * MAX_CONNS_PER_SERVER_PORT
+#define MAX_NUM_TOTAL_CONNECTIONS	MAX_NUM_SERVER_PORTS * MAX_THREADS_PER_SERVER_PORT
 /* Maximum size of sending a UDP packet is (64K - 1) - IP header - UDP header */
 #define MAX_UDP_SEND_SIZE		(65535 - 8 - 20)
 
 /* default values */
-#define THREAD_STACK_SIZE		65536
 #define DEFAULT_NUM_SERVER_PORTS	16
-#define DEFAULT_CONNS_PER_SERVER_PORT	4
+#define DEFAULT_THREADS_PER_SERVER_PORT	4
+#define DEFAULT_CLIENT_CONNS_PER_THREAD	1
 #define DEFAULT_BASE_DST_PORT		5001
 #define DEFAULT_BASE_SRC_PORT 		25001
 #define DEFAULT_RECV_BUFFER_SIZE	64 * 1024
 #define DEFAULT_SEND_BUFFER_SIZE	128 * 1024
 #define DEFAULT_TEST_DURATION		60
 #define SOCKET_TIMEOUT_SEC		3
+#define THREAD_STACK_SIZE		65536
 
 #define NO_ERROR			0
 #define ERROR_GENERAL			-1000
