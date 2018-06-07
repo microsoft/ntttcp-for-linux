@@ -33,7 +33,12 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 
 	int n            = 0; //write n bytes to socket
 	uint64_t nbytes  = 0; //total bytes sent
-	int i            = 0; //hold function return value
+	int ret          = 0; //hold function return value
+	uint i           = 0; //for loop iterator
+	uint total_sub_conn_created = 0; //track how many sub connections created in this thread
+	int sockfds[DEFAULT_CLIENT_CONNS_PER_THREAD] = {-1};
+	uint client_port = 0;
+
 	bool verbose_log = sc->verbose;
 
 	struct sockaddr_in local_addr, serv_addr;
@@ -44,55 +49,83 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	serv_addr.sin_port = htons(sc->server_port);
 	memcpy((void *)&serv_addr.sin_addr, hp->h_addr_list[0], hp->h_length);
 
+	for (i = 0; i < sc->num_connections; i++) {
+
 	if ((sockfd = socket(sc->domain, sc->domain, 0)) < 0){
 		PRINT_ERR("cannot create socket ednpoint");
-		return 0;
+		sockfds[i] = -1;
+		continue;
 	}
 
 	/*
 	   2. bind this socket fd to a local random/ephemeral TCP port,
 	      so that the sender side will have randomized TCP ports.
 	*/
-	(*(struct sockaddr_in*)&local_addr).sin_family = sc->domain; //AF_INET
-	(*(struct sockaddr_in*)&local_addr).sin_port = 0;
+	client_port = (sc->num_connections > 1 && sc->client_port != 0 )
+			? sc->client_port + i
+			: sc->client_port;
 
-	if (( i = bind(sockfd, (struct sockaddr *)&local_addr, sa_size)) < 0 ){
-		ASPRINTF(&log, "failed to bind socket: %d to a local ephemeral port. errno = %d", sockfd, errno);
-		PRINT_ERR_FREE(log);
-		return 0;
+	(*(struct sockaddr_in*)&local_addr).sin_port = client_port;
+	(*(struct sockaddr_in*)&local_addr).sin_family = sc->domain; //AF_INET
+
+	if (( ret = bind(sockfd, (struct sockaddr *)&local_addr, sa_size)) < 0 ){
+		ASPRINTF(&log,
+			 "failed to bind socket[%d] to a local port: [%s:%d]. errno = %d. Ignored",
+			 sockfd,
+			 inet_ntoa((*(struct sockaddr_in*)&local_addr).sin_addr),
+			 client_port,
+			 errno);
+		PRINT_INFO_FREE(log);
 	}
+
+	ASPRINTF(&log, "Running UDP stream: local:%d [socket:%d] --> %s:%d",
+		 ntohs(((struct sockaddr_in *)&local_addr)->sin_port),
+		 sockfd,
+		 sc->bind_address,
+		 sc->server_port);
+	PRINT_DBG_FREE(log);
+
+	sockfds[i] = sockfd;
+	total_sub_conn_created++;
+	}
+
+	if (total_sub_conn_created == 0)
+		goto CLEANUP;
 
 	/* 3. send to receiver */
 	/* wait for sync thread to finish */
 	wait_light_on();
 
-	ASPRINTF(&log, "Running UDP stream: local:%d [socket:%d] --> %s:%d",
-		ntohs(((struct sockaddr_in *)&local_addr)->sin_port),
-		sockfd,
-		sc->bind_address,
-		sc->server_port);
-	PRINT_DBG_FREE(log);
-
 	if ((buffer = (char *)malloc( sc->send_buf_size * sizeof(char))) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for send buffer");
-		close(sockfd);
-		return 0;
+		goto CLEANUP;;
 	}
 
 	memset(buffer, 'B', sc->send_buf_size * sizeof(char));
 	while (is_light_turned_on(sc->continuous_mode)){
-		n = sendto(sockfd, buffer, sc->send_buf_size, 0, (struct sockaddr *)&serv_addr, sa_size);
-		if (n < 0) {
-//			PRINT_ERR("cannot write data to a socket");
-//			printf("error: %d \n", errno);
-			break;
-		}
-		nbytes += n;
-	}
-	sc->total_bytes_transferred = nbytes;
+		for (i = 0; i < sc->num_connections; i++) {
+			sockfd = sockfds[i];
+			/* skip those socket fds ('-1') if failed in creation phase */
+			if (sockfd < 0)
+				continue;
 
+			n = sendto(sockfd, buffer, sc->send_buf_size, 0, (struct sockaddr *)&serv_addr, sa_size);
+			if (n < 0) {
+	//			PRINT_ERR("cannot write data to a socket");
+	//			printf("error: %d \n", errno);
+				continue;
+			}
+			nbytes += n;
+		}
+	}
+	sc->num_conns_created = total_sub_conn_created;
+	sc->total_bytes_transferred = nbytes;
 	free(buffer);
-	close(sockfd);
+
+CLEANUP:
+	for (i = 0; i < sc->num_connections; i++)
+		if (sockfds[i] >= 0)
+			close(sockfds[i]);
 
 	return 0;
 }
@@ -126,7 +159,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 	char *log;
 	bool verbose_log = false;
 
-	int i            = 0;  //hold function return value
+	int ret          = 0;  //hold function return value
 //	int opt          = 1;
 	int sockfd       = 0;  //socket file descriptor
 	char *buffer;          //receive buffer
@@ -188,16 +221,16 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 		}
 		*/
 
-		if (( i = bind(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
+		if (( ret = bind(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
 			ASPRINTF(&log,
 				"failed to bind the socket to local address: %s on socket: %d. return = %d",
 				local_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr,
 									local_addr_str,
 									ip_addr_max_size),
 				sockfd,
-				i );
+				ret );
 
-			if (i == -1) //append more info to log
+			if (ret == -1) //append more info to log
 				ASPRINTF(&log, "%s. errcode = %d", log, errno);
 			PRINT_DBG_FREE(log);
 			continue;
