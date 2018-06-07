@@ -158,7 +158,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 				sockfd,
 				sc->domain == AF_INET ? inet_ntoa((*(struct sockaddr_in*)&local_addr).sin_addr)
 						      : "::", //TODO - get the IPv6 addr string
-				sc->client_port,
+				client_port,
 				errno);
 			PRINT_INFO_FREE(log);
 		}
