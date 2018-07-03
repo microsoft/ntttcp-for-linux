@@ -63,10 +63,20 @@ void print_flags(struct ntttcp_test *test)
 	if (test->client_role)
 		printf("%s:\t %ld\n", "sender socket buffer (bytes)", test->send_buf_size);
 
+	if (test->warmup == 0)
+		printf("%s:\t\t %s\n", "test warm-up (sec)", "no");
+	else
+		printf("%s:\t\t %d\n", "test warm-up (sec)", test->warmup);
+
 	if (test->duration == 0)
 		printf("%s:\t\t %s\n", "test duration (sec)", "continuous");
 	else
 		printf("%s:\t\t %d\n", "test duration (sec)", test->duration);
+
+	if (test->cooldown == 0)
+		printf("%s:\t\t %s\n", "test cool-down (sec)", "no");
+	else
+		printf("%s:\t\t %d\n", "test cool-down (sec)", test->cooldown);
 
 	printf("%s:\t %s\n", "show system tcp retransmit", test->show_tcp_retransmit ? "yes" : "no");
 
@@ -80,7 +90,7 @@ void print_flags(struct ntttcp_test *test)
 void print_usage()
 {
 	printf("Author: %s\n", AUTHOR_NAME);
-	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-t|-N|-R|-x|-V|-h|-m <mapping>\n\n");
+	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-W|-t|-C|-N|-R|-x|-V|-h|-m <mapping>\n\n");
 	printf("\t-r   Run as a receiver\n");
 	printf("\t-s   Run as a sender\n");
 	printf("\t-D   Run as daemon\n");
@@ -101,7 +111,9 @@ void print_usage()
 	printf("\t-f   Fixed source port number, or starting port number    [default: %d]\n", DEFAULT_BASE_SRC_PORT);
 	printf("\t-b   <buffer size>    [default: %d (receiver); %d (sender)]\n", DEFAULT_RECV_BUFFER_SIZE, DEFAULT_SEND_BUFFER_SIZE);
 
-	printf("\t-t   Time of test duration in seconds    [default: %d]\n", DEFAULT_TEST_DURATION);
+	printf("\t-W   Warm-up time in seconds          [default: %d]\n", DEFAULT_WARMUP_SEC);
+	printf("\t-t   Time of test duration in seconds [default: %d]\n", DEFAULT_TEST_DURATION);
+	printf("\t-C   Cool-down time in seconds        [default: %d]\n", DEFAULT_COOLDOWN_SEC);
 	printf("\t-N   No sync, senders will start sending as soon as possible\n");
 	printf("\t     Otherwise, will use 'destination port - 1' as sync port	[default: %d]\n", DEFAULT_BASE_DST_PORT - 1);
 
@@ -299,6 +311,16 @@ int verify_args(struct ntttcp_test *test)
 		PRINT_INFO("running test in continuous mode. please monitor throughput by other tools");
 	}
 
+	if (test->warmup < 0) {
+		test->warmup = DEFAULT_WARMUP_SEC;
+		PRINT_INFO("invalid test warm-up seconds provided. use the default value");
+	}
+
+	if(test->cooldown <0) {
+		test->cooldown = DEFAULT_COOLDOWN_SEC;
+		PRINT_INFO("invalid test cool-down seconds provided. use the default value");
+	}
+
 	return NO_ERROR;
 }
 
@@ -324,7 +346,9 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		{"base-dst-port", required_argument, NULL, 'p'},
 		{"base-src-port", optional_argument, NULL, 'f'},
 		{"buffer", required_argument, NULL, 'b'},
+		{"warmup", required_argument, NULL, 'W'},
 		{"duration", required_argument, NULL, 't'},
+		{"cooldown", required_argument, NULL, 'C'},
 		{"no-synch", no_argument, NULL, 'N'},
 		{"show-retrans", no_argument, NULL, 'R'},
 		{"save-xml", optional_argument, NULL, 'x'},
@@ -336,7 +360,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 	int opt;
 
-	while ((opt = getopt(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:t:NRx::Vh")) != -1) {
+	while ((opt = getopt(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:W:t:C:NRx::Vh")) != -1) {
 		switch (opt) {
 		case 'r':
 		case 's':
@@ -420,8 +444,16 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			test->send_buf_size = unit_atod(optarg);
 			break;
 
+		case 'W':
+			test->warmup = atoi(optarg);
+			break;
+
 		case 't':
 			test->duration = atoi(optarg);
+			break;
+
+		case 'C':
+			test->cooldown = atoi(optarg);
 			break;
 
 		case 'N':

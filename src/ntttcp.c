@@ -39,7 +39,9 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->client_base_port = 0;       //random/ephemeral port
 	test->recv_buf_size    = DEFAULT_RECV_BUFFER_SIZE;  //64K
 	test->send_buf_size    = DEFAULT_SEND_BUFFER_SIZE;  //128K
-	test->duration         = DEFAULT_TEST_DURATION;
+	test->warmup	       = DEFAULT_WARMUP_SEC;	    // 0 sec
+	test->duration         = DEFAULT_TEST_DURATION;     //60 sec
+	test->cooldown         = DEFAULT_COOLDOWN_SEC;      // 0 sec
 	test->no_synch         = false;
 	test->show_tcp_retransmit = false;
 	test->save_xml_log     = false;

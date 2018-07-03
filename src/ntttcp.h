@@ -41,7 +41,9 @@ struct ntttcp_test
 	uint	client_base_port;    /* '-f' to pin client source port based on this */
 	ulong	recv_buf_size;       /* '-b' for receive buffer option */
 	ulong	send_buf_size;       /* '-B' for send buffer option */
+	int	warmup;              /* '-W' for test warm-up time in sec */
 	int	duration;            /* '-t' for total duration in sec of test (0: continuous_mode) */
+	int	cooldown;            /* '-C' for test cool-down time in sec */
 
 	bool 	show_tcp_retransmit; /* '-R' to display TCP retransmit counters in log from /proc */
 	bool	save_xml_log;        /* '-x' to save output to XML file */
