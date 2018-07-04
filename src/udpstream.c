@@ -32,7 +32,6 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	char *buffer;         //send buffer
 
 	int n            = 0; //write n bytes to socket
-	uint64_t nbytes  = 0; //total bytes sent
 	int ret          = 0; //hold function return value
 	uint i           = 0; //for loop iterator
 	uint total_sub_conn_created = 0; //track how many sub connections created in this thread
@@ -115,11 +114,10 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	//			printf("error: %d \n", errno);
 				continue;
 			}
-			nbytes += n;
+			sc->total_bytes_transferred += n;
 		}
 	}
 	sc->num_conns_created = total_sub_conn_created;
-	sc->total_bytes_transferred = nbytes;
 	free(buffer);
 
 CLEANUP:

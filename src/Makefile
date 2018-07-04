@@ -2,14 +2,16 @@ CC=gcc
 CFLAGS=-Wall -W -O2 -fno-strict-aliasing
 CLIBS=-pthread
 OUT=ntttcp
-OBJS=ntttcp.o util.o tcpstream.o udpstream.o endpointsync.o multithreading.o main.o
+OBJS=ntttcp.o util.o throughputmanagement.o tcpstream.o udpstream.o endpointsync.o multithreading.o main.o
 
-$(OUT): ntttcp.o util.o tcpstream.o udpstream.o endpointsync.o multithreading.o main.o
+$(OUT): ntttcp.o util.o throughputmanagement.o tcpstream.o udpstream.o endpointsync.o multithreading.o main.o
 	$(CC) $(CFLAGS) $(CLIBS) -o $(OUT) $(OBJS)
 ntttcp.o: ntttcp.c
 	$(CC) $(CFLAGS) -c ntttcp.c -o ntttcp.o
 util.o: util.c
 	$(CC) $(CFLAGS) -c util.c -o util.o
+throughputmanagement.o: throughputmanagement.c
+	$(CC) $(CFLAGS) -c throughputmanagement.c -o throughputmanagement.o
 tcpstream.o: tcpstream.c
 	$(CC) $(CFLAGS) -c tcpstream.c -o tcpstream.o
 udpstream.o:udpstream.c

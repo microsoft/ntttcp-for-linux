@@ -80,10 +80,23 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		PRINT_INFO("Starting sender activity (no sync) ...");
 	}
 
-	/* create threads */
+	/* prepare to create threads */
 	pthread_attr_init(&pth_attrs);
 	pthread_attr_setstacksize(&pth_attrs, THREAD_STACK_SIZE);
 
+	/* create throughput management thread */
+	rc = pthread_create(tep->throughput_mgmt_thread,
+			    &pth_attrs,
+			    run_ntttcp_throughput_management,
+			    (void*)tep);
+	if (rc) {
+		ASPRINTF(&log, "pthread_create(): failed to create throughput management thread. errno = %d", errno);
+		PRINT_ERR_FREE(log);
+		pthread_attr_destroy(&pth_attrs);
+		return ERROR_PTHREAD_CREATE;
+	}
+
+	/* create test threads */
 	for (t = 0; t < test->server_ports; t++) {
 		for (n = 0; n < test->threads_per_server_port; n++ ) {
 			cs = tep->client_streams[t * test->threads_per_server_port + n];
@@ -183,6 +196,8 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		tep->results->threads[n]->total_bytes = nbytes;
 		tep->results->threads[n]->actual_test_time = actual_test_time;
 	}
+
+	pthread_join(*(tep->throughput_mgmt_thread), &p_retval);
 	ASPRINTF(&log, "%d connections tested", total_conns_created);
 	PRINT_INFO_FREE(log);
 
@@ -211,7 +226,18 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	struct timeval now;
 	double actual_test_time = 0;
 
-	/* create threads */
+	/* create throughput management thread */
+	rc = pthread_create(tep->throughput_mgmt_thread,
+			    NULL,
+			    run_ntttcp_throughput_management,
+			    (void*)tep);
+	if (rc) {
+		ASPRINTF(&log, "pthread_create(): failed to create throughput management thread. errno = %d", errno);
+		PRINT_ERR_FREE(log);
+		return ERROR_PTHREAD_CREATE;
+	}
+
+	/* create test threads */
 	for (t = 0; t < test->server_ports; t++) {
 		ss = tep->server_streams[t];
 		ss->server_port = test->server_base_port + t;
@@ -358,6 +384,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	for (t=0; t < threads_created; t++) {
 		pthread_join(tep->threads[t], NULL);
 	}
+	pthread_join(*(tep->throughput_mgmt_thread), NULL);
 
 	return err_code;
 }

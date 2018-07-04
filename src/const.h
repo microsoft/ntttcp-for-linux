@@ -5,7 +5,7 @@
 // ----------------------------------------------------------------------------------
 
 #define TOOL_NAME "NTTTCP for Linux"
-#define TOOL_VERSION "1.3.2"
+#define TOOL_VERSION "1.3.3"
 #define AUTHOR_NAME "Shihua (Simon) Xiao, sixiao@microsoft.com"
 
 #define TCP 				SOCK_STREAM
@@ -18,7 +18,6 @@
 #define TEST_NOT_STARTED		11
 #define TEST_RUNNING			12
 #define TEST_FINISHED			13
-
 
 /*
  * NUM_SERVER_PORTS:		how many PORTs opened by receiver;

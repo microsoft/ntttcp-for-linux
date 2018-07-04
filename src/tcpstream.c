@@ -69,7 +69,6 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	uint i           = 0; //for loop iterator
 	char *buffer;         //send buffer
 	int n            = 0; //write n bytes to socket
-	uint64_t nbytes  = 0; //total bytes sent
 	int ret          = 0; //hold function return value
 	uint total_sub_conn_created = 0; //track how many sub connections created in this thread
 	struct ntttcp_stream_client *sc;
@@ -235,11 +234,10 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 //				PRINT_ERR("cannot write data to a socket");
 				continue;
 			}
-			nbytes += n;
+			sc->total_bytes_transferred += n;
 		}
 	}
 	sc->num_conns_created = total_sub_conn_created;
-	sc->total_bytes_transferred = nbytes;
 	free(buffer);
 
 CLEANUP:

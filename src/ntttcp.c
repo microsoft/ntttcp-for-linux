@@ -127,6 +127,8 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 			return NULL;
 		}
 	}
+	/* for throughput management thread */
+	e->throughput_mgmt_thread = malloc( sizeof(pthread_t) );
 
 	/* for test results */
 	e->results = (struct ntttcp_test_endpoint_results *) malloc(sizeof(struct ntttcp_test_endpoint_results));
@@ -216,6 +218,7 @@ void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
 	free( e->results->final_tcp_retrans);
 	free( e->results );
 	free( e->threads );
+	free( e->throughput_mgmt_thread );
 	free( e->test );
 	free( e );
 }

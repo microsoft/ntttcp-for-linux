@@ -5,8 +5,7 @@
 // ----------------------------------------------------------------------------------
 
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <limits.h>
-#include "endpointsync.h"
-#include "throughputmanagement.h"
-#include "udpstream.h"
+#include "multithreading.h"
+#include "util.h"
+
+void *run_ntttcp_throughput_management(void *ptr);

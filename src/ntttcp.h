@@ -66,8 +66,10 @@ struct ntttcp_test_endpoint{
 	struct	ntttcp_stream_client **client_streams; /* alloc memory for this if client/sender role */
 	struct	ntttcp_stream_server **server_streams; /* alloc memory for this if server/receiver role */
 
-	pthread_t	*threads;
+	pthread_t	*threads;      /* linux threads created to transfer test data */
 	struct	ntttcp_test_endpoint_results	*results;	/* test results */
+
+	pthread_t	*throughput_mgmt_thread;	/* linux thread created to manage the throughput on endpoint */
 
 	/* to support testing with multiple senders */
 	int	num_remote_endpoints; /* number to test client/sender endpoints */
