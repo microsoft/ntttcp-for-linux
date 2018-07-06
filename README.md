@@ -14,6 +14,20 @@ A multiple-thread based Linux network throughput benchmark tool.
 
 * Support Sender and Receiver sync mode by default. Use "-N" (no_sync) to disable the sync.
 
+* Support testing with multiple clients mode (use '-M' on Receiver, and '-L' on the last Sender).
+
+* Support select() by default, and epoll() (use '-e' on Receiver).
+
+* Support both TCP (by default), and UDP ('-u') tests.
+
+* Support pin TCP server or client port (use '-p' on Receiver or '-f' on Sender).
+
+* Support test Warmup ('-W') and Cooldown ('-C').
+
+* Support reporting TCP retransmit ('-R').
+
+* Support writing log into XML file ('-x').
+
 
 ## Getting Started
 
@@ -51,38 +65,30 @@ Using the above parameters, the program returns results on both the sender and r
 Example receiver-side output from a given run (which showcases 37.66 Gbps throughput):
 
 ```
-NODE1:/home/simonxiao/ntttcp-for-linux/src # ./ntttcp -r
-NTTTCP for Linux 1.1.0
+NODE1:/home/simonxiaoss/ntttcp-for-linux/src # ./ntttcp -s 10.0.0.1 -W 1 -t 10 -C 1
+NTTTCP for Linux 1.3.4
 ---------------------------------------------------------
-13:44:25 INFO: Network activity progressing...
-13:45:25 INFO:  Thread  Time(s) Throughput
-13:45:25 INFO:  ======  ======= ==========
-13:45:25 INFO:  0        60.00   1.83Gbps
-13:45:25 INFO:  1        60.00   2.51Gbps
-13:45:25 INFO:  2        60.00   2.54Gbps
-13:45:25 INFO:  3        60.00   1.94Gbps
-13:45:25 INFO:  4        60.00   1.93Gbps
-13:45:25 INFO:  5        60.00   2.09Gbps
-13:45:25 INFO:  6        60.00   2.15Gbps
-13:45:25 INFO:  7        60.00   3.23Gbps
-13:45:25 INFO:  8        60.00   1.77Gbps
-13:45:25 INFO:  9        60.00   3.30Gbps
-13:45:25 INFO:  10       60.00   2.97Gbps
-13:45:25 INFO:  11       60.00   3.65Gbps
-13:45:25 INFO:  12       60.00   1.67Gbps
-13:45:25 INFO:  13       60.00   1.86Gbps
-13:45:25 INFO:  14       60.00   1.61Gbps
-13:45:25 INFO:  15       60.00   2.61Gbps
+22:36:30 INFO: Network activity progressing...
+22:36:30 INFO: 64 threads created
+22:36:31 INFO: Test warmup completed.
+22:36:42 INFO: Test run completed.
+22:36:42 INFO: 64 connections tested
+22:36:42 INFO: #####  Totals:  #####
+22:36:42 INFO: test duration    :10.36 seconds
+22:36:42 INFO: total bytes      :30629953536
+22:36:42 INFO:   throughput     :23.65Gbps
+22:36:42 INFO: cpu cores        :20
+22:36:42 INFO:   cpu speed      :2394.455MHz
+22:36:42 INFO:   user           :3.60%
+22:36:42 INFO:   system         :3.44%
+22:36:42 INFO:   idle           :91.57%
+22:36:42 INFO:   iowait         :0.00%
+22:36:42 INFO:   softirq        :1.38%
+22:36:42 INFO:   cycles/byte    :1.37
+22:36:42 INFO: cpu busy (all)   :159.81%
 ---------------------------------------------------------
-13:45:25 INFO: test duration    :60.00 seconds
-13:45:25 INFO: total bytes      :282418471264
-13:45:25 INFO:   throughput     :37.66Gbps
-13:45:25 INFO: total cpu time   :166.11%
-13:45:25 INFO:   user time      :39.89%
-13:45:25 INFO:   system time    :126.23%
-13:45:25 INFO:   cpu cycles     :192000045567
-13:45:25 INFO: cycles/byte      :0.68
----------------------------------------------------------
+22:40:52 INFO: Test cooldown is in progress...
+22:40:52 INFO: Test cycle finished.
 ```
 
 # Related topics
