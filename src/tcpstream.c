@@ -211,6 +211,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 
 	if (total_sub_conn_created == 0)
 		goto CLEANUP;
+	sc->num_conns_created = total_sub_conn_created;
 
 	/* wait for sync thread to finish */
 	wait_light_on();
@@ -237,7 +238,6 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 			sc->total_bytes_transferred += n;
 		}
 	}
-	sc->num_conns_created = total_sub_conn_created;
 	free(buffer);
 
 CLEANUP:

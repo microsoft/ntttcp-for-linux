@@ -67,7 +67,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	e->test = test;
 	e->state = TEST_NOT_STARTED;
 	e->receiver_exit_after_done = test->exit_after_done;
-	e->confirmed_duration = test->duration;
+	e->negotiated_test_cycle_time = test->warmup + test->duration + test->cooldown;
 	e->start_time = now;
 	e->end_time = now;
 	e->synch_socket = 0;

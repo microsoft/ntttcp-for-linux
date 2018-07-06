@@ -56,20 +56,19 @@ struct ntttcp_test_endpoint{
 	int	endpoint_role;        /* sender or receiver role */
 	struct	ntttcp_test *test;
 	int	state;                /* test state */
-	int	confirmed_duration;   /* test duration exchanged and confirmed by both sides */
+	int	negotiated_test_cycle_time;   /* test cycle time (warmup + duration + cooldown) exchanged and confirmed by both sides */
 	struct	timeval start_time;   /* timestamp of test started on this endpoint */
 	struct	timeval end_time;     /* timestamp of test ended on this endpoint */
 	int	synch_socket;         /* the synch channel for sender/receiver sync */
-	unsigned int	total_threads;	      /* total threads, including synch thread */
-	bool    receiver_exit_after_done;       /* the receiver will exit after test done, or not */
+	unsigned int	total_threads;		/* total threads, including synch thread */
+	bool    receiver_exit_after_done;	/* the receiver will exit after test done, or not */
 
-	struct	ntttcp_stream_client **client_streams; /* alloc memory for this if client/sender role */
-	struct	ntttcp_stream_server **server_streams; /* alloc memory for this if server/receiver role */
+	struct	ntttcp_stream_client **client_streams;	/* alloc memory for this if client/sender role */
+	struct	ntttcp_stream_server **server_streams;	/* alloc memory for this if server/receiver role */
+	pthread_t	*threads;			/* linux threads created to transfer test data */
+	pthread_t       *throughput_mgmt_thread;        /* linux thread created to manage the throughput on endpoint */
 
-	pthread_t	*threads;      /* linux threads created to transfer test data */
 	struct	ntttcp_test_endpoint_results	*results;	/* test results */
-
-	pthread_t	*throughput_mgmt_thread;	/* linux thread created to manage the throughput on endpoint */
 
 	/* to support testing with multiple senders */
 	int	num_remote_endpoints; /* number to test client/sender endpoints */

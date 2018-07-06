@@ -90,6 +90,7 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 
 	if (total_sub_conn_created == 0)
 		goto CLEANUP;
+	sc->num_conns_created = total_sub_conn_created;
 
 	/* 3. send to receiver */
 	/* wait for sync thread to finish */
@@ -117,7 +118,6 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 			sc->total_bytes_transferred += n;
 		}
 	}
-	sc->num_conns_created = total_sub_conn_created;
 	free(buffer);
 
 CLEANUP:

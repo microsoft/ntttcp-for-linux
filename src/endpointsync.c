@@ -142,11 +142,11 @@ int query_receiver_busy_state(int sockfd)
 	return 0;  //server is not busy
 }
 
-/* negotiate a test duration time with receiver. if receiver returns:
+/* negotiate the total_test_time (warmup + test_duration + coldown) with receiver. if receiver returns:
  * -1: indicates error;
- *  Non-Zero positive integer: negotiated test duration, returned from receiver;
+ *  Non-Zero positive integer: negotiated total_test_time, returned from receiver;
  */
-int negotiate_test_duration(int sockfd, int proposed_time)
+int negotiate_test_cycle_time(int sockfd, int proposed_time)
 {
 	int converted = htonl(proposed_time);
 	int response = 0; //the int to be received
@@ -428,7 +428,7 @@ void *create_receiver_sync_socket( void *ptr )
 							 * all sender clients use the test duration specified by receiver.
 							 */
 							answer_to_send = tep->test->duration;
-							tep->confirmed_duration = answer_to_send;
+							tep->negotiated_test_cycle_time = answer_to_send;
 						} else if (converted == 0) {
 							/* the sender request to run with "continuous_mode" (duration == 0),
 							 * receiver then will accept that mode.
@@ -436,7 +436,7 @@ void *create_receiver_sync_socket( void *ptr )
 							if (tep->test->duration !=0)
 								PRINT_INFO("test is negotiated to run with continuous mode");
 							answer_to_send = 0;
-							tep->confirmed_duration = 0;
+							tep->negotiated_test_cycle_time = 0;
 						} else {
 							/* if receiver is specified to run with "continuous_mode", then tell sender to do so;
 							 * else, compare and use the max time as negotiated test duration time
@@ -444,17 +444,17 @@ void *create_receiver_sync_socket( void *ptr )
 							if (tep->test->duration == 0) {
 								//then tell sender to run with "continuous_mode" too
 								answer_to_send = 0;
-								tep->confirmed_duration = 0;
+								tep->negotiated_test_cycle_time = 0;
 							} else if (tep->test->duration < converted) {
 								answer_to_send = converted;
-								tep->confirmed_duration = answer_to_send;
+								tep->negotiated_test_cycle_time = answer_to_send;
 
-								ASPRINTF(&log, "test duration negotiated is: %d seconds", answer_to_send);
+								ASPRINTF(&log, "Test cycle time negotiated is: %d seconds", answer_to_send);
 								PRINT_INFO_FREE(log);
 							}
 							else {
 								answer_to_send = tep->test->duration;
-								tep->confirmed_duration = answer_to_send;
+								tep->negotiated_test_cycle_time = answer_to_send;
 							}
 						}
 					}

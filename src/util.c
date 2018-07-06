@@ -644,6 +644,7 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 {
 	struct ntttcp_test_endpoint_results *tepr = tep->results;
 	uint64_t total_bytes = tepr->total_bytes;
+	uint total_conns_created = 0;
 	double test_duration = tepr->actual_test_time;
 
 	unsigned int i;
@@ -660,11 +661,19 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 				continue;
 
 			log_tmp = format_throughput(tepr->threads[i]->total_bytes,
-							tepr->threads[i]->actual_test_time);
+						    tepr->threads[i]->actual_test_time);
 			ASPRINTF(&log, "\t%d\t %.2f\t %s", i, tepr->threads[i]->actual_test_time, log_tmp);
 			free(log_tmp);
 			PRINT_INFO_FREE(log);
 		}
+	}
+
+	/* only sender/client report the total connections established */
+	if (tep->test->client_role == true) {
+		for (i=0; i<tep->total_threads; i++)
+			total_conns_created += tep->client_streams[i]->num_conns_created;
+		ASPRINTF(&log, "%d connections tested", total_conns_created);
+		PRINT_INFO_FREE(log);
 	}
 
 	PRINT_INFO("#####  Totals:  #####");

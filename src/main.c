@@ -16,13 +16,10 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	char *log = NULL;
 
 	pthread_attr_t  pth_attrs;
-	uint n, t, threads_created = 0, total_conns_created = 0;
+	uint n, t, threads_created = 0;
 	struct ntttcp_stream_client *cs;
 	int rc, reply_received;
-	uint64_t nbytes = 0, total_bytes = 0;
 	void *p_retval;
-	struct timeval now;
-	double actual_test_time = 0;
 
 	if (test->no_synch == false ) {
 		/* Negotiate with receiver on:
@@ -46,9 +43,10 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			return ERROR_GENERAL;
 		}
 
-		reply_received = negotiate_test_duration(tep->synch_socket, test->duration);
+		reply_received = negotiate_test_cycle_time(tep->synch_socket,
+							   test->warmup + test->duration + test->cooldown);
 		if (reply_received == -1) {
-			PRINT_ERR("sender: failed to negotiate test duration with receiver");
+			PRINT_ERR("sender: failed to negotiate test cycle time with receiver");
 			return ERROR_GENERAL;
 		}
 		if (reply_received != test->duration) {
@@ -56,11 +54,11 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 				PRINT_INFO("test is negotiated to run with continuous mode");
 				set_ntttcp_test_endpoint_test_continuous(tep);
 			} else {
-				ASPRINTF(&log, "test duration negotiated is: %d seconds", reply_received);
+				ASPRINTF(&log, "Test cycle time negotiated is: %d seconds", reply_received);
 				PRINT_INFO_FREE(log);
 			}
 		}
-		tep->confirmed_duration = reply_received;
+		tep->negotiated_test_cycle_time = reply_received;
 
 		reply_received = request_to_start(tep->synch_socket,
 						  tep->test->last_client ? (int)'L' : (int)'R' );
@@ -142,73 +140,22 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	turn_on_light();
 
 	/* in the case of running in continuous_mode */
-	if (tep->confirmed_duration == 0) {
+	if (tep->negotiated_test_cycle_time == 0) {
 		sleep (UINT_MAX);
-		/* either sleep has elapsed, or sleep was interrupted  by a signal */
+		/* either sleep has elapsed, or sleep was interrupted by a signal */
 		return err_code;
 	}
 
-	get_cpu_usage( tep->results->init_cpu_usage );
-	get_cpu_usage_from_proc_stat( tep->results->init_cpu_ps );
-	get_tcp_retrans( tep->results->init_tcp_retrans );
-
-	/* run the timer. it will trigger turn_off_light() after timer timeout */
-	run_test_timer(tep->confirmed_duration);
-	tep->state = TEST_RUNNING;
-	gettimeofday(&now, NULL);
-	tep->start_time = now;
-
-	/* wait test done */
+	/* wait for test done (after the timer fired, or CTRL+C) */
 	wait_light_off();
 
-	tep->state = TEST_FINISHED;
-	gettimeofday(&now, NULL);
-	tep->end_time = now;
-
-	/* calculate the actual test run time */
-	actual_test_time = get_time_diff(&tep->end_time, &tep->start_time);
-
-	/*
-	 * if actual_test_time < tep->confirmed_duration;
-	 * then this indicates that in the sender side, test is being interrupted.
-	 * hence, tell receiver about this.
-	 */
-	if (actual_test_time < tep->confirmed_duration) {
-		tell_receiver_test_exit(tep->synch_socket);
-	}
-	close(tep->synch_socket);
-
-	/* calculate resource usage */
-	get_cpu_usage( tep->results->final_cpu_usage );
-	get_cpu_usage_from_proc_stat( tep->results->final_cpu_ps );
-	get_tcp_retrans( tep->results->final_tcp_retrans );
-
-	/* calculate client side throughput, but exclude the last thread as it is synch thread */
 	for (n = 0; n < threads_created; n++) {
 		if (pthread_join(tep->threads[n], &p_retval) !=0 ) {
 			PRINT_ERR("sender: error when pthread_join");
 			continue;
 		}
-		total_conns_created += tep->client_streams[n]->num_conns_created;
-		nbytes = tep->client_streams[n]->total_bytes_transferred;
-		total_bytes += nbytes;
-
-		tep->results->threads[n]->total_bytes = nbytes;
-		tep->results->threads[n]->actual_test_time = actual_test_time;
 	}
-
 	pthread_join(*(tep->throughput_mgmt_thread), &p_retval);
-	ASPRINTF(&log, "%d connections tested", total_conns_created);
-	PRINT_INFO_FREE(log);
-
-	tep->results->total_bytes = total_bytes;
-	tep->results->actual_test_time = actual_test_time;
-
-	process_test_results(tep);
-	print_test_results(tep);
-	if (tep->test->save_xml_log)
-		if (write_result_into_log_file(tep))
-			PRINT_ERR("Error writing log to xml file");
 
 	return err_code;
 }
@@ -222,9 +169,6 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	uint t, threads_created = 0;
 	struct ntttcp_stream_server *ss;
 	int rc;
-	uint64_t nbytes = 0, total_bytes = 0;
-	struct timeval now;
-	double actual_test_time = 0;
 
 	/* create throughput management thread */
 	rc = pthread_create(tep->throughput_mgmt_thread,
@@ -320,69 +264,29 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 			(uint64_t)__sync_lock_test_and_set(&(tep->server_streams[t]->total_bytes_transferred), 0);
 
 		/* in the case of running in continuous_mode */
-		if (tep->confirmed_duration == 0) {
+		if (tep->negotiated_test_cycle_time == 0) {
 			sleep (UINT_MAX);
-			/* either sleep has elapsed, or sleep was interrupted  by a signal */
+			/* either sleep has elapsed, or sleep was interrupted by a signal */
 			return err_code;
 		}
 
-		get_cpu_usage( tep->results->init_cpu_usage );
-		get_cpu_usage_from_proc_stat( tep->results->init_cpu_ps );
-		get_tcp_retrans( tep->results->init_tcp_retrans );
-
-		/* run the timer. it will trigger turn_off_light() after timer timeout */
-		run_test_timer(tep->confirmed_duration);
-		tep->state = TEST_RUNNING;
-		gettimeofday(&now, NULL);
-		tep->start_time = now;
-
 		/* wait test done */
 		wait_light_off();
-		tep->state = TEST_FINISHED;
+
+		/* reset thiss variable, in case receiver is running as '-H' (receiver is running in loop) */
 		tep->num_remote_endpoints = 0;
-		for (t=0; t<MAX_REMOTE_ENDPOINTS; t++) tep->remote_endpoints[t] = -1;
-		gettimeofday(&now, NULL);
-		tep->end_time = now;
-
-		/* calculate the actual test run time */
-		actual_test_time = get_time_diff(&tep->end_time, &tep->start_time);
-
-		/* calculate resource usage */
-		get_cpu_usage( tep->results->final_cpu_usage );
-		get_cpu_usage_from_proc_stat( tep->results->final_cpu_ps );
-		get_tcp_retrans( tep->results->final_tcp_retrans );
-
-		//sleep(1);  //looks like server needs more time to receive data ...
-
-		/* calculate server side throughput */
-		total_bytes = 0;
-		for (t=0; t < threads_created; t++){
-			/* exclude the sync thread */
-			if (tep->server_streams[t]->is_sync_thread == true)
-				continue;
-
-			/* read and reset the counter */
-			nbytes = (uint64_t)__sync_lock_test_and_set(&(tep->server_streams[t]->total_bytes_transferred), 0);
-			total_bytes += nbytes;
-
-			tep->results->threads[t]->total_bytes = nbytes;
-			tep->results->threads[t]->actual_test_time = actual_test_time;
-		}
-		tep->results->total_bytes = total_bytes;
-		tep->results->actual_test_time = actual_test_time;
-
-		process_test_results(tep);
-		print_test_results(tep);
-		if (tep->test->save_xml_log)
-			if (write_result_into_log_file(tep))
-				PRINT_ERR("Error writing log to xml file");
+		for (t=0; t<MAX_REMOTE_ENDPOINTS; t++)
+			tep->remote_endpoints[t] = -1;
 
 		if (tep->receiver_exit_after_done)
 			break;
 	}
 
 	for (t=0; t < threads_created; t++) {
-		pthread_join(tep->threads[t], NULL);
+		if (pthread_join(tep->threads[t], NULL) != 0 ) {
+			PRINT_ERR("receiver: error when pthread_join");
+			continue;
+		}
 	}
 	pthread_join(*(tep->throughput_mgmt_thread), NULL);
 
