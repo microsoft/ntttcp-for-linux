@@ -21,4 +21,4 @@ struct report_segment
 	uint64_t	bytes;
 };
 
-void *run_ntttcp_throughput_management(void *ptr);
+void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep);

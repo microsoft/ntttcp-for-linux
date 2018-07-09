@@ -42,9 +42,8 @@ struct report_segment report_real_time_throughput(struct ntttcp_test_endpoint *t
 	return this_checkpoint;
 }
 
-void *run_ntttcp_throughput_management(void *ptr)
+void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 {
-	struct ntttcp_test_endpoint *tep = (struct ntttcp_test_endpoint *) ptr;
 	uint n = 0;
 	uint i = 0;
 	double elapsed_sec = 0.0;
@@ -59,7 +58,7 @@ void *run_ntttcp_throughput_management(void *ptr)
 	uint64_t nbytes;
 	uint total_test_threads = tep->total_threads;
 
-	wait_light_on();
+	/* light is already turned on before entering this function */
 
 	/* Now the ntttcp test traffic is running now */
 	tep->state = TEST_RUNNING;
@@ -210,5 +209,5 @@ END:
 	}
 
 	tep->state = TEST_FINISHED;
-	return NULL;
+	return;
 }

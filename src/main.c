@@ -81,19 +81,6 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	/* prepare to create threads */
 	pthread_attr_init(&pth_attrs);
 	pthread_attr_setstacksize(&pth_attrs, THREAD_STACK_SIZE);
-
-	/* create throughput management thread */
-	rc = pthread_create(tep->throughput_mgmt_thread,
-			    &pth_attrs,
-			    run_ntttcp_throughput_management,
-			    (void*)tep);
-	if (rc) {
-		ASPRINTF(&log, "pthread_create(): failed to create throughput management thread. errno = %d", errno);
-		PRINT_ERR_FREE(log);
-		pthread_attr_destroy(&pth_attrs);
-		return ERROR_PTHREAD_CREATE;
-	}
-
 	/* create test threads */
 	for (t = 0; t < test->server_ports; t++) {
 		for (n = 0; n < test->threads_per_server_port; n++ ) {
@@ -146,8 +133,11 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		return err_code;
 	}
 
-	/* wait for test done (after the timer fired, or CTRL+C) */
-	wait_light_off();
+	/* manage the test cycle
+	 * will return after light is turned off
+	 * (calling wait_light_off() inside of below
+	 */
+	run_ntttcp_throughput_management(tep);
 
 	for (n = 0; n < threads_created; n++) {
 		if (pthread_join(tep->threads[n], &p_retval) !=0 ) {
@@ -155,7 +145,6 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			continue;
 		}
 	}
-	pthread_join(*(tep->throughput_mgmt_thread), &p_retval);
 
 	return err_code;
 }
@@ -169,17 +158,6 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	uint t, threads_created = 0;
 	struct ntttcp_stream_server *ss;
 	int rc;
-
-	/* create throughput management thread */
-	rc = pthread_create(tep->throughput_mgmt_thread,
-			    NULL,
-			    run_ntttcp_throughput_management,
-			    (void*)tep);
-	if (rc) {
-		ASPRINTF(&log, "pthread_create(): failed to create throughput management thread. errno = %d", errno);
-		PRINT_ERR_FREE(log);
-		return ERROR_PTHREAD_CREATE;
-	}
 
 	/* create test threads */
 	for (t = 0; t < test->server_ports; t++) {
@@ -270,8 +248,11 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 			return err_code;
 		}
 
-		/* wait test done */
-		wait_light_off();
+		/* manage the test cycle
+		 * will return after light is turned off
+		 * (calling wait_light_off() inside of below function)
+		 */
+		run_ntttcp_throughput_management(tep);
 
 		/* reset thiss variable, in case receiver is running as '-H' (receiver is running in loop) */
 		tep->num_remote_endpoints = 0;
@@ -288,7 +269,6 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 			continue;
 		}
 	}
-	pthread_join(*(tep->throughput_mgmt_thread), NULL);
 
 	return err_code;
 }

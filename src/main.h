@@ -7,6 +7,5 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <limits.h>
-#include "endpointsync.h"
 #include "throughputmanagement.h"
 #include "udpstream.h"
