@@ -131,7 +131,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	/* for test results */
 	e->results = (struct ntttcp_test_endpoint_results *) malloc(sizeof(struct ntttcp_test_endpoint_results));
 	memset(e->results, 0 , sizeof(struct ntttcp_test_endpoint_results));
-	e->results->average_rtt = (unsigned int)-1;
+	e->results->average_rtt = (unsigned int) -1;
 
 	e->results->threads = (struct ntttcp_test_endpoint_thread_result **) malloc(
 			       sizeof( struct ntttcp_test_endpoint_thread_result *) * total_threads);
