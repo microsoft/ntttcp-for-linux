@@ -106,7 +106,7 @@ struct ntttcp_test_endpoint_results{
 	uint64_t	packets_retransmitted;
 	double		cpu_busy_percent;
 	unsigned int	errors;
-	unsigned int 	average_rtt;
+	unsigned int	average_rtt;
 };
 
 enum {S_THREADS = 0, S_PROCESSOR, S_HOST, S_DONE};

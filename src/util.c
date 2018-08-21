@@ -834,7 +834,7 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "		<no_stdio_buffer>%s</no_stdio_buffer>\n", "False");
 	fprintf(logfile, "		<throughput_Bpms>%d</throughput_Bpms>\n", 0);
 	fprintf(logfile, "		<cpu_burn>%d</cpu_burn>\n", 0);
-	fprintf(logfile, "		<latency_measurement>%s</latency_measurement>\n", tep->endpoint_role == ROLE_SENDER ? "True" : "False");
+	fprintf(logfile, "		<latency_measurement>%s</latency_measurement>\n", "False");
 	fprintf(logfile, "		<use_io_compl_ports>%s</use_io_compl_ports>\n", "NA");
 	fprintf(logfile, "		<cpu_from_idle_flag>%s</cpu_from_idle_flag>\n", "False");
 	fprintf(logfile, "		<get_estats>%s</get_estats>\n", "False");
@@ -878,8 +878,8 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<bufferCount>%u</bufferCount>\n", 0);
 	fprintf(logfile, "	<bufferLen>%u</bufferLen>\n", 0);
 	fprintf(logfile, "	<io>%u</io>\n", 0);
-	if (tep->endpoint_role == ROLE_SENDER) {
-		fprintf(logfile, "	<latency>%u</latency>\n", tepr->average_rtt);
+	if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
+		fprintf(logfile, "	<tcp_average_rtt>%u</tcp_average_rtt>\n", tepr->average_rtt);
 	}
 
 	count = execute_system_cmd_by_process("uname -a", "r", str_temp1);
