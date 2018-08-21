@@ -71,10 +71,10 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	int n            = 0; //write n bytes to socket
 	int ret          = 0; //hold function return value
 	uint total_sub_conn_created = 0; //track how many sub connections created in this thread
-	struct ntttcp_stream_client *sc;
+	struct ntttcp_stream_client *sc = (struct ntttcp_stream_client *) ptr;
 
 	uint client_port = 0;
-	int sockfds[DEFAULT_CLIENT_CONNS_PER_THREAD] = {-1};
+	int *sockfds;
 	struct sockaddr_storage local_addr; //for local address
 	socklen_t local_addr_size;    //local address size
 
@@ -85,8 +85,13 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 
 	struct timeval timeout = {SOCKET_TIMEOUT_SEC, 0}; //set socket timeout
 
-	sc = (struct ntttcp_stream_client *) ptr;
 	verbose_log = sc->verbose;
+
+	sockfds = sc->sockfds = (int *)malloc(sizeof(int) * sc->num_connections);
+	if (sockfds == NULL) {
+		PRINT_ERR("cannot allocate memory for sockfds");
+		return 0;
+	}
 
 	/* get address of remote receiver */
 	memset(&hints, 0, sizeof hints);
@@ -241,10 +246,6 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	free(buffer);
 
 CLEANUP:
-	for (i = 0; i < sc->num_connections; i++)
-		if (sockfds[i] >= 0)
-			close(sockfds[i]);
-
 	return 0;
 }
 

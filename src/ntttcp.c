@@ -131,6 +131,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	/* for test results */
 	e->results = (struct ntttcp_test_endpoint_results *) malloc(sizeof(struct ntttcp_test_endpoint_results));
 	memset(e->results, 0 , sizeof(struct ntttcp_test_endpoint_results));
+	e->results->average_rtt = (unsigned int)-1;
 
 	e->results->threads = (struct ntttcp_test_endpoint_thread_result **) malloc(
 			       sizeof( struct ntttcp_test_endpoint_thread_result *) * total_threads);
@@ -179,15 +180,27 @@ void set_ntttcp_test_endpoint_test_continuous(struct ntttcp_test_endpoint* e)
 
 void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
 {
-	int i = 0;
-	int total_threads = 0;
+	uint i = 0;
+	uint j = 0;
+	uint total_threads = 0;
 	int endpoint_role = e->endpoint_role;
+	int *sockfds = NULL;
 
 	if (endpoint_role == ROLE_SENDER) {
 		total_threads = e->test->server_ports * e->test->threads_per_server_port;
 
-		for(i = 0; i < total_threads ; i++ )
+		for(i = 0; i < total_threads ; i++ ) {
+			sockfds = e->client_streams[i]->sockfds;
+			if (sockfds != NULL) {
+				for (j = 0; j < e->client_streams[i]->num_connections; j++) {
+					if (sockfds[j] >= 0) {
+						close(sockfds[j]);
+					}
+				}
+				free( sockfds );
+			}
 			free( e->client_streams[i] );
+		}
 
 		free( e->client_streams );
 	}

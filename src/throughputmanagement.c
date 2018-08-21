@@ -42,6 +42,48 @@ struct report_segment report_real_time_throughput(struct ntttcp_test_endpoint *t
 	return this_checkpoint;
 }
 
+void output_ntttcp_result(struct ntttcp_test_endpoint *tep)
+{
+	if (tep->test->save_xml_log)
+		if (write_result_into_log_file(tep))
+			PRINT_ERR("Error writing log to xml file");
+}
+
+void run_ntttcp_rtt_calculation(struct ntttcp_test_endpoint *tep)
+{
+	uint n = 0;
+	uint i = 0;
+	unsigned int average_rtt = 0;
+	uint num_average_rtt = 0;
+	struct	ntttcp_stream_client *sc;
+	int *sockfds;
+	struct tcp_info tcpinfo;
+	uint bytes = sizeof(tcpinfo);
+	uint total_test_threads = tep->total_threads;
+
+	/* Calculate average SRTT across all connections */
+	for (n = 0; n < total_test_threads; n++) {
+		sc = tep->client_streams[n];
+		sockfds = sc->sockfds;
+
+		for (i = 0; i < sc->num_connections; i++) {
+			if (sockfds[i] >= 0) {
+				if(getsockopt(sockfds[i], SOL_TCP, TCP_INFO, (void *)&tcpinfo, &bytes) != 0) {
+					PRINT_INFO("getsockopt (TCP_INFO) failed");
+				} 
+				else {
+					average_rtt += (tcpinfo.tcpi_rtt / 1000);
+					num_average_rtt++;
+				}
+			}
+		}
+	}
+
+	if (num_average_rtt > 0) {
+		tep->results->average_rtt = average_rtt / num_average_rtt;
+	}
+}
+
 void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 {
 	uint n = 0;
@@ -176,9 +218,6 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 
 	process_test_results(tep);
 	print_test_results(tep);
-	if (tep->test->save_xml_log)
-		if (write_result_into_log_file(tep))
-			PRINT_ERR("Error writing log to xml file");
 
 	/* 3) wait, if cool-down specified. there are some possibilities:
 	 *    a) "-C" is specified by user, then Cooldown here.
