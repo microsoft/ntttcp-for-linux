@@ -92,6 +92,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 		PRINT_ERR("cannot allocate memory for sockfds");
 		return 0;
 	}
+	memset(sockfds, -1, sizeof(int) * sc->num_connections);
 
 	/* get address of remote receiver */
 	memset(&hints, 0, sizeof hints);
