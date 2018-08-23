@@ -181,26 +181,14 @@ void set_ntttcp_test_endpoint_test_continuous(struct ntttcp_test_endpoint* e)
 void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
 {
 	uint i = 0;
-	uint j = 0;
 	uint total_threads = 0;
 	int endpoint_role = e->endpoint_role;
-	int *sockfds = NULL;
 
 	if (endpoint_role == ROLE_SENDER) {
 		total_threads = e->test->server_ports * e->test->threads_per_server_port;
 
-		for(i = 0; i < total_threads ; i++ ) {
-			sockfds = e->client_streams[i]->sockfds;
-			if (sockfds != NULL) {
-				for (j = 0; j < e->client_streams[i]->num_connections; j++) {
-					if (sockfds[j] >= 0) {
-						close(sockfds[j]);
-					}
-				}
-				free( sockfds );
-			}
+		for(i = 0; i < total_threads ; i++ )
 			free( e->client_streams[i] );
-		}
 
 		free( e->client_streams );
 	}
@@ -255,6 +243,7 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoin
 
 	s->num_conns_created = 0;
 	s->total_bytes_transferred = 0;
+	s->average_rtt = (uint) -1;
 	return s;
 }
 

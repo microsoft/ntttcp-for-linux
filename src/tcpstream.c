@@ -74,7 +74,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	struct ntttcp_stream_client *sc = (struct ntttcp_stream_client *) ptr;
 
 	uint client_port = 0;
-	int *sockfds;
+	int *sockfds = NULL;
 	struct sockaddr_storage local_addr; //for local address
 	socklen_t local_addr_size;    //local address size
 
@@ -84,10 +84,14 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	struct addrinfo hints, *remote_serv_info, *p; //to get remote peer's sockaddr
 
 	struct timeval timeout = {SOCKET_TIMEOUT_SEC, 0}; //set socket timeout
+	unsigned int average_rtt = 0;
+	uint num_average_rtt = 0;
+	struct tcp_info tcpinfo;
+	uint bytes = sizeof(tcpinfo);
 
 	verbose_log = sc->verbose;
 
-	sockfds = sc->sockfds = (int *)malloc(sizeof(int) * sc->num_connections);
+	sockfds = (int *)malloc(sizeof(int) * sc->num_connections);
 	if (sockfds == NULL) {
 		PRINT_ERR("cannot allocate memory for sockfds");
 		return 0;
@@ -246,7 +250,30 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	}
 	free(buffer);
 
+	for (i = 0; i < sc->num_connections; i++) {
+		if (sockfds[i] >= 0) {
+			if(getsockopt(sockfds[i], SOL_TCP, TCP_INFO, (void *)&tcpinfo, &bytes) != 0) {
+				PRINT_INFO("getsockopt (TCP_INFO) failed");
+			} 
+			else {
+				average_rtt += (tcpinfo.tcpi_rtt / 1000);
+				num_average_rtt++;
+			}
+		}
+	}
+
+	if (num_average_rtt > 0) {
+		sc->average_rtt = average_rtt / num_average_rtt;
+	}
+
 CLEANUP:
+	for (i = 0; i < sc->num_connections; i++)
+		if (sockfds[i] >= 0)
+			close(sockfds[i]);
+
+	if (sockfds != NULL) {
+		free(sockfds);
+	}
 	return 0;
 }
 

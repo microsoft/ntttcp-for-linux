@@ -92,6 +92,7 @@ struct ntttcp_stream_client{
 	uint	  num_conns_created;
 	uint64_t  total_bytes_transferred;
 	int*	  sockfds;
+	unsigned int average_rtt;
 };
 
 /* manage a server test connection/stream */
