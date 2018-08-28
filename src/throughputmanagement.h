@@ -22,5 +22,4 @@ struct report_segment
 };
 
 void output_ntttcp_result(struct ntttcp_test_endpoint *tep);
-void run_ntttcp_rtt_calculation(struct ntttcp_test_endpoint *tep);
 void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep);

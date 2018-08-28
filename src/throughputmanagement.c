@@ -49,27 +49,6 @@ void output_ntttcp_result(struct ntttcp_test_endpoint *tep)
 			PRINT_ERR("Error writing log to xml file");
 }
 
-void run_ntttcp_rtt_calculation(struct ntttcp_test_endpoint *tep)
-{
-	uint i = 0;
-	uint average_rtt = 0;
-	uint num_average_rtt = 0;
-	struct	ntttcp_stream_client *sc;
-	uint total_test_threads = tep->total_threads;
-
-	/* Calculate average SRTT across all connections */
-	for (i = 0; i < total_test_threads; i++) {
-		sc = tep->client_streams[i];
-		if (sc->average_rtt != (uint) -1) {
-			average_rtt += sc->average_rtt;	
-			num_average_rtt++;
-		}
-	}
-
-	if (num_average_rtt > 0)
-		tep->results->average_rtt = average_rtt / num_average_rtt;
-}
-
 void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 {
 	uint n = 0;

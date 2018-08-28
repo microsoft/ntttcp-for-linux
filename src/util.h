@@ -122,6 +122,8 @@ void print_version();
 void fill_buffer(register char *buf, register int count);
 double unit_atod(const char *s);
 
+void run_ntttcp_rtt_calculation(struct ntttcp_test_endpoint *tep);
+
 void get_cpu_usage(struct cpu_usage *cu);
 void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups);
 double get_time_diff(struct timeval *t1, struct timeval *t2);

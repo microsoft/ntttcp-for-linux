@@ -500,6 +500,27 @@ void get_cpu_usage(struct cpu_usage *cu)
 	cu->system_time = usage.ru_stime.tv_sec * 1000000.0 + usage.ru_stime.tv_usec;
 }
 
+void run_ntttcp_rtt_calculation(struct ntttcp_test_endpoint *tep)
+{
+	uint i = 0;
+	uint average_rtt = 0;
+	uint num_average_rtt = 0;
+	struct	ntttcp_stream_client *sc;
+	uint total_test_threads = tep->total_threads;
+
+	/* Calculate average SRTT across all connections */
+	for (i = 0; i < total_test_threads; i++) {
+		sc = tep->client_streams[i];
+		if (sc->average_rtt != (uint) -1) {
+			average_rtt += sc->average_rtt;
+			num_average_rtt++;
+		}
+	}
+
+	if (num_average_rtt > 0)
+		tep->results->average_rtt = average_rtt / num_average_rtt;
+}
+
 void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
 {
 	unsigned long long int user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice;

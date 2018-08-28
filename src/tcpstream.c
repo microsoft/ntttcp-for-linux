@@ -74,7 +74,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	struct ntttcp_stream_client *sc = (struct ntttcp_stream_client *) ptr;
 
 	uint client_port = 0;
-	int *sockfds = NULL;
+	int sockfds[MAX_CLIENT_CONNS_PER_THREAD] = {-1};
 	struct sockaddr_storage local_addr; //for local address
 	socklen_t local_addr_size;    //local address size
 
@@ -90,13 +90,6 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	uint bytes = sizeof(tcpinfo);
 
 	verbose_log = sc->verbose;
-
-	sockfds = (int *)malloc(sizeof(int) * sc->num_connections);
-	if (sockfds == NULL) {
-		PRINT_ERR("cannot allocate memory for sockfds");
-		return 0;
-	}
-	memset(sockfds, -1, sizeof(int) * sc->num_connections);
 
 	/* get address of remote receiver */
 	memset(&hints, 0, sizeof hints);
@@ -254,7 +247,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 		if (sockfds[i] >= 0) {
 			if(getsockopt(sockfds[i], SOL_TCP, TCP_INFO, (void *)&tcpinfo, &bytes) != 0) {
 				PRINT_INFO("getsockopt (TCP_INFO) failed");
-			} 
+			}
 			else {
 				average_rtt += (tcpinfo.tcpi_rtt / 1000);
 				num_average_rtt++;
@@ -270,10 +263,6 @@ CLEANUP:
 	for (i = 0; i < sc->num_connections; i++)
 		if (sockfds[i] >= 0)
 			close(sockfds[i]);
-
-	if (sockfds != NULL) {
-		free(sockfds);
-	}
 	return 0;
 }
 
