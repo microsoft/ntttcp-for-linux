@@ -146,6 +146,11 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		}
 	}
 
+	/* get TCP_INFO stats after all transfer are completed before sockets are closed */
+	run_ntttcp_rtt_calculation(tep);
+	if (write_result_into_log_file(tep) != 0)
+		PRINT_ERR("Error writing log to xml file");
+
 	return err_code;
 }
 
@@ -253,6 +258,8 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		 * (calling wait_light_off() inside of below function)
 		 */
 		run_ntttcp_throughput_management(tep);
+		if (write_result_into_log_file(tep) != 0)
+			PRINT_ERR("Error writing log to xml file");
 
 		/* reset thiss variable, in case receiver is running as '-H' (receiver is running in loop) */
 		tep->num_remote_endpoints = 0;

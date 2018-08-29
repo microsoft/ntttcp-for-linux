@@ -176,9 +176,6 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 
 	process_test_results(tep);
 	print_test_results(tep);
-	if (tep->test->save_xml_log)
-		if (write_result_into_log_file(tep))
-			PRINT_ERR("Error writing log to xml file");
 
 	/* 3) wait, if cool-down specified. there are some possibilities:
 	 *    a) "-C" is specified by user, then Cooldown here.

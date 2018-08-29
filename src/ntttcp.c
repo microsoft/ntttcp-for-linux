@@ -131,6 +131,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	/* for test results */
 	e->results = (struct ntttcp_test_endpoint_results *) malloc(sizeof(struct ntttcp_test_endpoint_results));
 	memset(e->results, 0 , sizeof(struct ntttcp_test_endpoint_results));
+	e->results->average_rtt = (unsigned int) -1;
 
 	e->results->threads = (struct ntttcp_test_endpoint_thread_result **) malloc(
 			       sizeof( struct ntttcp_test_endpoint_thread_result *) * total_threads);
@@ -179,8 +180,8 @@ void set_ntttcp_test_endpoint_test_continuous(struct ntttcp_test_endpoint* e)
 
 void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint* e)
 {
-	int i = 0;
-	int total_threads = 0;
+	uint i = 0;
+	uint total_threads = 0;
 	int endpoint_role = e->endpoint_role;
 
 	if (endpoint_role == ROLE_SENDER) {
@@ -242,6 +243,7 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoin
 
 	s->num_conns_created = 0;
 	s->total_bytes_transferred = 0;
+	s->average_rtt = (uint) -1;
 	return s;
 }
 

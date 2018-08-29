@@ -9,6 +9,8 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <sys/epoll.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
 #include "util.h"
 #include "multithreading.h"
 

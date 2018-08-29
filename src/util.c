@@ -500,6 +500,27 @@ void get_cpu_usage(struct cpu_usage *cu)
 	cu->system_time = usage.ru_stime.tv_sec * 1000000.0 + usage.ru_stime.tv_usec;
 }
 
+void run_ntttcp_rtt_calculation(struct ntttcp_test_endpoint *tep)
+{
+	uint i = 0;
+	uint total_rtt = 0;
+	uint num_average_rtt = 0;
+	struct	ntttcp_stream_client *sc;
+	uint total_test_threads = tep->total_threads;
+
+	/* Calculate average RTT across all connections */
+	for (i = 0; i < total_test_threads; i++) {
+		sc = tep->client_streams[i];
+		if (sc->average_rtt != (uint) -1) {
+			total_rtt += sc->average_rtt;
+			num_average_rtt++;
+		}
+	}
+
+	if (num_average_rtt > 0)
+		tep->results->average_rtt = total_rtt / num_average_rtt;
+}
+
 void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
 {
 	unsigned long long int user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice;
@@ -791,6 +812,10 @@ unsigned int escape_char_for_xml(char *in, char *out)
 
 int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 {
+	if (!tep->test->save_xml_log) {
+		return 0;
+	}
+
 	struct ntttcp_test *test = tep->test;
 	struct ntttcp_test_endpoint_results *tepr = tep->results;
 	char str_temp1[256];
@@ -878,6 +903,9 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<bufferCount>%u</bufferCount>\n", 0);
 	fprintf(logfile, "	<bufferLen>%u</bufferLen>\n", 0);
 	fprintf(logfile, "	<io>%u</io>\n", 0);
+	if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
+		fprintf(logfile, "	<tcp_average_rtt>%u</tcp_average_rtt>\n", tepr->average_rtt);
+	}
 
 	count = execute_system_cmd_by_process("uname -a", "r", str_temp1);
 	escape_char_for_xml(str_temp1, str_temp2);

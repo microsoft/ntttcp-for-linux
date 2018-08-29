@@ -106,6 +106,7 @@ struct ntttcp_test_endpoint_results{
 	uint64_t	packets_retransmitted;
 	double		cpu_busy_percent;
 	unsigned int	errors;
+	unsigned int	average_rtt;
 };
 
 enum {S_THREADS = 0, S_PROCESSOR, S_HOST, S_DONE};
@@ -120,6 +121,8 @@ void print_version();
 
 void fill_buffer(register char *buf, register int count);
 double unit_atod(const char *s);
+
+void run_ntttcp_rtt_calculation(struct ntttcp_test_endpoint *tep);
 
 void get_cpu_usage(struct cpu_usage *cu);
 void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups);
