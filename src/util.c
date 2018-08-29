@@ -904,7 +904,7 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<bufferLen>%u</bufferLen>\n", 0);
 	fprintf(logfile, "	<io>%u</io>\n", 0);
 	if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
-		fprintf(logfile, "	<tcp_average_rtt>%u</tcp_average_rtt>\n", tepr->average_rtt);
+		fprintf(logfile, "	<tcp_average_rtt metric=\"microsecond\">%u</tcp_average_rtt>\n", tepr->average_rtt);
 	}
 
 	count = execute_system_cmd_by_process("uname -a", "r", str_temp1);
