@@ -71,7 +71,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	int n            = 0; //write n bytes to socket
 	int ret          = 0; //hold function return value
 	uint total_sub_conn_created = 0; //track how many sub connections created in this thread
-	struct ntttcp_stream_client *sc = (struct ntttcp_stream_client *) ptr;
+	struct ntttcp_stream_client *sc;
 
 	uint client_port = 0;
 	int sockfds[MAX_CLIENT_CONNS_PER_THREAD] = {-1};
@@ -84,6 +84,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	struct addrinfo hints, *remote_serv_info, *p; //to get remote peer's sockaddr
 
 	struct timeval timeout = {SOCKET_TIMEOUT_SEC, 0}; //set socket timeout
+	/* the variables below are used to retrieve RTT and calculate average RTT */
 	unsigned int total_rtt = 0;
 	uint num_average_rtt = 0;
 	struct tcp_info tcpinfo;
