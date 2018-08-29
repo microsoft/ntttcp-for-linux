@@ -42,13 +42,6 @@ struct report_segment report_real_time_throughput(struct ntttcp_test_endpoint *t
 	return this_checkpoint;
 }
 
-void output_ntttcp_result(struct ntttcp_test_endpoint *tep)
-{
-	if (tep->test->save_xml_log)
-		if (write_result_into_log_file(tep))
-			PRINT_ERR("Error writing log to xml file");
-}
-
 void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 {
 	uint n = 0;

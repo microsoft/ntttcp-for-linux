@@ -84,11 +84,12 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	struct addrinfo hints, *remote_serv_info, *p; //to get remote peer's sockaddr
 
 	struct timeval timeout = {SOCKET_TIMEOUT_SEC, 0}; //set socket timeout
-	unsigned int average_rtt = 0;
+	unsigned int total_rtt = 0;
 	uint num_average_rtt = 0;
 	struct tcp_info tcpinfo;
 	uint bytes = sizeof(tcpinfo);
 
+	sc = (struct ntttcp_stream_client *) ptr;
 	verbose_log = sc->verbose;
 
 	/* get address of remote receiver */
@@ -245,18 +246,18 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 
 	for (i = 0; i < sc->num_connections; i++) {
 		if (sockfds[i] >= 0) {
-			if(getsockopt(sockfds[i], SOL_TCP, TCP_INFO, (void *)&tcpinfo, &bytes) != 0) {
+			if (getsockopt(sockfds[i], SOL_TCP, TCP_INFO, (void *)&tcpinfo, &bytes) != 0) {
 				PRINT_INFO("getsockopt (TCP_INFO) failed");
 			}
 			else {
-				average_rtt += (tcpinfo.tcpi_rtt / 1000);
+				total_rtt += (tcpinfo.tcpi_rtt / 1000);
 				num_average_rtt++;
 			}
 		}
 	}
 
 	if (num_average_rtt > 0) {
-		sc->average_rtt = average_rtt / num_average_rtt;
+		sc->average_rtt = total_rtt / num_average_rtt;
 	}
 
 CLEANUP:
