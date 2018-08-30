@@ -6,7 +6,17 @@
 
 #define _GNU_SOURCE
 #include <stdio.h>
-#include <limits.h>
-#include "throughputmanagement.h"
-#include "udpstream.h"
-#include "parameter.h"
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include <getopt.h>
+#include "util.h"
+
+enum {S_THREADS = 0, S_PROCESSOR, S_HOST, S_DONE};
+
+int parse_arguments(struct ntttcp_test *test, int argc, char **argv);
+int verify_args(struct ntttcp_test *test);
+
+void print_flags(struct ntttcp_test *test);
+void print_usage();
+void print_version();

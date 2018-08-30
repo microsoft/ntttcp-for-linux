@@ -15,7 +15,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <getopt.h>
 #include <time.h>
 #include <math.h>
 #include <arpa/inet.h>
@@ -23,8 +22,6 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#include "const.h"
-#include "logger.h"
 #include "ntttcp.h"
 
 struct cpu_usage{
@@ -108,16 +105,6 @@ struct ntttcp_test_endpoint_results{
 	unsigned int	errors;
 	unsigned int	average_rtt;
 };
-
-enum {S_THREADS = 0, S_PROCESSOR, S_HOST, S_DONE};
-
-int parse_arguments(struct ntttcp_test *test, int argc, char **argv);
-int process_mappings(struct ntttcp_test *test);
-int verify_args(struct ntttcp_test *test);
-
-void print_flags(struct ntttcp_test *test);
-void print_usage();
-void print_version();
 
 void fill_buffer(register char *buf, register int count);
 double unit_atod(const char *s);
