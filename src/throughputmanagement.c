@@ -174,9 +174,6 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 	tep->results->total_bytes = total_bytes_duration;
 	tep->results->actual_test_time = actual_test_time;
 
-	process_test_results(tep);
-	print_test_results(tep);
-
 	/* 3) wait, if cool-down specified. there are some possibilities:
 	 *    a) "-C" is specified by user, then Cooldown here.
 	 *    b) "-C" is not specified (Cooldown time is 0), but the total test cycle time negotiated with remote peer,

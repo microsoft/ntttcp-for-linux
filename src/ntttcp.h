@@ -74,7 +74,7 @@ struct ntttcp_test_endpoint{
 	int	remote_endpoints[MAX_REMOTE_ENDPOINTS]; /* list of the TCP listeners of those endpoints */
 };
 
-/* manage a client test connection/stream */
+/* manage a client test thread (one or multiple socket connections) */
 struct ntttcp_stream_client{
 	struct	ntttcp_test_endpoint *endpoint;
 	int	domain;
@@ -89,12 +89,12 @@ struct ntttcp_stream_client{
 	bool	continuous_mode;
 	bool	verbose;
 
+	uint    average_rtt;
 	uint	  num_conns_created;
 	uint64_t  total_bytes_transferred;
-	unsigned int average_rtt;
 };
 
-/* manage a server test connection/stream */
+/* manage a server test thread (one socket on one port) */
 struct ntttcp_stream_server{
 	struct  ntttcp_test_endpoint *endpoint;
 	int	domain;
@@ -113,6 +113,7 @@ struct ntttcp_stream_server{
 	fd_set	read_set;     /* set of read sockets */
 	fd_set	write_set;    /* set of write sockets */
 	int	state;
+
 	uint64_t	total_bytes_transferred;
 };
 

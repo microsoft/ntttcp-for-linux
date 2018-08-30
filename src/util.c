@@ -500,7 +500,7 @@ void get_cpu_usage(struct cpu_usage *cu)
 	cu->system_time = usage.ru_stime.tv_sec * 1000000.0 + usage.ru_stime.tv_usec;
 }
 
-void run_ntttcp_rtt_calculation(struct ntttcp_test_endpoint *tep)
+void run_ntttcp_rtt_calculation_for_sender(struct ntttcp_test_endpoint *tep)
 {
 	uint i = 0;
 	uint total_rtt = 0;
@@ -658,6 +658,10 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 				 / (tepr->final_cpu_usage->time - tepr->init_cpu_usage->time);
 	tepr->errors = 0;
 
+	/* calculate TCP RTT */
+	if (tep->endpoint_role == ROLE_SENDER && tep->test->protocol == TCP)
+		run_ntttcp_rtt_calculation_for_sender(tep);
+
 	return 0;
 }
 
@@ -751,7 +755,17 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 	ASPRINTF(&log, "cpu busy (all)\t:%.2f%%", tepr->cpu_busy_percent * 100);
 	PRINT_INFO_FREE(log);
 
+	if (tep->test->verbose) {
+		if (tep->endpoint_role == ROLE_SENDER && tep->test->protocol == TCP) {
+			ASPRINTF(&log, "tcpi rtt\t\t:%u us", tepr->average_rtt);
+			PRINT_INFO_FREE(log);
+		}
+	}
 	printf("---------------------------------------------------------\n");
+
+	if (tep->test->save_xml_log)
+		if (write_result_into_log_file(tep) != 0)
+			PRINT_ERR("Error writing log to xml file");
 }
 
 size_t execute_system_cmd_by_process(char *command, char *type, char *output)
@@ -812,10 +826,6 @@ unsigned int escape_char_for_xml(char *in, char *out)
 
 int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 {
-	if (!tep->test->save_xml_log) {
-		return 0;
-	}
-
 	struct ntttcp_test *test = tep->test;
 	struct ntttcp_test_endpoint_results *tepr = tep->results;
 	char str_temp1[256];
@@ -903,8 +913,9 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<bufferCount>%u</bufferCount>\n", 0);
 	fprintf(logfile, "	<bufferLen>%u</bufferLen>\n", 0);
 	fprintf(logfile, "	<io>%u</io>\n", 0);
+
 	if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
-		fprintf(logfile, "	<tcp_average_rtt>%u</tcp_average_rtt>\n", tepr->average_rtt);
+		fprintf(logfile, "	<tcp_average_rtt metric=\"us\">%u</tcp_average_rtt>\n", tepr->average_rtt);
 	}
 
 	count = execute_system_cmd_by_process("uname -a", "r", str_temp1);

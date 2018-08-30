@@ -251,7 +251,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 				PRINT_INFO("getsockopt (TCP_INFO) failed");
 			}
 			else {
-				total_rtt += (tcpinfo.tcpi_rtt / 1000);
+				total_rtt += tcpinfo.tcpi_rtt;
 				num_average_rtt++;
 			}
 		}
