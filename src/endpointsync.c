@@ -398,11 +398,6 @@ void *create_receiver_sync_socket( void *ptr )
 
 					case (int)'L':  //the last client joined, and request to start the test
 						if (tep->test->multi_clients_mode == true) {
-							if (tep->num_remote_endpoints >= MAX_REMOTE_ENDPOINTS) {
-								/* the last seat has been taken; too many client! */
-								answer_to_send = (int)'E'; //'E': ERROR
-							}
-
 							/* firstly, add this client into the client collection */
 							tep->remote_endpoints[ tep->num_remote_endpoints++ ] = current_fd;
 
