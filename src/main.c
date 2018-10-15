@@ -281,7 +281,10 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 int main(int argc, char **argv)
 {
 	int err_code = NO_ERROR;
+#if defined(__APPLE__)
+#else
 	cpu_set_t cpuset;
+#endif
 	struct ntttcp_test *test;
 	struct ntttcp_test_endpoint *tep;
 
@@ -331,17 +334,23 @@ int main(int argc, char **argv)
 	turn_off_light();
 
 	if (test->cpu_affinity != -1) {
+#if defined(__APPLE__)
+#else
 		CPU_ZERO(&cpuset);
 		CPU_SET(test->cpu_affinity, &cpuset);
 		PRINT_INFO("main: set cpu affinity");
 		if ( pthread_setaffinity_np( pthread_self(), sizeof(cpu_set_t ), &cpuset) != 0 )
 			PRINT_ERR("main: cannot set cpu affinity");
+#endif
 	}
 
 	if (test->daemon) {
+#if defined(__APPLE__)
+#else
 		PRINT_INFO("main: run this tool in the background");
 		if ( daemon(0, 0) != 0 )
 			PRINT_ERR("main: cannot run this tool in the background");
+#endif
 	}
 
 	if (test->client_role == true) {

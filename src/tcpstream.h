@@ -8,7 +8,13 @@
 #include <stdio.h>
 #include <netdb.h>
 #include <unistd.h>
+#if defined(__APPLE__)
+#include <sys/sysctl.h>
+#include <sys/socketvar.h>
+#include <net/if.h>
+#else
 #include <sys/epoll.h>
+#endif
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include "util.h"

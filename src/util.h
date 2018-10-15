@@ -22,6 +22,11 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#if defined(__APPLE__)
+#import <mach/mach_host.h>
+#import <mach/vm_map.h>
+#import <sys/sysctl.h>
+#endif
 #include "ntttcp.h"
 
 struct cpu_usage{
@@ -123,12 +128,18 @@ char *retrive_ip4_address_str(struct sockaddr_in *ss, char *ip_str, size_t maxle
 char *retrive_ip6_address_str(struct sockaddr_in6 *ss, char *ip_str, size_t maxlen);
 int set_socket_non_blocking(int fd);
 
+#if defined(__APPLE__)
+unsigned int cpu_mhz_macos();
+#endif
 double read_value_from_proc(char *file_name, char *key);
 uint64_t read_counter_from_proc(char *file_name, char *section, char *key);
 void get_tcp_retrans(struct tcp_retrans *tr);
 bool check_resource_limit(struct ntttcp_test *test);
 
+#if defined(__APPLE__)
+#else
 #define MAX(a,b) \
 	({ __typeof__ (a) _a = (a); \
 	__typeof__ (b) _b = (b); \
 	_a > _b ? _a : _b; })
+#endif

@@ -40,6 +40,48 @@ void run_ntttcp_rtt_calculation_for_sender(struct ntttcp_test_endpoint *tep)
 		tep->results->average_rtt = total_rtt / num_average_rtt;
 }
 
+#if defined(__APPLE__)
+void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
+{
+	unsigned long long int user, nice, system, idle;
+	user = nice = system = idle = 0;
+	
+	processor_info_array_t _cpuInfo = NULL;
+	mach_msg_type_number_t _numCPUInfo = 0;
+	
+	int _mib[2U] = { CTL_HW, HW_NCPU };
+	unsigned _numCPUs;
+	size_t _sizeOfNumCPUs = sizeof(_numCPUs);
+	int _status = sysctl(_mib, 2U, &_numCPUs, &_sizeOfNumCPUs, NULL, 0U);
+	if(_status)
+		_numCPUs = 1;
+	
+	kern_return_t err = host_processor_info(mach_host_self(), PROCESSOR_CPU_LOAD_INFO, &_numCPUs, &_cpuInfo, &_numCPUInfo);
+	unsigned long long int inuse[4] = {0};
+	double total = 0;
+	if (err == KERN_SUCCESS) {
+		for (unsigned i = 0; i < _numCPUs; ++i){
+			user = _cpuInfo[(CPU_STATE_MAX * i) + CPU_STATE_USER];
+			system = _cpuInfo[(CPU_STATE_MAX * i) + CPU_STATE_SYSTEM];
+			nice = _cpuInfo[(CPU_STATE_MAX * i) + CPU_STATE_NICE];
+			idle = _cpuInfo[(CPU_STATE_MAX * i) + CPU_STATE_IDLE];
+			inuse[0] += user;
+			inuse[1] += system;
+			inuse[2] += nice;
+			inuse[3] += idle;
+			total += inuse[0] + inuse[1] + inuse[2] + inuse[3];
+		}
+		cups->nproc = _numCPUs;
+		cups->user_time = inuse[0];
+		cups->system_time = inuse[1];
+		cups->idle_time = inuse[3];
+		
+		cups->total_time = total;
+	}
+}
+
+#else
+
 void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
 {
 	unsigned long long int user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice;
@@ -82,6 +124,7 @@ void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
 
 	cups->total_time = user + nice + system + idle + iowait + irq + softirq + steal;
 }
+#endif
 
 double get_time_diff(struct timeval *t1, struct timeval *t2)
 {
@@ -146,9 +189,15 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	}
 
 	/* calculate for overall counters */
+#if defined(__APPLE__)
+	cpu_speed_mhz = cpu_mhz_macos();
+#else
 	cpu_speed_mhz = read_value_from_proc(PROC_FILE_CPUINFO, CPU_SPEED_MHZ);
+#endif
 	tepr->cpu_speed_mhz = cpu_speed_mhz;
 
+#if defined(__APPLE__)
+#else
 	tepr->retrans_segments_per_sec = (tepr->final_tcp_retrans->retrans_segs - tepr->init_tcp_retrans->retrans_segs) / test_duration;
 	tepr->tcp_lost_retransmit_per_sec = (tepr->final_tcp_retrans->tcp_lost_retransmit - tepr->init_tcp_retrans->tcp_lost_retransmit) / test_duration;
 	tepr->tcp_syn_retrans_per_sec = (tepr->final_tcp_retrans->tcp_syn_retrans - tepr->init_tcp_retrans->tcp_syn_retrans) / test_duration;
@@ -156,6 +205,7 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	tepr->tcp_forward_retrans_per_sec = (tepr->final_tcp_retrans->tcp_forward_retrans - tepr->init_tcp_retrans->tcp_forward_retrans) / test_duration;
 	tepr->tcp_slowStart_retrans_per_sec = (tepr->final_tcp_retrans->tcp_slowStart_retrans - tepr->init_tcp_retrans->tcp_slowStart_retrans) / test_duration;
 	tepr->tcp_retrans_fail_per_sec = (tepr->final_tcp_retrans->tcp_retrans_fail - tepr->init_tcp_retrans->tcp_retrans_fail) / test_duration;
+#endif
 
 	cpu_ps_total_diff = tepr->final_cpu_ps->total_time - tepr->init_cpu_ps->total_time;
 	tepr->cpu_ps_user_usage = (tepr->final_cpu_ps->user_time - tepr->init_cpu_ps->user_time) / cpu_ps_total_diff;
@@ -231,6 +281,8 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 	free(log_tmp);
 	PRINT_INFO_FREE(log);
 
+#if defined(__APPLE__)
+#else
 	if (tep->test->show_tcp_retransmit) {
 		PRINT_INFO("tcp retransmit:");
 		ASPRINTF(&log, "\t retrans_segments/sec\t:%.2f", tepr->retrans_segments_per_sec);
@@ -248,6 +300,7 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 		ASPRINTF(&log, "\t retrans_fail/sec\t:%.2f", tepr->tcp_retrans_fail_per_sec);
 		PRINT_INFO_FREE(log);
 	}
+#endif
 
 	if (tepr->final_cpu_ps->nproc == tepr->init_cpu_ps->nproc) {
 		ASPRINTF(&log, "cpu cores\t:%d", tepr->final_cpu_ps->nproc);
@@ -567,6 +620,8 @@ found:
 
 void get_tcp_retrans(struct tcp_retrans *tr)
 {
+#if defined(__APPLE__)
+#else
 	tr->retrans_segs		= read_counter_from_proc(PROC_FILE_SNMP,    TCP_SECTION, "RetransSegs");
 	tr->tcp_lost_retransmit		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPLostRetransmit");
 	tr->tcp_syn_retrans		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPSynRetrans");
@@ -574,7 +629,22 @@ void get_tcp_retrans(struct tcp_retrans *tr)
 	tr->tcp_forward_retrans		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPForwardRetrans");
 	tr->tcp_slowStart_retrans	= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPSlowStartRetrans");
 	tr->tcp_retrans_fail		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPRetransFail");
+#endif
 }
+
+#if defined(__APPLE__)
+unsigned int cpu_mhz_macos() {
+	int mib[2];
+	unsigned int freq;
+	size_t len;
+
+	mib[0] = CTL_HW;
+	mib[1] = HW_CPU_FREQ;
+	len = sizeof(freq);
+	sysctl(mib, 2, &freq, &len, NULL, 0);
+	return freq / 1000000;
+}
+#endif
 
 double read_value_from_proc(char *file_name, char *key)
 {

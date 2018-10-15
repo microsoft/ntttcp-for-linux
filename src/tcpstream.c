@@ -87,7 +87,11 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	/* the variables below are used to retrieve RTT and calculate average RTT */
 	unsigned int total_rtt = 0;
 	uint num_average_rtt = 0;
+#if defined(__APPLE__)
+	struct tcp_connection_info tcpinfo;
+#else
 	struct tcp_info tcpinfo;
+#endif
 	uint bytes = sizeof(tcpinfo);
 
 	sc = (struct ntttcp_stream_client *) ptr;
@@ -247,11 +251,19 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 
 	for (i = 0; i < sc->num_connections; i++) {
 		if (sockfds[i] >= 0) {
+#if defined(__APPLE__)
+			if (getsockopt(sockfds[i], IPPROTO_TCP, TCP_CONNECTION_INFO, (void *)&tcpinfo, &bytes) != 0) {
+#else
 			if (getsockopt(sockfds[i], SOL_TCP, TCP_INFO, (void *)&tcpinfo, &bytes) != 0) {
+#endif
 				PRINT_INFO("getsockopt (TCP_INFO) failed");
 			}
 			else {
+#if defined(__APPLE__)
+				total_rtt += tcpinfo.tcpi_srtt;
+#else
 				total_rtt += tcpinfo.tcpi_rtt;
+#endif
 				num_average_rtt++;
 			}
 		}
@@ -376,6 +388,10 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 
 int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 {
+#if defined(__APPLE__)
+	PRINT_ERR("epoll isn't supported in macOS");
+	return -1;
+#else
 	int err_code = NO_ERROR;
 	char *log    = NULL;
 	bool verbose_log = ss->verbose;
@@ -527,6 +543,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 	close(efd);
 	close(ss->listener);
 	return err_code;
+#endif
 }
 
 int ntttcp_server_select(struct ntttcp_stream_server *ss)
