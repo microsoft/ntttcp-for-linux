@@ -12,10 +12,12 @@
 #include <sys/sysctl.h>
 #include <sys/socketvar.h>
 #include <net/if.h>
+#include <sys/event.h>
+#elif defined(__FreeBSD__) || defined(__OpenBSD__)
+#include <sys/event.h>
 #else
 #include <sys/epoll.h>
 #endif
-#include <sys/event.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include "util.h"
