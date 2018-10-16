@@ -231,6 +231,8 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	}
 	//fill_buffer(buffer, sc->send_buf_size);
 	memset(buffer, 'A', sc->send_buf_size * sizeof(char));
+	/* ensure buffer is NULL-terminated */
+	buffer[sc->send_buf_size * sizeof(char)] = NULL;
 
 	while ( is_light_turned_on(sc->continuous_mode) ) {
 
