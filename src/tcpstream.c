@@ -389,6 +389,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 
 int ntttcp_server_kqueue(struct ntttcp_stream_server *ss)
 {
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 	int err_code = NO_ERROR;
 	char *log    = NULL;
 	bool verbose_log = ss->verbose;
@@ -542,6 +543,10 @@ int ntttcp_server_kqueue(struct ntttcp_stream_server *ss)
 	close(kfd);
 	close(ss->listener);
 	return err_code;
+#else
+	PRINT_ERR("kqueue is only supported in Darwin and BSD systems");
+	return -1;
+#endif
 }
 	
 int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
