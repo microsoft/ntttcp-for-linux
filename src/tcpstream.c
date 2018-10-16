@@ -225,7 +225,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	/* wait for sync thread to finish */
 	wait_light_on();
 
-	if ((buffer = (char *)malloc(sc->send_buf_size * sizeof(char))) == (char *)NULL) {
+	if ((buffer = (char *)malloc(sc->send_buf_size * sizeof(char) + 1)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for send buffer");
 		goto CLEANUP;
 	}
