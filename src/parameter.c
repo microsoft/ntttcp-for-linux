@@ -16,6 +16,8 @@ void print_flags(struct ntttcp_test *test)
 		printf("%s\n", "*** run as daemon");
 	if (test->server_role && test->use_epoll)
 		printf("%s\n", "*** use epoll()");
+    if (test->server_role && test->use_kqueue && !test->use_epoll)
+        printf("%s\n", "*** use kqueue()");
 	if (test->server_role && !test->exit_after_done)
 		printf("%s\n", "*** hold receiver always running");
 
@@ -99,6 +101,7 @@ void print_usage()
 	printf("\t-L   [sender only] indicates this is the last client when receiver is running with multi-clients mode\n");
 
 	printf("\t-e   [receiver only] use epoll() instead of select()\n");
+    printf("\t-k   [receiver only] use kqueue() instead of select()\n");
 	printf("\t-H   [receiver only] hold receiver always running even after one test finished\n");
 
 	printf("\t-P   Number of ports listening on receiver side	[default: %d] [max: %d]\n", DEFAULT_NUM_SERVER_PORTS, MAX_NUM_SERVER_PORTS);
@@ -278,6 +281,8 @@ int verify_args(struct ntttcp_test *test)
 	if (test->client_role) {
 		if (test->use_epoll)
 			PRINT_DBG("ignore '-e' on sender role");
+        if (test->use_kqueue)
+            PRINT_DBG("ignore '-k' on sender role");
 		if (!test->exit_after_done)
 			PRINT_DBG("ignore '-H' on sender role");
 	}
@@ -336,6 +341,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		{"multi-clients", no_argument, NULL, 'M'},
 		{"last-client", no_argument, NULL, 'L'},
 		{"epoll", no_argument, NULL, 'e'},
+        {"kqueue", no_argument, NULL, 'k'},
 		{"hold", no_argument, NULL, 'H'},
 		{"mapping", required_argument, NULL, 'm'},
 		{"nports", required_argument, NULL, 'P'},
@@ -360,7 +366,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 	int opt;
 
-	while ((opt = getopt(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:W:t:C:NRx::Vh")) != -1) {
+	while ((opt = getopt(argc, argv, "r::s::DMLekHm:P:n:l:6up:f::b:W:t:C:NRx::Vh")) != -1) {
 		switch (opt) {
 		case 'r':
 		case 's':
@@ -393,6 +399,10 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		case 'e':
 			test->use_epoll = true;
 			break;
+
+        case 'k':
+            test->use_kqueue = true;
+            break;
 
 		case 'H':
 			test->exit_after_done = false;

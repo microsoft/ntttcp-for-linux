@@ -9,7 +9,7 @@
 /************************************************************/
 //		ntttcp socket functions
 /************************************************************/
-int n_read(int fd, char *buffer, size_t total)
+size_t n_read(int fd, char *buffer, size_t total)
 {
 	register ssize_t rtn;
 	register size_t left = total;
@@ -34,7 +34,7 @@ int n_read(int fd, char *buffer, size_t total)
 	return total - left;
 }
 
-int n_write(int fd, const char *buffer, size_t total)
+size_t n_write(int fd, const char *buffer, size_t total)
 {
 	register ssize_t rtn;
 	register size_t left = total;
@@ -68,7 +68,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	int sockfd       = 0; //socket id
 	uint i           = 0; //for loop iterator
 	char *buffer;         //send buffer
-	int n            = 0; //write n bytes to socket
+	size_t n         = 0; //write n bytes to socket
 	int ret          = 0; //hold function return value
 	uint total_sub_conn_created = 0; //track how many sub connections created in this thread
 	struct ntttcp_stream_client *sc;
@@ -231,7 +231,6 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	}
 	//fill_buffer(buffer, sc->send_buf_size);
 	memset(buffer, 'A', sc->send_buf_size * sizeof(char));
-	/* ensure buffer is NULL-terminated */
 	buffer[sc->send_buf_size * sizeof(char)] = '\0';
 
 	while ( is_light_turned_on(sc->continuous_mode) ) {
@@ -295,7 +294,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 	int sockfd       = 0;  //socket file descriptor
 	char *local_addr_str;  //used to get local ip address
 	int ip_addr_max_size;  //used to get local ip address
-	char *port_str;        //used to get port number string for getaddrinfo()
+	char *port_str;	       //used to get port number string for getaddrinfo()
 	struct addrinfo hints, *serv_info, *p; //to get local sockaddr for bind()
 
 	/* get receiver/itself address */
@@ -388,6 +387,163 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 	return ss->listener;
 }
 
+int ntttcp_server_kqueue(struct ntttcp_stream_server *ss)
+{
+	int err_code = NO_ERROR;
+	char *log    = NULL;
+	bool verbose_log = ss->verbose;
+	
+	int kfd = 0, n_fds = 0, newfd = 0, current_fd = 0;
+	char *buffer;  //receive buffer
+	uint64_t nbytes;   //bytes read
+	int bytes_to_be_read = 0;  //read bytes from socket
+	struct kevent event, *events;
+	
+	struct sockaddr_storage peer_addr, local_addr; //for remote peer, and local address
+	socklen_t peer_addr_size, local_addr_size;
+	char *ip_address_str;
+	int ip_addr_max_size;
+	int i = 0;
+	
+	if ( (buffer = (char *)malloc(ss->recv_buf_size)) == (char *)NULL) {
+		PRINT_ERR("cannot allocate memory for receive buffer");
+		return ERROR_MEMORY_ALLOC;
+	}
+	ip_addr_max_size = (ss->domain == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
+	if ( (ip_address_str = (char *)malloc(ip_addr_max_size)) == (char *)NULL) {
+		PRINT_ERR("cannot allocate memory for ip address of peer");
+		free(buffer);
+		return ERROR_MEMORY_ALLOC;
+	}
+	
+	kfd = kqueue();
+	if (kfd == -1) {
+		PRINT_ERR("kqueue failed");
+		free(buffer);
+		free(ip_address_str);
+		return ERROR_KQUEUE;
+	}
+	
+	EV_SET(&event, ss->listener, EVFILT_READ, EV_ADD, 0, 0, NULL);
+	if (kevent(kfd, &event, 1, NULL, 0, NULL) == -1) {
+		PRINT_ERR("kevent failed");
+		free(buffer);
+		free(ip_address_str);
+		close(kfd);
+		return ERROR_KQUEUE;
+	}
+	
+	/* Buffer where events are returned */
+	events = calloc (MAX_KQUEUE_EVENTS, sizeof kevent);
+	
+	while (1) {
+		if (ss->endpoint->receiver_exit_after_done &&
+			ss->endpoint->state == TEST_FINISHED)
+			break;
+		
+		n_fds = kevent(kfd, NULL, 0, events, MAX_KQUEUE_EVENTS, NULL);
+		
+		for (i = 0; i < n_fds; i++) {
+			current_fd = (int)events[i].ident;
+			
+			if (events[i].flags & EV_EOF) {
+				int eof_fd = (int)events[i].ident;
+				EV_SET(&event, eof_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+				if (kevent(kfd, &event, 1, NULL, 0, NULL) == -1)
+					PRINT_ERR("kevent failed");
+				close (current_fd);
+				continue;
+			}
+			
+			/* then, we got one fd to handle */
+			/* a NEW connection coming */
+			if (current_fd == ss->listener) {
+				/* We have a notification on the listening socket, which means one or more incoming connections. */
+				while (1) {
+					peer_addr_size = sizeof (peer_addr);
+					newfd = accept (ss->listener, (struct sockaddr *) &peer_addr, &peer_addr_size);
+					if (newfd == -1) {
+						if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+							/* We have processed all incoming connections. */
+							break;
+						}
+						else {
+							ASPRINTF(&log, "error to accept new connections. errno = %d", errno)
+							PRINT_ERR_FREE(log);
+							break;
+						}
+					}
+					if (set_socket_non_blocking(newfd) == -1) {
+						ASPRINTF(&log, "cannot set the new socket as non-blocking: %d", newfd);
+						PRINT_DBG_FREE(log);
+					}
+					
+					local_addr_size = sizeof(local_addr);
+					if (getsockname(newfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0) {
+						ASPRINTF(&log, "failed to get local address information for the new socket: %d", newfd);
+						PRINT_DBG_FREE(log);
+					}
+					else {
+						ASPRINTF(&log, "New connection: %s:%d --> local:%d [socket %d]",
+								 ip_address_str = retrive_ip_address_str(&peer_addr, ip_address_str, ip_addr_max_size),
+								 ntohs( ss->domain == AF_INET ?
+									   ((struct sockaddr_in *)&peer_addr)->sin_port
+									   :((struct sockaddr_in6 *)&peer_addr)->sin6_port),
+								 ntohs( ss->domain == AF_INET ?
+									   ((struct sockaddr_in *)&local_addr)->sin_port
+									   :((struct sockaddr_in6 *)&local_addr)->sin6_port),
+								 newfd);
+						PRINT_DBG_FREE(log);
+					}
+					
+					event.ident = newfd;
+					event.flags = EVFILT_READ;
+					
+					EV_SET(&event, newfd, EVFILT_READ, EV_ADD, 0, 0, NULL);
+					if (kevent(kfd, &event, 1, NULL, 0, NULL) == -1)
+						PRINT_ERR("kevent failed");
+					
+					//if there is no synch thread, if any new connection coming, indicates ss started
+					if ( ss->no_synch )
+						turn_on_light();
+					//else, leave the sync thread to fire the trigger
+				}
+			}
+			/* handle data from an EXISTING client */
+			else {
+				bzero(buffer, ss->recv_buf_size);
+				bytes_to_be_read = ss->is_sync_thread ? 1 : ss->recv_buf_size;
+				
+				/* got error or connection closed by client */
+				if ((nbytes = n_read(current_fd, buffer, bytes_to_be_read)) <= 0) {
+					if (nbytes == 0) {
+						ASPRINTF(&log, "socket closed: %d", i);
+						PRINT_DBG_FREE(log);
+					}
+					else {
+						ASPRINTF(&log, "error: cannot read data from socket: %d", i);
+						PRINT_INFO_FREE(log);
+						err_code = ERROR_NETWORK_READ;
+						/* need to continue ss and check other socket, so don't end the ss */
+					}
+					close (current_fd);
+				}
+				/* report how many bytes received */
+				else {
+					__sync_fetch_and_add(&(ss->total_bytes_transferred), nbytes);
+				}
+			}
+		}
+	}
+	
+	free(buffer);
+	free(ip_address_str);
+	free(events);
+	close(kfd);
+	close(ss->listener);
+	return err_code;
+}
+	
 int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 {
 #if defined(__APPLE__)
@@ -460,7 +616,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 				continue;
 			}
 
-			/* then, we got one fd to hanle */
+			/* then, we got one fd to handle */
 			/* a NEW connection coming */
 			if (current_fd == ss->listener) {
 				/* We have a notification on the listening socket, which means one or more incoming connections. */
@@ -693,6 +849,12 @@ void *run_ntttcp_receiver_tcp_stream( void *ptr )
 		if (ss->use_epoll == true) {
 			if ( ntttcp_server_epoll(ss) != NO_ERROR ) {
 				ASPRINTF(&log, "epoll error at port: %d", ss->server_port);
+				PRINT_ERR_FREE(log);
+			}
+		}
+		else if (ss->use_kqueue == true) {
+			if ( ntttcp_server_kqueue(ss) != NO_ERROR ) {
+				ASPRINTF(&log, "kqueue error at port: %d", ss->server_port);
 				PRINT_ERR_FREE(log);
 			}
 		}

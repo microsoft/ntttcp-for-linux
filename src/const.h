@@ -33,6 +33,7 @@
 #define MAX_CLIENT_CONNS_PER_THREAD	1000
 #define MAX_REMOTE_ENDPOINTS		8
 #define MAX_EPOLL_EVENTS		512
+#define MAX_KQUEUE_EVENTS        512
 #define MAX_NUM_TOTAL_CONNECTIONS	MAX_NUM_SERVER_PORTS * MAX_THREADS_PER_SERVER_PORT
 /* Maximum size of sending a UDP packet is (64K - 1) - IP header - UDP header */
 #define MAX_UDP_SEND_SIZE		(65535 - 8 - 20)
@@ -64,6 +65,7 @@
 #define ERROR_NETWORK_READ		-1108
 #define ERROR_NETWORK_WRITE		-1109
 #define ERROR_RECEIVER_NOT_READY	-1110
+#define ERROR_KQUEUE            -1200
 
 /* /proc file for re-transmit counters */
 #define TCP_SECTION			"Tcp"

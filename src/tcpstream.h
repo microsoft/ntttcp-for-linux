@@ -15,17 +15,19 @@
 #else
 #include <sys/epoll.h>
 #endif
+#include <sys/event.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include "util.h"
 #include "multithreading.h"
 
-int n_read(int fd, char *buffer, size_t total);
-int n_write(int fd, const char *buffer, size_t total);
+size_t n_read(int fd, char *buffer, size_t total);
+size_t n_write(int fd, const char *buffer, size_t total);
 
 void *run_ntttcp_sender_tcp_stream( void *ptr );
 
 int ntttcp_server_listen(struct ntttcp_stream_server *ss);
+int ntttcp_server_kqueue(struct ntttcp_stream_server *ss);
 int ntttcp_server_epoll(struct ntttcp_stream_server *ss);
 int ntttcp_server_select(struct ntttcp_stream_server *ss);
 void *run_ntttcp_receiver_tcp_stream( void *ptr );

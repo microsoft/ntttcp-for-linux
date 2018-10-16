@@ -26,6 +26,7 @@
 #import <mach/mach_host.h>
 #import <mach/vm_map.h>
 #import <sys/sysctl.h>
+#define ulong unsigned long
 #endif
 #include "ntttcp.h"
 

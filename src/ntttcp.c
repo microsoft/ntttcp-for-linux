@@ -268,6 +268,7 @@ struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test_endpoin
 	s->no_synch = test->no_synch;
 	s->continuous_mode = (test->duration == 0);
 	s->use_epoll = test->use_epoll;
+    s->use_kqueue = test->use_kqueue;
 	s->total_bytes_transferred = 0;
 	//other fields will be assigned at run time
 	return s;
