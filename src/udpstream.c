@@ -96,12 +96,13 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	/* wait for sync thread to finish */
 	wait_light_on();
 
-	if ((buffer = (char *)malloc( sc->send_buf_size * sizeof(char))) == (char *)NULL) {
+	if ((buffer = (char *)malloc( sc->send_buf_size * sizeof(char) + 1 )) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for send buffer");
 		goto CLEANUP;;
 	}
 
 	memset(buffer, 'B', sc->send_buf_size * sizeof(char));
+	buffer[sc->send_buf_size * sizeof(char)] = '\0';
 	while (is_light_turned_on(sc->continuous_mode)){
 		for (i = 0; i < sc->num_connections; i++) {
 			sockfd = sockfds[i];
