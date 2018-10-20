@@ -10,11 +10,11 @@
 struct ntttcp_test *new_ntttcp_test()
 {
 	struct ntttcp_test *test;
-	test = (struct ntttcp_test *) malloc(sizeof(struct ntttcp_test));
+	test = (struct ntttcp_test *) calloc(1, sizeof(struct ntttcp_test));
+
 	if (!test)
 		return NULL;
 
-	memset(test, 0, sizeof(struct ntttcp_test));
 	return test;
 }
 
@@ -56,13 +56,13 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	unsigned int total_threads = 0;
 
 	struct ntttcp_test_endpoint *e;
-	e = (struct ntttcp_test_endpoint *) malloc(sizeof(struct ntttcp_test_endpoint));
+	e = (struct ntttcp_test_endpoint *) calloc(1, sizeof(struct ntttcp_test_endpoint));
+
 	if(!e)
 		return NULL;
 
 	gettimeofday(&now, NULL);
 
-	memset(e, 0, sizeof(struct ntttcp_test_endpoint));
 	e->endpoint_role = endpoint_role;
 	e->test = test;
 	e->state = TEST_NOT_STARTED;
@@ -108,12 +108,13 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 			total_threads = test->server_ports + 1; /* the last one is synch thread */
 
 		e->total_threads = total_threads;
-		e->server_streams = (struct ntttcp_stream_server **) malloc( sizeof( struct ntttcp_stream_server *) * total_threads );
+		e->server_streams = (struct ntttcp_stream_server **) calloc(total_threads, sizeof(struct ntttcp_stream_server *));
+		
 		if(!e->server_streams) {
 			free (e);
 			return NULL;
 		}
-		memset(e->server_streams, 0, sizeof( struct  ntttcp_stream_server *) * total_threads );
+
 		for(i = 0; i < total_threads; i++ ){
 			e->server_streams[i] = new_ntttcp_server_stream(e);
 		}
@@ -130,13 +131,11 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	}
 
 	/* for test results */
-	e->results = (struct ntttcp_test_endpoint_results *) malloc(sizeof(struct ntttcp_test_endpoint_results));
-	memset(e->results, 0 , sizeof(struct ntttcp_test_endpoint_results));
+	e->results = (struct ntttcp_test_endpoint_results *) calloc(1, sizeof(struct ntttcp_test_endpoint_results));
 	e->results->average_rtt = (unsigned int) -1;
 
-	e->results->threads = (struct ntttcp_test_endpoint_thread_result **) malloc(
-			       sizeof( struct ntttcp_test_endpoint_thread_result *) * total_threads);
-	memset(e->results->threads, 0, sizeof( struct ntttcp_test_endpoint_thread_result *) * total_threads );
+	e->results->threads = (struct ntttcp_test_endpoint_thread_result **) calloc(
+					total_threads, sizeof(struct ntttcp_test_endpoint_thread_result *) );
 
 	for(i = 0; i < total_threads; i++ ){
 		e->results->threads[i] = (struct ntttcp_test_endpoint_thread_result *) malloc( sizeof( struct ntttcp_test_endpoint_thread_result ) );
@@ -224,11 +223,10 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoin
 	struct ntttcp_stream_client *s;
 	struct ntttcp_test *test = ept->test;
 
-	s = (struct ntttcp_stream_client *) malloc(sizeof(struct ntttcp_stream_client));
+	s = (struct ntttcp_stream_client *) calloc(1, sizeof (struct ntttcp_stream_client));
 	if (!s)
 		return NULL;
 
-	memset(s, 0, sizeof(struct ntttcp_stream_client));
 	s->endpoint = ept;
 	s->domain = test->domain;
 	s->protocol = test->protocol;
@@ -253,11 +251,10 @@ struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test_endpoin
 	struct ntttcp_stream_server *s;
 	struct ntttcp_test *test = ept->test;
 
-	s = (struct ntttcp_stream_server *) malloc(sizeof(struct ntttcp_stream_server));
+	s = (struct ntttcp_stream_server *) calloc(1, sizeof(struct ntttcp_stream_server));
 	if (!s)
 	 	return NULL;
 
-	memset(s, 0, sizeof(struct ntttcp_stream_server));
 	s->endpoint = ept;
 	s->domain = test->domain;
 	s->protocol = test->protocol;
