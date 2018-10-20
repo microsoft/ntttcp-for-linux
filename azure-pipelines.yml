@@ -1,0 +1,20 @@
+# Starter pipeline
+
+pool:
+  vmImage: 'Ubuntu 16.04'
+
+steps:
+- script: |
+    cd src
+    make && sudo make install
+  displayName: 'Build'
+
+- script: |
+    ntttcp -D -P 1 -t 5 -W 2 -C 2
+    ntttcp -s127.0.0.1 -P 1 -n 1 -l 1 -t 5 -W 2 -C 2 -V
+  displayName: 'Run Single TCP Connection Test'
+
+- script: |
+    ntttcp -D -P 8 -t 5 -W 2 -C 2
+    ntttcp -s127.0.0.1 -P 8 -n 4 -l 2 -b 1024 -t 5 -W 2 -C 2 -V
+  displayName: 'Run 64 TCP Connections Test'
