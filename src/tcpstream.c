@@ -145,6 +145,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 				? sc->client_port + i
 				: sc->client_port;
 
+		memset(&local_addr, 0, sizeof(local_addr));
 		if (sc->domain == AF_INET) {
 			(*(struct sockaddr_in*)&local_addr).sin_family = AF_INET; //local_addrs[i].ss_family = AF_INET;
 		//	(*(struct sockaddr_in*)&local_addr).sin_addr.s_addr = inet_addr(INADDR_ANY);
