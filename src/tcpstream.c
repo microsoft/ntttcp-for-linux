@@ -222,12 +222,13 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	/* wait for sync thread to finish */
 	wait_light_on();
 
-	if ((buffer = (char *)malloc(sc->send_buf_size * sizeof(char))) == (char *)NULL) {
+	size_t buffer_len = sc->send_buf_size * sizeof(char);
+	if ((buffer = (char *)malloc(buffer_len)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for send buffer");
 		goto CLEANUP;
 	}
 	//fill_buffer(buffer, sc->send_buf_size);
-	memset(buffer, 'A', sc->send_buf_size * sizeof(char));
+	memset(buffer, 'A', buffer_len);
 
 	while ( is_light_turned_on(sc->continuous_mode) ) {
 
@@ -236,7 +237,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 			/* skip those socket fds ('-1') if failed in creation phase */
 			if (sockfd < 0)
 				continue;
-			n = n_write(sockfd, buffer, strlen(buffer));
+			n = n_write(sockfd, buffer, buffer_len);
 			if (n < 0) {
 //				PRINT_ERR("cannot write data to a socket");
 				continue;
