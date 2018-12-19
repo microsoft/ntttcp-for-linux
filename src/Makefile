@@ -1,5 +1,9 @@
 CC=gcc
+ifeq ($(DEBUG), 1)
+CFLAGS=-Wall -W -O0 -ggdb3 -fno-omit-frame-pointer
+else
 CFLAGS=-Wall -W -O2 -fno-strict-aliasing
+endif
 CLIBS=-pthread
 OUT=ntttcp
 OBJS=ntttcp.o util.o throughputmanagement.o tcpstream.o udpstream.o endpointsync.o multithreading.o parameter.o main.o

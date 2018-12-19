@@ -561,6 +561,7 @@ uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 	size_t len = 0;
 	ssize_t read;
 	int key_found = 0;
+	uint64_t ret = 0;
 
 	stream = fopen(file_name, "r");
 	if (!stream) {
@@ -585,8 +586,10 @@ uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 			pch = line;
 			while ((pch = strtok(pch, " "))) {
 				key_found--;
-				if (key_found == 0)
+				if (key_found == 0) {
+					ret = strtoull(pch, NULL, 10);
 					goto found;
+				}
 				pch = NULL;
 			}
 		}
@@ -608,7 +611,7 @@ found:
 	free(line);
 	fclose(stream);
 
-	return pch ? strtoull(pch, NULL, 10) : 0;
+	return ret;
 }
 
 void get_tcp_retrans(struct tcp_retrans *tr)
