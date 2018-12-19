@@ -83,6 +83,52 @@ void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
 	cups->total_time = user + nice + system + idle + iowait + irq + softirq + steal;
 }
 
+bool is_str_number(char *str)
+{
+	while (*str) {
+		if (!isdigit(*str))
+			return false;
+		else
+			++str;
+	}
+
+	return true;
+}
+
+uint64_t get_interrupts_from_proc_by_dev(char *dev_name)
+{
+	FILE* file = fopen(PROC_FILE_INTERRUPTS, "r");
+	if (file == NULL) {
+		PRINT_ERR("Cannot open /proc/interrupts");
+				return -1;
+	}
+	/* the max number of chars in each line = 64 + 12 chars/cpu * 1024 cpus + 128 = 12,480 */
+	char buffer[12480];
+	char *line;
+	char *value;
+	uint64_t interrupts = 0;
+	uint64_t total_interrupts = 0;
+	while ((line = fgets(buffer, 12480, file)) != NULL) {
+		if(strstr(line, dev_name) == NULL) {
+			continue;
+		}
+
+		value = strtok(line, " ");
+		while (value != NULL) {
+			if (!is_str_number(value)) {
+				value = strtok(NULL, " ");
+				continue;
+			}
+			errno = 0;
+			interrupts = strtoull(value, NULL, 10);
+			total_interrupts += (errno == 0) ? interrupts : 0;
+			value = strtok(NULL, " ");
+		}
+		break;
+	}
+	return total_interrupts;
+}
+
 double get_time_diff(struct timeval *t1, struct timeval *t2)
 {
 	return fabs( (t1->tv_sec + (t1->tv_usec / 1000000.0)) - (t2->tv_sec + (t2->tv_usec / 1000000.0)) );

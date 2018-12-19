@@ -69,6 +69,7 @@
 #define TCP_SECTION			"Tcp"
 #define PROC_FILE_SNMP			"/proc/net/snmp"
 #define PROC_FILE_NETSTAT 		"/proc/net/netstat"
+#define PROC_FILE_INTERRUPTS		"/proc/interrupts"
 #define CPU_SPEED_MHZ			"cpu MHz"
 #define PROC_FILE_CPUINFO		"/proc/cpuinfo"
 

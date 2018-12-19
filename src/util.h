@@ -8,6 +8,7 @@
 #pragma once
 
 #define _GNU_SOURCE
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -111,6 +112,7 @@ double unit_atod(const char *s);
 
 void get_cpu_usage(struct cpu_usage *cu);
 void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups);
+uint64_t get_interrupts_from_proc_by_dev(char *dev_name);
 double get_time_diff(struct timeval *t1, struct timeval *t2);
 
 int process_test_results(struct ntttcp_test_endpoint *tep);
