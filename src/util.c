@@ -85,14 +85,19 @@ void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
 
 bool is_str_number(char *str)
 {
+	bool is_number = false;
 	while (*str) {
-		if (!isdigit(*str))
-			return false;
-		else
+		if (!isdigit(*str)) {
+			if (*str != 10 && *str != 13)
+				is_number = false;
+			break;
+		} else {
+			is_number = true;
 			++str;
+		}
 	}
 
-	return true;
+	return is_number;
 }
 
 uint64_t get_interrupts_from_proc_by_dev(char *dev_name)
@@ -100,8 +105,9 @@ uint64_t get_interrupts_from_proc_by_dev(char *dev_name)
 	FILE* file = fopen(PROC_FILE_INTERRUPTS, "r");
 	if (file == NULL) {
 		PRINT_ERR("Cannot open /proc/interrupts");
-				return -1;
+		return -1;
 	}
+
 	/* the max number of chars in each line = 64 + 12 chars/cpu * 1024 cpus + 128 = 12,480 */
 	char buffer[12480];
 	char *line;
@@ -124,9 +130,37 @@ uint64_t get_interrupts_from_proc_by_dev(char *dev_name)
 			total_interrupts += (errno == 0) ? interrupts : 0;
 			value = strtok(NULL, " ");
 		}
-		break;
 	}
 	return total_interrupts;
+}
+
+uint64_t get_single_value_from_os_file(char *filename)
+{
+	char *log = NULL;
+	char buffer[16];
+	char *line;
+	uint64_t value;
+
+	FILE* file = fopen(filename, "r");
+	if (file == NULL) {
+		ASPRINTF(&log, "Cannot open %s", filename);
+		PRINT_ERR_FREE(log);
+		return -1;
+	}
+
+	line = fgets(buffer, 16, file);
+	if (line == NULL) {
+		ASPRINTF(&log, "Empty file: %s", filename);
+		PRINT_ERR_FREE(log);
+		return -1;
+	}
+	if (!is_str_number(line)) {
+		ASPRINTF(&log, "Cannot convert the content to a number: %s", filename);
+		PRINT_ERR_FREE(log);
+		return -1;
+	}
+	value = strtoull(line, NULL, 10);
+	return value;
 }
 
 double get_time_diff(struct timeval *t1, struct timeval *t2)
