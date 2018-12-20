@@ -8,7 +8,6 @@
 #pragma once
 
 #define _GNU_SOURCE
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -24,33 +23,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include "ntttcp.h"
-
-struct cpu_usage{
-	clock_t   clock;
-	double    time;
-	double    user_time;
-	double    system_time;
-};
-
-struct cpu_usage_from_proc_stat{
-	unsigned int nproc;
-	long long unsigned total_time;
-	long long unsigned user_time;
-	long long unsigned system_time;
-	long long unsigned idle_time;
-	long long unsigned iowait_time;
-	long long unsigned softirq_time;
-};
-
-struct tcp_retrans{
-	uint64_t  retrans_segs;
-	uint64_t  tcp_lost_retransmit;
-	uint64_t  tcp_syn_retrans;
-	uint64_t  tcp_fast_retrans;
-	uint64_t  tcp_forward_retrans;
-	uint64_t  tcp_slowStart_retrans;
-	uint64_t  tcp_retrans_fail;
-};
+#include "oscounter.h"
 
 struct ntttcp_test_endpoint_thread_result{
 	bool	is_sync_thread;
@@ -109,11 +82,6 @@ struct ntttcp_test_endpoint_results{
 
 void fill_buffer(register char *buf, register int count);
 double unit_atod(const char *s);
-
-void get_cpu_usage(struct cpu_usage *cu);
-void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups);
-uint64_t get_interrupts_from_proc_by_dev(char *dev_name);
-uint64_t get_single_value_from_os_file(char *filename);
 double get_time_diff(struct timeval *t1, struct timeval *t2);
 
 int process_test_results(struct ntttcp_test_endpoint *tep);
@@ -126,12 +94,4 @@ char *retrive_ip4_address_str(struct sockaddr_in *ss, char *ip_str, size_t maxle
 char *retrive_ip6_address_str(struct sockaddr_in6 *ss, char *ip_str, size_t maxlen);
 int set_socket_non_blocking(int fd);
 
-double read_value_from_proc(char *file_name, char *key);
-uint64_t read_counter_from_proc(char *file_name, char *section, char *key);
-void get_tcp_retrans(struct tcp_retrans *tr);
 bool check_resource_limit(struct ntttcp_test *test);
-
-#define MAX(a,b) \
-	({ __typeof__ (a) _a = (a); \
-	__typeof__ (b) _b = (b); \
-	_a > _b ? _a : _b; })
