@@ -311,6 +311,16 @@ int verify_args(struct ntttcp_test *test)
 		test->send_buf_size = MAX_UDP_SEND_SIZE;
 	}
 
+	if (test->show_interface_packets[0] == '-') {
+		PRINT_INFO("invalid network interface provided. ignore it");
+		test->show_interface_packets = "";
+	}
+
+	if (test->show_dev_interrupts[0] == '-') {
+		PRINT_INFO("invalid interrupt device provided. ignore it");
+		test->show_dev_interrupts = "";
+	}
+
 	if (test->duration < 0) {
 		test->duration = DEFAULT_TEST_DURATION;
 		PRINT_INFO("invalid test duration provided. use the default value");
