@@ -79,7 +79,10 @@ void print_flags(struct ntttcp_test *test)
 		printf("%s:\t\t %d\n", "test cool-down (sec)", test->cooldown);
 
 	printf("%s:\t %s\n", "show system tcp retransmit", test->show_tcp_retransmit ? "yes" : "no");
-
+	if (strcmp(test->show_interface_packets, ""))
+		printf("%s:\t\t %s\n", "show packets for", test->show_interface_packets);
+	if (strcmp(test->show_dev_interrupts, ""))
+		printf("%s:\t %s\n", "show device interrupts for", test->show_dev_interrupts);
 	if (test->save_xml_log)
 		printf("%s:\t %s\n", "save output to xml file:", test->xml_log_filename);
 
@@ -90,7 +93,7 @@ void print_flags(struct ntttcp_test *test)
 void print_usage()
 {
 	printf("Author: %s\n", AUTHOR_NAME);
-	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-W|-t|-C|-N|-R|-x|-V|-h|-m <mapping>\n\n");
+	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-W|-t|-C|-N|-R|-K|-I|-x|-V|-h|-m <mapping>\n\n");
 	printf("\t-r   Run as a receiver\n");
 	printf("\t-s   Run as a sender\n");
 	printf("\t-D   Run as daemon\n");
@@ -118,6 +121,11 @@ void print_usage()
 	printf("\t     Otherwise, will use 'destination port - 1' as sync port	[default: %d]\n", DEFAULT_BASE_DST_PORT - 1);
 
 	printf("\t-R   Show system TCP retransmit counters in log from /proc\n");
+	printf("\t-K   <network interface name>\n");
+	printf("\t\t    Show number of packets transferred (tx and rx) through this network interface\n");
+	printf("\t-I   <device differentiator>\n");
+	printf("\t\t    Show number of interrupts for the devices specified by the differentiator\n");
+	printf("\t\t    Examples for differentiator: Hyper-V PCIe MSI, mlx4, Hypervisor callback interrupts, ...\n");
 	printf("\t-x   Save output to XML file, by default saves to %s\n", DEFAULT_LOG_FILE_NAME);
 	printf("\t-V   Verbose mode\n");
 	printf("\t-h   Help, tool usage\n");
@@ -135,7 +143,7 @@ void print_usage()
 	printf("\t1) ./ntttcp -r\n");
 	printf("\t2) ./ntttcp -r192.168.1.1\n");
 	printf("\t3) ./ntttcp -r -m 8,*,192.168.1.1 -6\n");
-	printf("\t4) ./ntttcp -r -m 8,0,192.168.1.1 -6 -R -V\n");
+	printf("\t4) ./ntttcp -r -m 8,0,192.168.1.1 -6 -R -K eth0 -I mlx4 -V\n");
 	printf("\tsender:\n");
 	printf("\t1) ./ntttcp -s\n");
 	printf("\t2) ./ntttcp -s192.168.1.1\n");
@@ -360,7 +368,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 	int opt;
 
-	while ((opt = getopt(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:W:t:C:NRx::Vh")) != -1) {
+	while ((opt = getopt(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:W:t:C:NRK:I:x::Vh")) != -1) {
 		switch (opt) {
 		case 'r':
 		case 's':
@@ -462,6 +470,14 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 		case 'R':
 			test->show_tcp_retransmit = true;
+			break;
+
+		case 'K':
+			test->show_interface_packets = optarg;
+			break;
+
+		case 'I':
+			test->show_dev_interrupts = optarg;
 			break;
 
 		case 'x':

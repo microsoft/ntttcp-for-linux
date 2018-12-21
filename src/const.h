@@ -73,7 +73,6 @@
 #define CPU_SPEED_MHZ			"cpu MHz"
 #define PROC_FILE_CPUINFO		"/proc/cpuinfo"
 #define PROC_FILE_STAT			"/proc/stat"
-#define SYS_CLASS_NIC_TX_PKT		"/sys/class/net/%s/statistics/tx_packets"
-#define SYS_CLASS_NIC_RX_PKT		"/sys/class/net/%s/statistics/rx_packets"
+#define SYS_CLASS_NIC_STAT_PKT		"/sys/class/net/%s/statistics/%s_packets"
 
 #define DEFAULT_LOG_FILE_NAME		"ntttcp-for-linux-log.xml"

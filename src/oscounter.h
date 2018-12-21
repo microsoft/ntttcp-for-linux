@@ -48,7 +48,7 @@ struct tcp_retrans{
 void get_cpu_usage(struct cpu_usage *cu);
 void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups);
 uint64_t get_interrupts_from_proc_by_dev(char *dev_name);
-uint64_t get_single_value_from_os_file(char *filename);
+uint64_t get_single_value_from_os_file(char *if_name, char *tx_or_rx);
 
 double read_value_from_proc(char *file_name, char *key);
 uint64_t read_counter_from_proc(char *file_name, char *section, char *key);

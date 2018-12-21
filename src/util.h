@@ -47,6 +47,12 @@ struct ntttcp_test_endpoint_results{
 	struct 	cpu_usage_from_proc_stat *final_cpu_ps;
 	struct 	tcp_retrans *init_tcp_retrans;
 	struct 	tcp_retrans *final_tcp_retrans;
+	uint64_t	init_tx_packets;
+	uint64_t	init_rx_packets;
+	uint64_t	final_tx_packets;
+	uint64_t	final_rx_packets;
+	uint64_t	init_interrupts;
+	uint64_t	final_interrupts;
 
 	/*point to per-thread result*/
 	struct	ntttcp_test_endpoint_thread_result	**threads;
@@ -66,6 +72,8 @@ struct ntttcp_test_endpoint_results{
 	double	cpu_ps_idle_usage;
 	double	cpu_ps_iowait_usage;
 	double	cpu_ps_softirq_usage;
+	uint64_t	total_interrupts;
+	double	packets_per_interrupt;
 
 	/* fields for xml log (compatiable with Windows ntttcp.exe) */
 	double	total_bytes_MB;

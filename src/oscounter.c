@@ -84,8 +84,10 @@ uint64_t get_interrupts_from_proc_by_dev(char *dev_name)
 	FILE* file = fopen(PROC_FILE_INTERRUPTS, "r");
 	if (file == NULL) {
 		PRINT_ERR("Cannot open /proc/interrupts");
-		return -1;
+		return 0;
 	}
+	if(!strcmp(dev_name, ""))
+		return 0;
 
 	/* the max number of chars in each line = 64 + 12 chars/cpu * 1024 cpus + 128 = 12,480 */
 	char buffer[12480];
@@ -101,43 +103,55 @@ uint64_t get_interrupts_from_proc_by_dev(char *dev_name)
 		value = strtok(line, " ");
 		while (value != NULL) {
 			if (!is_str_number(value)) {
+				/* go to next element ("value")  */
 				value = strtok(NULL, " ");
 				continue;
-			}	
+			}
+			errno = 0;
 			interrupts = strtoull(value, NULL, 10);
 			total_interrupts += (errno == 0) ? interrupts : 0;
+			/* go to next element ("value")  */
 			value = strtok(NULL, " ");
 		}
 	}
 	return total_interrupts;
 }
 
-uint64_t get_single_value_from_os_file(char *filename)
+uint64_t get_single_value_from_os_file(char *if_name, char *tx_or_rx)
 {
 	char *log = NULL;
 	char buffer[16];
 	char *line;
 	uint64_t value;
+	char *filename;
 
+	if (!strcmp(if_name, ""))
+		return 0;
+
+	ASPRINTF(&filename, SYS_CLASS_NIC_STAT_PKT, if_name, tx_or_rx);
 	FILE* file = fopen(filename, "r");
 	if (file == NULL) {
 		ASPRINTF(&log, "Cannot open %s", filename);
 		PRINT_ERR_FREE(log);
-		return -1;
+		return 0;
 	}
 
 	line = fgets(buffer, 16, file);
 	if (line == NULL) {
 		ASPRINTF(&log, "Empty file: %s", filename);
 		PRINT_ERR_FREE(log);
-		return -1;
+		return 0;
 	}
+
 	if (!is_str_number(line)) {
 		ASPRINTF(&log, "Cannot convert the content to a number: %s", filename);
 		PRINT_ERR_FREE(log);
-		return -1;
+		return 0;
 	}
+
 	value = strtoull(line, NULL, 10);
+	free(filename);
+
 	return value;
 }
 

@@ -101,6 +101,11 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	tepr->tcp_slowStart_retrans_per_sec = (tepr->final_tcp_retrans->tcp_slowStart_retrans - tepr->init_tcp_retrans->tcp_slowStart_retrans) / test_duration;
 	tepr->tcp_retrans_fail_per_sec = (tepr->final_tcp_retrans->tcp_retrans_fail - tepr->init_tcp_retrans->tcp_retrans_fail) / test_duration;
 
+	tepr->packets_sent = tepr->final_tx_packets - tepr->init_tx_packets;
+	tepr->packets_received = tepr->final_rx_packets - tepr->init_rx_packets;
+	tepr->total_interrupts = tepr->final_interrupts - tepr->init_interrupts;
+	tepr->packets_per_interrupt = tepr->total_interrupts == 0 ? 0 : (tepr->packets_sent + tepr->packets_received) / (double)tepr->total_interrupts;
+
 	cpu_ps_total_diff = tepr->final_cpu_ps->total_time - tepr->init_cpu_ps->total_time;
 	tepr->cpu_ps_user_usage = (tepr->final_cpu_ps->user_time - tepr->init_cpu_ps->user_time) / cpu_ps_total_diff;
 	tepr->cpu_ps_system_usage = (tepr->final_cpu_ps->system_time - tepr->init_cpu_ps->system_time) / cpu_ps_total_diff;
@@ -114,8 +119,6 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	tepr->throughput_mbps = tepr->throughput_MBps * BYTE_TO_BITS;
 	tepr->cycles_per_byte = total_bytes == 0 ? 0 :
 			cpu_speed_mhz * 1000 * 1000 * test_duration * (tepr->final_cpu_ps->nproc) * (1 - tepr->cpu_ps_idle_usage) / total_bytes;
-	tepr->packets_sent = 0;
-	tepr->packets_received = 0;
 	tepr->packets_retransmitted = tepr->final_tcp_retrans->retrans_segs - tepr->init_tcp_retrans->retrans_segs;
 	tepr->cpu_busy_percent = ((tepr->final_cpu_usage->clock - tepr->init_cpu_usage->clock) * 1000000.0 / CLOCKS_PER_SEC)
 				 / (tepr->final_cpu_usage->time - tepr->init_cpu_usage->time);
@@ -190,6 +193,23 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 		ASPRINTF(&log, "\t slowStart_retrans/sec\t:%.2f", tepr->tcp_slowStart_retrans_per_sec);
 		PRINT_INFO_FREE(log);
 		ASPRINTF(&log, "\t retrans_fail/sec\t:%.2f", tepr->tcp_retrans_fail_per_sec);
+		PRINT_INFO_FREE(log);
+	}
+
+	if (strcmp(tep->test->show_interface_packets, "")) {
+		PRINT_INFO("total packets:");
+		ASPRINTF(&log, "\t tx_packets\t:%" PRIu64, tepr->packets_sent);
+		PRINT_INFO_FREE(log);
+		ASPRINTF(&log, "\t rx_packets\t:%" PRIu64, tepr->packets_received);
+		PRINT_INFO_FREE(log);
+	}
+	if (strcmp(tep->test->show_dev_interrupts, "")) {
+		PRINT_INFO("interrupts:");
+		ASPRINTF(&log, "\t total\t\t:%" PRIu64, tepr->total_interrupts);
+		PRINT_INFO_FREE(log);
+	}
+	if (strcmp(tep->test->show_interface_packets, "") && strcmp(tep->test->show_dev_interrupts, "")) {
+		ASPRINTF(&log, "\t pkts/interrupt\t:%.2f", tepr->packets_per_interrupt);
 		PRINT_INFO_FREE(log);
 	}
 
@@ -363,7 +383,7 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<throughput metric=\"mbps\">%.3f</throughput>\n", tepr->throughput_mbps);
 	fprintf(logfile, "	<total_buffers>%.3f</total_buffers>\n", 0.000);
 	fprintf(logfile, "	<throughput metric=\"buffers/s\">%.3f</throughput>\n", 0.000);
-	fprintf(logfile, "	<avg_packets_per_interrupt metric=\"packets/interrupt\">%.3f</avg_packets_per_interrupt>\n", 0.000);
+	fprintf(logfile, "	<avg_packets_per_interrupt metric=\"packets/interrupt\">%.3f</avg_packets_per_interrupt>\n", tepr->packets_per_interrupt);
 	fprintf(logfile, "	<interrupts metric=\"count/sec\">%.3f</interrupts>\n", 0.000);
 	fprintf(logfile, "	<dpcs metric=\"count/sec\">%.3f</dpcs>\n", 0.000);
 	fprintf(logfile, "	<avg_packets_per_dpc metric=\"packets/dpc\">%.3f</avg_packets_per_dpc>\n", 0.000);

@@ -117,6 +117,9 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 	get_cpu_usage( tep->results->init_cpu_usage );
 	get_cpu_usage_from_proc_stat( tep->results->init_cpu_ps );
 	get_tcp_retrans( tep->results->init_tcp_retrans );
+	tep->results->init_tx_packets = get_single_value_from_os_file(tep->test->show_interface_packets, "tx");
+	tep->results->init_rx_packets = get_single_value_from_os_file(tep->test->show_interface_packets, "rx");
+	tep->results->init_interrupts = get_interrupts_from_proc_by_dev(tep->test->show_dev_interrupts);
 
 	while(is_light_turned_on(tep->test->duration == 0)) {
 		/* Wait 500 micro-seconds. We don't want to pull the status too often.
@@ -146,6 +149,9 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 	get_cpu_usage( tep->results->final_cpu_usage );
 	get_cpu_usage_from_proc_stat( tep->results->final_cpu_ps );
 	get_tcp_retrans( tep->results->final_tcp_retrans );
+	tep->results->final_tx_packets = get_single_value_from_os_file(tep->test->show_interface_packets, "tx");
+	tep->results->final_rx_packets = get_single_value_from_os_file(tep->test->show_interface_packets, "rx");
+	tep->results->final_interrupts = get_interrupts_from_proc_by_dev(tep->test->show_dev_interrupts);
 
 	gettimeofday(&now, NULL);
 	tep->end_time = now;

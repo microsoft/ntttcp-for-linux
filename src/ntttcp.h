@@ -48,7 +48,9 @@ struct ntttcp_test
 	int	duration;            /* '-t' for total duration in sec of test (0: continuous_mode) */
 	int	cooldown;            /* '-C' for test cool-down time in sec */
 
-	bool 	show_tcp_retransmit; /* '-R' to display TCP retransmit counters in log from /proc */
+	bool 	show_tcp_retransmit;      /* '-R' to display TCP retransmit counters in log from /proc */
+	char	*show_interface_packets;  /* '-K' to show number of packets tx/rx through the interface */
+	char	*show_dev_interrupts  ;   /* '-I' to show number of interrupts of devices */
 	bool	save_xml_log;        /* '-x' to save output to XML file */
 	char	*xml_log_filename;   /* the xml log file name */
 	bool	verbose;             /* '-V' for verbose logging */

@@ -43,7 +43,9 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->duration         = DEFAULT_TEST_DURATION;     //60 sec
 	test->cooldown         = DEFAULT_COOLDOWN_SEC;      // 0 sec
 	test->no_synch         = false;
-	test->show_tcp_retransmit = false;
+	test->show_tcp_retransmit    = false;
+	test->show_interface_packets = "";
+	test->show_dev_interrupts    = "";
 	test->save_xml_log     = false;
 	test->xml_log_filename = DEFAULT_LOG_FILE_NAME;	   //"ntttcp-for-linux-log.xml"
 	test->verbose          = false;
