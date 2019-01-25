@@ -32,8 +32,10 @@ struct report_segment report_real_time_throughput(struct ntttcp_test_endpoint *t
 	total_bytes = this_total_bytes - last_total_bytes;
 
 	printf("%c[2K", 27); /* cleanup current line */
-	printf("%s: %s\r", "Real-time throughput", format_throughput(total_bytes, test_time));
+	char *throughput = format_throughput(total_bytes, test_time);
+	printf("%s: %s\r", "Real-time throughput", throughput);
 	fflush(stdout);
+	free(throughput);
 
 	this_checkpoint.interval_sec = test_time;
 	this_checkpoint.time  = this_check_time;

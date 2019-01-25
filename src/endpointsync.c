@@ -42,6 +42,7 @@ int create_sender_sync_socket( struct ntttcp_test_endpoint *tep )
 	ASPRINTF(&port_str, "%d", sync_port);
 	if (getaddrinfo(test->bind_address, port_str, &hints, &serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");
+		free(port_str);
 		return 0;
 	}
 	free(port_str);
