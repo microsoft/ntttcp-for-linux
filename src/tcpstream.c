@@ -459,7 +459,8 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 						else {
 							ASPRINTF(&log, "error to accept new connections. errno = %d", errno)
 							PRINT_ERR_FREE(log);
-							break;
+							err_code = ERROR_ACCEPT;
+							goto handle_err;
 						}
 					}
 					if (set_socket_non_blocking(newfd) == -1) {
@@ -523,6 +524,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 		}
 	}
 
+handle_err:
 	free(buffer);
 	free(ip_address_str);
 	free(events);
