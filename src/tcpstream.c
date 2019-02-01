@@ -459,6 +459,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 						else {
 							ASPRINTF(&log, "error to accept new connections. errno = %d", errno)
 							PRINT_ERR_FREE(log);
+							close (ss->listener);
 							break;
 						}
 					}
