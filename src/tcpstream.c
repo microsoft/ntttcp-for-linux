@@ -118,7 +118,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	for (p = remote_serv_info; p != NULL; p = p->ai_next) {
 		/* 1. create socket fd */
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
-			PRINT_ERR("cannot create a socket ednpoint");
+			PRINT_ERR("cannot create a socket endpoint");
 			sockfds[i] = -1;
 			continue;;
 		}
@@ -173,6 +173,19 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 							  remote_addr_str,
 							  ip_addr_max_size);
 		if (( ret = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
+			// ignore the EINPROGRESS error, errno = 115, and try to create new connection
+			if (errno == EINPROGRESS) {
+				ASPRINTF(&log,
+					"ignore the failure to connect to receiver: %s:%d on socket[%d]. return = %d, errno = %d",
+					remote_addr_str,
+					sc->server_port,
+					sockfd,
+					ret,
+					errno);
+				PRINT_DBG_FREE(log);
+				i--;
+				break;
+			}
 			ASPRINTF(&log,
 				"failed to connect to receiver: %s:%d on socket[%d]. return = %d, errno = %d",
 				remote_addr_str,
