@@ -173,8 +173,21 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 							  remote_addr_str,
 							  ip_addr_max_size);
 		if (( ret = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
-			// ignore the EINPROGRESS error, errno = 115
-			if (errno != EINPROGRESS) {
+			// ignore the EINPROGRESS error, errno = 115, and try to create new connection
+			if (errno == EINPROGRESS) {
+				ASPRINTF(&log,
+					"ignore the failure to connect to receiver: %s:%d on socket[%d]. return = %d, errno = %d",
+					remote_addr_str,
+					sc->server_port,
+					sockfd,
+					ret,
+					errno);
+				PRINT_DBG_FREE(log);
+				close(sockfd);
+				i--;
+				break;
+			}
+			else {
 				ASPRINTF(&log,
 					"failed to connect to receiver: %s:%d on socket[%d]. return = %d, errno = %d",
 					remote_addr_str,
