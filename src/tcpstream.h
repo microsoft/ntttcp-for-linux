@@ -14,6 +14,8 @@
 #include "util.h"
 #include "multithreading.h"
 
+#define INTERVAL_BEFORE_WRITE_U_SEC 1000000
+
 int n_read(int fd, char *buffer, size_t total);
 int n_write(int fd, const char *buffer, size_t total);
 
