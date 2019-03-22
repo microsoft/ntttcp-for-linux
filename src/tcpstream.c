@@ -118,7 +118,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	for (p = remote_serv_info; p != NULL; p = p->ai_next) {
 		/* 1. create socket fd */
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
-			PRINT_ERR("cannot create a socket ednpoint");
+			PRINT_ERR("cannot create a socket endpoint");
 			sockfds[i] = -1;
 			continue;;
 		}
@@ -173,17 +173,33 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 							  remote_addr_str,
 							  ip_addr_max_size);
 		if (( ret = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
-			ASPRINTF(&log,
-				"failed to connect to receiver: %s:%d on socket[%d]. return = %d, errno = %d",
-				remote_addr_str,
-				sc->server_port,
-				sockfd,
-				ret,
-				errno);
-			PRINT_INFO_FREE(log);
-			close(sockfd);
-			sockfds[i] = -1;
-			continue;
+			// ignore the EINPROGRESS error, errno = 115, and try to create new connection
+			if (errno == EINPROGRESS) {
+				ASPRINTF(&log,
+					"ignore the failure to connect to receiver: %s:%d on socket[%d]. return = %d, errno = %d",
+					remote_addr_str,
+					sc->server_port,
+					sockfd,
+					ret,
+					errno);
+				PRINT_DBG_FREE(log);
+				close(sockfd);
+				i--;
+				break;
+			}
+			else {
+				ASPRINTF(&log,
+					"failed to connect to receiver: %s:%d on socket[%d]. return = %d, errno = %d",
+					remote_addr_str,
+					sc->server_port,
+					sockfd,
+					ret,
+					errno);
+				PRINT_INFO_FREE(log);
+				close(sockfd);
+				sockfds[i] = -1;
+				continue;
+			}
 		}
 
 		/* get the local TCP ephemeral port number assigned to this socket, for logging purpose */
@@ -230,6 +246,8 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	//fill_buffer(buffer, sc->send_buf_size);
 	memset(buffer, 'A', buffer_len);
 
+	// wait 1 second before sending data, to reduce the possibility of EINPROGRESS connection
+	usleep(INTERVAL_BEFORE_WRITE_U_SEC);
 	while ( is_light_turned_on(sc->continuous_mode) ) {
 
 		for (i = 0; i < sc->num_connections; i++) {
