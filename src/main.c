@@ -124,6 +124,8 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	ASPRINTF(&log, "%d threads created", threads_created);
 	PRINT_INFO_FREE(log);
 
+	// wait 1 second before sending data, to reduce the possibility of EINPROGRESS connection
+	usleep(1000000);
 	turn_on_light();
 
 	/* in the case of running in continuous_mode */
