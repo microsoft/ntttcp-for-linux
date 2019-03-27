@@ -25,7 +25,6 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		/* Negotiate with receiver on:
 		* 1) receiver state: is receiver busy with another test?
 		* 2) submit sender's test duration time to receiver to negotiate
-		* 3) request receiver to start the test
 		*/
 		reply_received = create_sender_sync_socket( tep );
 		if (reply_received == 0) {
@@ -59,20 +58,6 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			}
 		}
 		tep->negotiated_test_cycle_time = reply_received;
-
-		reply_received = request_to_start(tep->synch_socket,
-						  tep->test->last_client ? (int)'L' : (int)'R' );
-		if (reply_received == -1) {
-			PRINT_ERR("sender: failed to sync with receiver to start test");
-			return ERROR_GENERAL;
-		}
-		if (reply_received == 0) {
-			PRINT_ERR("sender: receiver refuse to start test right now");
-			return ERROR_GENERAL;
-		}
-
-		/* if we go here, the pre-test sync has completed */
-		PRINT_INFO("Network activity progressing...");
 	}
 	else {
 		PRINT_INFO("Starting sender activity (no sync) ...");
@@ -126,6 +111,24 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 
 	// wait 1 second before sending data, to reduce the possibility of EINPROGRESS connection
 	usleep(1000000);
+
+	if (test->no_synch == false ) {
+		// request receiver to start the test
+		reply_received = request_to_start(tep->synch_socket,
+						  tep->test->last_client ? (int)'L' : (int)'R' );
+		if (reply_received == -1) {
+			PRINT_ERR("sender: failed to sync with receiver to start test");
+			return ERROR_GENERAL;
+		}
+		if (reply_received == 0) {
+			PRINT_ERR("sender: receiver refuse to start test right now");
+			return ERROR_GENERAL;
+		}
+
+		/* if we go here, the pre-test sync has completed */
+		PRINT_INFO("Network activity progressing...");
+	}
+
 	turn_on_light();
 
 	/* in the case of running in continuous_mode */
