@@ -505,12 +505,12 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 					event.events = EPOLLIN;
 					if (epoll_ctl (efd, EPOLL_CTL_ADD, newfd, &event) != 0)
 						PRINT_ERR("epoll_ctl failed");
-				}
 
-				//if there is no synch thread, if any new connection coming, indicates ss started
-				if ( ss->no_synch )
-					turn_on_light();
-				//else, leave the sync thread to fire the trigger
+					//if there is no synch thread, if any new connection coming, indicates ss started
+					if ( ss->no_synch )
+						turn_on_light();
+					//else, leave the sync thread to fire the trigger
+				}
 			}
 			/* handle data from an EXISTING client */
 			else {
