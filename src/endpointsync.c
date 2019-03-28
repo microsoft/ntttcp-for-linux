@@ -232,8 +232,8 @@ void *create_receiver_sync_socket( void *ptr )
 	int request_received = 0; //the int to be received
 	int nbytes;
 
-	int n_fds = 0, newfd, current_fd = 0;
-	fd_set read_set, write_set;
+	int n_fds = 0, newfd, current_fd = 0, efd = 0;
+	struct epoll_event event, *events;
 
 	struct sockaddr_storage peer_addr, local_addr; //for remote peer, and local address
 	socklen_t peer_addr_size, local_addr_size;
@@ -242,7 +242,7 @@ void *create_receiver_sync_socket( void *ptr )
 	char *port_str;
 	int ip_address_max_size;
 
-	int i = 0;
+	int i, j;
 
 	ss = new_ntttcp_server_stream(tep);
 	if (ss == NULL) {
@@ -281,26 +281,47 @@ void *create_receiver_sync_socket( void *ptr )
 		return NULL;
 	}
 
+	efd = epoll_create1 (0);
+	if (efd == -1) {
+		PRINT_ERR("epoll_create1 failed");
+		return NULL;
+	}
+
+	event.data.fd = ss->listener;
+	event.events = EPOLLIN;
+	if (epoll_ctl(efd, EPOLL_CTL_ADD, ss->listener, &event) != 0) {
+		PRINT_ERR("epoll_ctl failed");
+		close(efd);
+		return NULL;
+	}
+
+	/* Buffer where events are returned */
+	events = calloc(MAX_EPOLL_EVENTS, sizeof event);
+
 	/* accept new client, receive data from client */
 	while (1) {
 		if (ss->endpoint->receiver_exit_after_done &&
 		    ss->endpoint->state == TEST_FINISHED)
 			break;
 
-		memcpy(&read_set, &ss->read_set, sizeof(fd_set));
-		memcpy(&write_set, &ss->write_set, sizeof(fd_set));
-
-		/* we are notified by select() */
-		n_fds = select(ss->max_fd + 1, &read_set, NULL, NULL, NULL);
+		/* we are notified by epoll_wait() */
+		n_fds = epoll_wait(efd, events, ss->max_fd + 1, -1);
 		if (n_fds < 0 && errno != EINTR) {
-			PRINT_ERR("error happened when select()");
+			ASPRINTF(&log, "error happened when epoll_wait(), errno=%d, n_fds=%d", errno, n_fds);
+			PRINT_ERR_FREE(log);
 			continue;
 		}
 
 		/*run through the existing connections looking for data to be read*/
-		for (current_fd = 0; current_fd <= ss->max_fd; current_fd++){
-			if ( !FD_ISSET(current_fd, &read_set) )
+		for (j = 0; j < n_fds; j++) {
+			current_fd = events[j].data.fd;
+
+			if ((events[j].events & EPOLLERR) || (events[j].events & EPOLLHUP) || (!(events[j].events & EPOLLIN))) {
+				/* An error has occurred on this fd, or the socket is not ready for reading */
+				PRINT_ERR("error happened on the sync socket connection");
+				close (current_fd);
 				continue;
+			}
 
 			/* then, we got one fd to handle */
 			/* a NEW connection coming */
@@ -316,7 +337,12 @@ void *create_receiver_sync_socket( void *ptr )
 					ASPRINTF(&log, "cannot set the new socket as non-blocking: %d", newfd);
 					PRINT_DBG_FREE(log);
 				}
-				FD_SET(newfd, &ss->read_set); /* add the new one to read_set */
+
+				event.data.fd = newfd;
+				event.events = EPOLLIN;
+				if (epoll_ctl(efd, EPOLL_CTL_ADD, newfd, &event) != 0) {
+					PRINT_ERR("epoll_ctl failed");
+				}
 				if (newfd > ss->max_fd) {
 					/* update the maximum */
 					ss->max_fd = newfd;
@@ -467,6 +493,8 @@ void *create_receiver_sync_socket( void *ptr )
 	}
 
 	free(ip_address_str);
+	free(events);
+	close(efd);
 	close(ss->listener);
 	free(ss);
 	return NULL;
