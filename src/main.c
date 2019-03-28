@@ -17,14 +17,18 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 
 	pthread_attr_t  pth_attrs;
 	uint n, t, threads_created = 0;
+	uint conns_created = 0, conns_total = 0;
 	struct ntttcp_stream_client *cs;
 	int rc, reply_received;
 	void *p_retval;
+	struct timeval start_time, now;
+	long int conns_creation_time = 0;
 
 	if (test->no_synch == false ) {
 		/* Negotiate with receiver on:
 		* 1) receiver state: is receiver busy with another test?
 		* 2) submit sender's test duration time to receiver to negotiate
+		* 3) request receiver to start the test
 		*/
 		reply_received = create_sender_sync_socket( tep );
 		if (reply_received == 0) {
@@ -58,6 +62,20 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			}
 		}
 		tep->negotiated_test_cycle_time = reply_received;
+
+		reply_received = request_to_start(tep->synch_socket,
+						  tep->test->last_client ? (int)'L' : (int)'R' );
+		if (reply_received == -1) {
+			PRINT_ERR("sender: failed to sync with receiver to start test");
+			return ERROR_GENERAL;
+		}
+		if (reply_received == 0) {
+			PRINT_ERR("sender: receiver refuse to start test right now");
+			return ERROR_GENERAL;
+		}
+
+		/* if we go here, the pre-test sync has completed */
+		PRINT_INFO("Network activity progressing...");
 	}
 	else {
 		PRINT_INFO("Starting sender activity (no sync) ...");
@@ -66,6 +84,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	/* prepare to create threads */
 	pthread_attr_init(&pth_attrs);
 	pthread_attr_setstacksize(&pth_attrs, THREAD_STACK_SIZE);
+	gettimeofday(&start_time, NULL);
 	/* create test threads */
 	for (t = 0; t < test->server_ports; t++) {
 		for (n = 0; n < test->threads_per_server_port; n++ ) {
@@ -109,24 +128,26 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	ASPRINTF(&log, "%d threads created", threads_created);
 	PRINT_INFO_FREE(log);
 
-	// wait 1 second before sending data, to reduce the possibility of EINPROGRESS connection
-	usleep(1000000);
-
-	if (test->no_synch == false ) {
-		// request receiver to start the test
-		reply_received = request_to_start(tep->synch_socket,
-						  tep->test->last_client ? (int)'L' : (int)'R' );
-		if (reply_received == -1) {
-			PRINT_ERR("sender: failed to sync with receiver to start test");
-			return ERROR_GENERAL;
+	// wait for all connections created
+	conns_total = test->server_ports * test->threads_per_server_port * test->conns_per_thread;
+	while (conns_creation_time < 1000000) {
+		conns_created = 0;
+		gettimeofday(&now, NULL);
+		conns_creation_time = (now.tv_sec - start_time.tv_sec) * 1000000 + now.tv_usec - start_time.tv_usec;
+		for (t = 0; t < test->server_ports; t++) {
+			for (n = 0; n < test->threads_per_server_port; n++ ) {
+				cs = tep->client_streams[t * test->threads_per_server_port + n];
+				conns_created += cs->num_conns_created;
+			}
 		}
-		if (reply_received == 0) {
-			PRINT_ERR("sender: receiver refuse to start test right now");
-			return ERROR_GENERAL;
+		if (conns_created == conns_total) {
+			ASPRINTF(&log, "%d connections created in %ld microseconds", conns_created, conns_creation_time);
+			PRINT_INFO_FREE(log);
+			break;
 		}
-
-		/* if we go here, the pre-test sync has completed */
-		PRINT_INFO("Network activity progressing...");
+	}
+	if (conns_created != conns_total) {
+		ASPRINTF(&log, "%d connections created in %ld microseconds", conns_created, conns_creation_time);
 	}
 
 	turn_on_light();
