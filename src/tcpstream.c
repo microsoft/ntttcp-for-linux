@@ -529,10 +529,6 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 						err_code = ERROR_NETWORK_READ;
 						/* need to continue ss and check other socket, so don't end the ss */
 					}
-					// remove (deregister) current_fd from the epoll instance
-					if (epoll_ctl(efd, EPOLL_CTL_DEL, current_fd, &event) != 0) {
-						PRINT_ERR("epoll_ctl delete failed");
-					}
 					close (current_fd);
 				}
 				/* report how many bytes received */
