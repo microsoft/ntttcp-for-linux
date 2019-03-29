@@ -130,7 +130,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 
 	// wait for all connections created
 	conns_total = test->server_ports * test->threads_per_server_port * test->conns_per_thread;
-	while (conns_creation_time < SEC_TO_USEC) {
+	while (conns_creation_time < CONN_CREATION_TIMEOUT_U_SEC) {
 		conns_created = 0;
 		gettimeofday(&now, NULL);
 		conns_creation_time = (now.tv_sec - start_time.tv_sec) * SEC_TO_USEC + now.tv_usec - start_time.tv_usec;
