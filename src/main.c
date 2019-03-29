@@ -133,7 +133,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	while (conns_creation_time < SEC_TO_USEC) {
 		conns_created = 0;
 		gettimeofday(&now, NULL);
-		conns_creation_time = (now.tv_sec - start_time.tv_sec) * 1000000 + now.tv_usec - start_time.tv_usec;
+		conns_creation_time = (now.tv_sec - start_time.tv_sec) * SEC_TO_USEC + now.tv_usec - start_time.tv_usec;
 		for (t = 0; t < test->server_ports; t++) {
 			for (n = 0; n < test->threads_per_server_port; n++ ) {
 				cs = tep->client_streams[t * test->threads_per_server_port + n];
@@ -148,6 +148,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	}
 	if (conns_created != conns_total) {
 		ASPRINTF(&log, "%d connections created in %ld microseconds", conns_created, conns_creation_time);
+		PRINT_ERR_FREE(log);
 	}
 
 	turn_on_light();
