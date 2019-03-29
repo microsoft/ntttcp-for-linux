@@ -379,8 +379,11 @@ void *create_receiver_sync_socket( void *ptr )
 						ASPRINTF(&log, "error: cannot read data from socket: %d", current_fd);
 						PRINT_ERR_FREE(log);
 					}
+					// remove (deregister) current_fd from the epoll instance
+					if (epoll_ctl(efd, EPOLL_CTL_DEL, current_fd, &event) != 0) {
+						PRINT_ERR("epoll_ctl delete failed");
+					}
 					close(current_fd);
-					FD_CLR(current_fd, &ss->read_set); /* remove from master set when finished */
 				}
 				/* reply sender's sync request */
 				else{
