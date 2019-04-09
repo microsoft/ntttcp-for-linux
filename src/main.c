@@ -117,6 +117,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	conns_total = test->server_ports * test->threads_per_server_port * test->conns_per_thread;
 	while (conns_creation_time < SEC_TO_USEC) {
 		conns_created = 0;
+		usleep(TEST_STATUS_POLL_INTERVAL_U_SEC);
 		gettimeofday(&now, NULL);
 		conns_creation_time = (now.tv_sec - start_time.tv_sec) * SEC_TO_USEC + now.tv_usec - start_time.tv_usec;
 		for (t = 0; t < test->server_ports; t++) {
@@ -136,20 +137,22 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		PRINT_ERR_FREE(log);
 	}
 
-	// request receiver to start the test
-	reply_received = request_to_start(tep->synch_socket,
-						tep->test->last_client ? (int)'L' : (int)'R' );
-	if (reply_received == -1) {
-		PRINT_ERR("sender: failed to sync with receiver to start test");
-		return ERROR_GENERAL;
-	}
-	if (reply_received == 0) {
-		PRINT_ERR("sender: receiver refuse to start test right now");
-		return ERROR_GENERAL;
-	}
+	if (test->no_synch == false ) {
+		// request receiver to start the test
+		reply_received = request_to_start(tep->synch_socket,
+							tep->test->last_client ? (int)'L' : (int)'R' );
+		if (reply_received == -1) {
+			PRINT_ERR("sender: failed to sync with receiver to start test");
+			return ERROR_GENERAL;
+		}
+		if (reply_received == 0) {
+			PRINT_ERR("sender: receiver refuse to start test right now");
+			return ERROR_GENERAL;
+		}
 
-	/* if we go here, the pre-test sync has completed */
-	PRINT_INFO("Network activity progressing...");
+		/* if we go here, the pre-test sync has completed */
+		PRINT_INFO("Network activity progressing...");
+	}
 
 	turn_on_light();
 
