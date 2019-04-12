@@ -492,7 +492,7 @@ bool check_resource_limit(struct ntttcp_test *test)
 	PRINT_DBG_FREE(log);
 
 	if (test->client_role == true) {
-		total_connections = test->server_ports * test->threads_per_server_port;
+		total_connections = test->server_ports * test->threads_per_server_port * test->conns_per_thread;
 	} else {
 		/*
 		 * for receiver, just do a minial check;
@@ -502,9 +502,9 @@ bool check_resource_limit(struct ntttcp_test *test)
 	}
 
 	if (total_connections > soft_limit) {
-		ASPRINTF(&log, "soft limit is too small: limit is %ld; but total connections will be %d X n",
+		ASPRINTF(&log, "soft limit is too small: limit is %ld; but total connections will be %d (or more on receiver)",
 				soft_limit,
-				test->server_ports);
+				total_connections);
 		PRINT_ERR_FREE(log);
 
 		return false;
