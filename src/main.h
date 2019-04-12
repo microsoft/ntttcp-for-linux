@@ -10,3 +10,5 @@
 #include "throughputmanagement.h"
 #include "udpstream.h"
 #include "parameter.h"
+
+#define CONNS_ESTAB_TIMEOUT	10  /* the max time in seconds for sender to establish the connections */

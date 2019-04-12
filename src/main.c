@@ -22,7 +22,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	int rc, reply_received;
 	void *p_retval;
 	struct timeval start_time, now;
-	long int conns_creation_time = 0;
+	long int conns_creation_time_usec = 0;
 
 	if (test->no_synch == false ) {
 		/* Negotiate with receiver on:
@@ -113,13 +113,14 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	ASPRINTF(&log, "%d threads created", threads_created);
 	PRINT_INFO_FREE(log);
 
-	// wait for all connections created
+	// wait for all connections created (timeout: CONNS_ESTAB_TIMEOUT seconds)
 	conns_total = test->server_ports * test->threads_per_server_port * test->conns_per_thread;
-	while (conns_creation_time < SEC_TO_USEC) {
+	while (conns_creation_time_usec < CONNS_ESTAB_TIMEOUT * SEC_TO_USEC) {
 		conns_created = 0;
 		usleep(TEST_STATUS_POLL_INTERVAL_U_SEC);
+
 		gettimeofday(&now, NULL);
-		conns_creation_time = (now.tv_sec - start_time.tv_sec) * SEC_TO_USEC + now.tv_usec - start_time.tv_usec;
+		conns_creation_time_usec = (now.tv_sec - start_time.tv_sec) * SEC_TO_USEC + now.tv_usec - start_time.tv_usec;
 		for (t = 0; t < test->server_ports; t++) {
 			for (n = 0; n < test->threads_per_server_port; n++ ) {
 				cs = tep->client_streams[t * test->threads_per_server_port + n];
@@ -127,20 +128,20 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			}
 		}
 		if (conns_created == conns_total) {
-			ASPRINTF(&log, "%d connections created in %ld microseconds", conns_created, conns_creation_time);
+			ASPRINTF(&log, "%d connections created in %ld microseconds", conns_created, conns_creation_time_usec);
 			PRINT_INFO_FREE(log);
 			break;
 		}
 	}
 	if (conns_created != conns_total) {
-		ASPRINTF(&log, "%d connections created in %ld microseconds", conns_created, conns_creation_time);
+		ASPRINTF(&log, "in %ld microseconds, only %d connections created (expected: %d)", conns_creation_time_usec, conns_created, conns_total);
 		PRINT_ERR_FREE(log);
 	}
 
 	if (test->no_synch == false ) {
 		// request receiver to start the test
 		reply_received = request_to_start(tep->synch_socket,
-							tep->test->last_client ? (int)'L' : (int)'R' );
+						  tep->test->last_client ? (int)'L' : (int)'R' );
 		if (reply_received == -1) {
 			PRINT_ERR("sender: failed to sync with receiver to start test");
 			return ERROR_GENERAL;
