@@ -37,16 +37,22 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	uint total_sub_conn_created = 0; //track how many sub connections created in this thread
 	int sockfds[DEFAULT_CLIENT_CONNS_PER_THREAD] = {-1};
 	uint client_port = 0;
+	struct hostent *hp;
 
 	bool verbose_log = sc->verbose;
 
 	struct sockaddr_in local_addr, serv_addr;
 	int sa_size = sizeof(struct sockaddr_in);
-	struct hostent *hp = gethostbyname(sc->bind_address);
 	memset((char*)&serv_addr, 0, sa_size);
 	serv_addr.sin_family = sc->domain; //AF_INET
 	serv_addr.sin_port = htons(sc->server_port);
-	memcpy((void *)&serv_addr.sin_addr, hp->h_addr_list[0], hp->h_length);
+	if (isalpha(sc->bind_address[0])) {
+		hp = gethostbyname(sc->bind_address);
+		memcpy((void *)&serv_addr.sin_addr, hp->h_addr_list[0], hp->h_length);
+	}
+	else {
+		serv_addr.sin_addr.s_addr = inet_addr(sc->bind_address);
+	}
 
 	for (i = 0; i < sc->num_connections; i++) {
 
