@@ -1,4 +1,6 @@
+ifndef CC
 CC=gcc
+endif
 ifeq ($(DEBUG), 1)
 CFLAGS=-Wall -W -O0 -ggdb3 -fno-omit-frame-pointer
 else
