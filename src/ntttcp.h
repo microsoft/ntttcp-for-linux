@@ -43,7 +43,9 @@ struct ntttcp_test
 	uint	server_base_port;    /* '-p' for server listening base port */
 	uint	client_base_port;    /* '-f' to pin client source port based on this */
 	ulong	recv_buf_size;       /* '-b' for receive buffer option */
-	ulong	send_buf_size;       /* '-B' for send buffer option */
+	ulong	send_buf_size;       /* '-b' for send buffer option */
+	long	bandwidth_limit;     /* '-B' for test bandwidth limit */
+
 	int	warmup;              /* '-W' for test warm-up time in sec */
 	int	duration;            /* '-t' for total duration in sec of test (0: continuous_mode) */
 	int	cooldown;            /* '-C' for test cool-down time in sec */
@@ -89,6 +91,7 @@ struct ntttcp_stream_client{
 	uint	client_port;
 	uint	num_connections;
 	ulong	send_buf_size;
+	ulong   sc_bandwidth_limit;	/* the bandwidth limit per stream client (thread) */
 	bool	is_sync_thread;
 	bool	no_synch;
 	bool	continuous_mode;

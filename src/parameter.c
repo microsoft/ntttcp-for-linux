@@ -63,6 +63,9 @@ void print_flags(struct ntttcp_test *test)
 	if (test->client_role)
 		printf("%s:\t %ld\n", "sender socket buffer (bytes)", test->send_buf_size);
 
+	if (test->client_role && test->bandwidth_limit != 0)
+		printf("%s:\t %ld\n", "bandwidth limit (bits/sec)", test->bandwidth_limit);
+
 	if (test->warmup == 0)
 		printf("%s:\t\t %s\n", "test warm-up (sec)", "no");
 	else
@@ -93,7 +96,7 @@ void print_flags(struct ntttcp_test *test)
 void print_usage()
 {
 	printf("Author: %s\n", AUTHOR_NAME);
-	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-W|-t|-C|-N|-R|-K|-I|-x|-V|-h|-m <mapping>\n\n");
+	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-B|-W|-t|-C|-N|-R|-K|-I|-x|-V|-h|-m <mapping>\n\n");
 	printf("\t-r   Run as a receiver\n");
 	printf("\t-s   Run as a sender\n");
 	printf("\t-D   Run as daemon\n");
@@ -112,7 +115,8 @@ void print_usage()
 	printf("\t-u   UDP mode     [default: TCP]\n");
 	printf("\t-p   Destination port number, or starting port number    [default: %d]\n", DEFAULT_BASE_DST_PORT);
 	printf("\t-f   Fixed source port number, or starting port number    [default: %d]\n", DEFAULT_BASE_SRC_PORT);
-	printf("\t-b   <buffer size>    [default: %d (receiver); %d (sender)]\n", DEFAULT_RECV_BUFFER_SIZE, DEFAULT_SEND_BUFFER_SIZE);
+	printf("\t-b   <buffer size in n[KMG] Bytes>    [default: %d (receiver); %d (sender)]\n", DEFAULT_RECV_BUFFER_SIZE, DEFAULT_SEND_BUFFER_SIZE);
+	printf("\t-B   <bandwidth limit in n[KMG] bits/sec> set limit to the bandwidth\n");
 
 	printf("\t-W   Warm-up time in seconds          [default: %d]\n", DEFAULT_WARMUP_SEC);
 	printf("\t-t   Time of test duration in seconds [default: %d]\n", DEFAULT_TEST_DURATION);
@@ -290,8 +294,11 @@ int verify_args(struct ntttcp_test *test)
 			PRINT_DBG("ignore '-H' on sender role");
 	}
 
-	if (test->server_role && test->client_base_port > 0) {
-		PRINT_DBG("ignore '-f' on receiver role");
+	if (test->server_role) {
+		if (test->client_base_port > 0)
+			PRINT_DBG("ignore '-f' on receiver role");
+		if (test->bandwidth_limit != 0)
+			PRINT_DBG("ignore '-B' on receiver role");
 	}
 
 	if (test->client_role) {
@@ -378,7 +385,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 	int opt;
 
-	while ((opt = getopt(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:W:t:C:NRK:I:x::Vh")) != -1) {
+	while ((opt = getopt(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:NRK:I:x::Vh")) != -1) {
 		switch (opt) {
 		case 'r':
 		case 's':
@@ -460,6 +467,10 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		case 'b':
 			test->recv_buf_size = unit_atod(optarg);
 			test->send_buf_size = unit_atod(optarg);
+			break;
+
+		case 'B':
+			test->bandwidth_limit = unit_atod(optarg);
 			break;
 
 		case 'W':
