@@ -108,7 +108,10 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	}
 
 	memset(buffer, 'B', sc->send_buf_size * sizeof(char));
-	while (is_light_turned_on(sc->continuous_mode)){
+	while (is_light_turned_on(sc->continuous_mode)) {
+		if (sc->hold_on)
+			continue;
+
 		for (i = 0; i < sc->num_connections; i++) {
 			sockfd = sockfds[i];
 			/* skip those socket fds ('-1') if failed in creation phase */

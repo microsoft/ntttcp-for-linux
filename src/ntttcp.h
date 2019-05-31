@@ -91,7 +91,8 @@ struct ntttcp_stream_client{
 	uint	client_port;
 	uint	num_connections;
 	ulong	send_buf_size;
-	ulong   sc_bandwidth_limit;	/* the bandwidth limit per stream client (thread) */
+	ulong   sc_bandwidth_limit_bytes;	/* the bandwidth limit per stream client (thread) */
+	bool    hold_on;			/* hold on sending packets on this stream client because of bandwidth limit */
 	bool	is_sync_thread;
 	bool	no_synch;
 	bool	continuous_mode;

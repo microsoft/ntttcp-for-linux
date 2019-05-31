@@ -6,6 +6,36 @@
 
 #include "throughputmanagement.h"
 
+void check_bandwidth_limit(struct ntttcp_test_endpoint *tep)
+{
+	/*
+	   Return immediately in the case of:
+	    a) this is receiver (we don't limit receiver);
+	    b) this is sender, but user did not specify the bandwidth limit.
+	*/
+	if ( (tep->endpoint_role == ROLE_RECEIVER) || (tep->test->bandwidth_limit == 0) )
+		return;
+
+	struct timeval this_check_time;
+	double test_time_elapsed;
+	ulong current_throughput;
+	uint n = 0;
+
+	gettimeofday(&this_check_time, NULL);
+	test_time_elapsed = get_time_diff(&this_check_time, &tep->start_time);
+
+	for (n = 0; n < tep->total_threads; n++) {
+		if (tep->client_streams[n]->is_sync_thread == true)
+			continue;
+
+		current_throughput = (tep->client_streams[n]->total_bytes_transferred) / test_time_elapsed;
+		if (current_throughput > tep->client_streams[n]->sc_bandwidth_limit_bytes)
+			tep->client_streams[n]->hold_on = true;
+		else
+			tep->client_streams[n]->hold_on = false;
+	}
+}
+
 struct report_segment report_real_time_throughput(struct ntttcp_test_endpoint *tep,
 						  struct report_segment last_checkpoint,
 						  uint total_test_threads)
@@ -131,6 +161,8 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 		 * and eventually make the final throughput reported inaccurate (will be lower than actual throughput)
 		 */
 		usleep(TEST_STATUS_POLL_INTERVAL_U_SEC);
+
+		check_bandwidth_limit(tep);
 
 		/* if we have already waited 1000 poll times (0.5 second), then let's report the throughput */
 		i++;

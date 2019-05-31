@@ -211,8 +211,8 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 		}
 
 		/* set bandwidth limit if specified */
-		if (sc->sc_bandwidth_limit > 0 ) {
-			unsigned int fqrate_bytes = sc->sc_bandwidth_limit / 8;
+		/*if (sc->sc_bandwidth_limit_bytes > 0 ) {
+			unsigned int fqrate_bytes = sc->sc_bandwidth_limit_bytes;
 			if (fqrate_bytes > 0) {
 				if (setsockopt(sockfd, SOL_SOCKET, SO_MAX_PACING_RATE, &fqrate_bytes, sizeof(fqrate_bytes)) < 0) {
 					ASPRINTF(&log,
@@ -221,7 +221,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 					PRINT_INFO_FREE(log);
 				}
 			}
-		}
+		}*/
 
 		ASPRINTF(&log, "New connection: local:%d [socket:%d] --> %s:%d",
 				ntohs(sc->domain == AF_INET?
@@ -261,6 +261,8 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	memset(buffer, 'A', buffer_len);
 
 	while ( is_light_turned_on(sc->continuous_mode) ) {
+		if (sc->hold_on)
+			continue;
 
 		for (i = 0; i < sc->num_connections; i++) {
 			sockfd = sockfds[i];
