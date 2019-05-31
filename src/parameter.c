@@ -311,6 +311,9 @@ int verify_args(struct ntttcp_test *test)
 		    < (int)(test->server_ports * test->threads_per_server_port * test->conns_per_thread)) {
 			PRINT_ERR("source port is too high to provide a sufficient range of ports for your test");
 		}
+
+		if (test->bandwidth_limit != 0)
+			PRINT_INFO("Warning! '-B' is specified and the network bandwidth may be limited");
 	}
 
 	if (test->protocol == UDP && test->send_buf_size > MAX_UDP_SEND_SIZE) {
