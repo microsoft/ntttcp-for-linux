@@ -25,8 +25,8 @@ void check_bandwidth_limit(struct ntttcp_test_endpoint *tep)
 	test_time_elapsed = get_time_diff(&this_check_time, &tep->start_time);
 
 	for (n = 0; n < tep->total_threads; n++) {
-		if (tep->client_streams[n]->is_sync_thread == true)
-			continue;
+		/* No need to check the current sc is the sync_thread or not,
+		   because sender does not have a delegated thread for sync */
 
 		current_throughput = (tep->client_streams[n]->total_bytes_transferred) / test_time_elapsed;
 		if (current_throughput > tep->client_streams[n]->sc_bandwidth_limit_bytes)

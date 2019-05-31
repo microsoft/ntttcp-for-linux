@@ -12,11 +12,12 @@ void run_ntttcp_rtt_calculation_for_sender(struct ntttcp_test_endpoint *tep)
 	uint total_rtt = 0;
 	uint num_average_rtt = 0;
 	struct	ntttcp_stream_client *sc;
-	uint total_test_threads = tep->total_threads;
 
 	/* Calculate average RTT across all connections */
-	for (i = 0; i < total_test_threads; i++) {
+	for (i = 0; i < tep->total_threads; i++) {
 		sc = tep->client_streams[i];
+		/* all sender threads are data threads; no sync thread on sender side */
+
 		if (sc->average_rtt != (uint) -1) {
 			total_rtt += sc->average_rtt;
 			num_average_rtt++;
@@ -79,7 +80,8 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	if (test_duration == 0)
 		return -1;
 
-	/* calculate for per-thread counters */
+	/* calculate for per-thread counters, even for receiver's sync thread
+	   we will ignore that sync thread when printing in "print_test_results()" */
 	for (i=0; i<tep->total_threads; i++){
 		if (tep->results->threads[i]->is_sync_thread == true)
 			continue;
