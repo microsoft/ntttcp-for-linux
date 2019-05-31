@@ -239,7 +239,8 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoin
 	//s->client_port, should be specified by caller
 	s->num_connections = test->conns_per_thread;
 	s->send_buf_size = test->send_buf_size;
-	s->sc_bandwidth_limit_bytes = test->bandwidth_limit / (test->server_ports * test->threads_per_server_port * test->conns_per_thread) / 8;
+	s->sc_bandwidth_limit_bytes = test->bandwidth_limit / (test->server_ports * test->threads_per_server_port) / 8;
+	s->hold_on = false;
 	s->verbose = test->verbose;
 	s->is_sync_thread = false;
 	s->no_synch = test->no_synch;
