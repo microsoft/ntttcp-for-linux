@@ -102,4 +102,5 @@ char *retrive_ip4_address_str(struct sockaddr_in *ss, char *ip_str, size_t maxle
 char *retrive_ip6_address_str(struct sockaddr_in6 *ss, char *ip_str, size_t maxlen);
 int set_socket_non_blocking(int fd);
 
+void enable_fq_rate_limit(struct ntttcp_stream_client *sc, int sockfd);
 bool check_resource_limit(struct ntttcp_test *test);

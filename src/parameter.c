@@ -66,6 +66,9 @@ void print_flags(struct ntttcp_test *test)
 	if (test->client_role && test->bandwidth_limit != 0)
 		printf("%s:\t %ld\n", "bandwidth limit (bits/sec)", test->bandwidth_limit);
 
+	if (test->client_role && test->fq_rate_limit != 0)
+		printf("%s:\t %ld\n", "fq rate limit (bits/sec)", test->fq_rate_limit);
+
 	if (test->warmup == 0)
 		printf("%s:\t\t %s\n", "test warm-up (sec)", "no");
 	else
@@ -96,7 +99,8 @@ void print_flags(struct ntttcp_test *test)
 void print_usage()
 {
 	printf("Author: %s\n", AUTHOR_NAME);
-	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-B|-W|-t|-C|-N|-R|-K|-I|-x|-V|-h|-m <mapping>\n\n");
+	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-B|-W|-t|-C|-N|-R|-K|-I|-x|-V|-h|-m <mapping>]\n");
+	printf("        [--fq-rate-limit]\n\n");
 	printf("\t-r   Run as a receiver\n");
 	printf("\t-s   Run as a sender\n");
 	printf("\t-D   Run as daemon\n");
@@ -141,6 +145,7 @@ void print_usage()
 	printf("\t     e.g. -m 8,*,192.168.1.1\n");
 	printf("\t\t    If for receiver role: 8 threads listening on 8 ports (one port per thread) on the network 192.168.1.1;\n\t\t\tand those threads will run on all processors.\n");
 	printf("\t\t    If for sender role: receiver has 8 ports listening on the network 192.168.1.1;\n\t\t\tsender will create 8 threads to talk to all of those receiver ports\n\t\t\t(1 sender thread to one receiver port; this can be overridden by '-n');\n\t\t\tand all sender threads will run on all processors.\n");
+	printf("\t--fq-rate-limit   Limit rate by Fair Queue traffic policing (FQ)\n");
 
 	printf("Example:\n");
 	printf("\treceiver:\n");
@@ -314,6 +319,14 @@ int verify_args(struct ntttcp_test *test)
 
 		if (test->bandwidth_limit != 0)
 			PRINT_INFO("Warning! '-B' is specified and the network bandwidth may be limited");
+
+		if (test->fq_rate_limit != 0)
+			PRINT_INFO("Warning! '--fq-rate-limit' is specified and the network bandwidth may be limited");
+
+		if (test->bandwidth_limit != 0 && test->fq_rate_limit != 0) {
+			PRINT_INFO("ignore '--fq-rate-limit' as '-B' is specified");
+			test->fq_rate_limit = 0;
+		}
 	}
 
 	if (test->protocol == UDP && test->send_buf_size > MAX_UDP_SEND_SIZE) {
@@ -354,41 +367,16 @@ int verify_args(struct ntttcp_test *test)
 
 int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 {
-	/* long options, deprecated */
-	/*
+	/* long options, for uncommon usage */
 	static struct option longopts[] =
 	{
-		{"receiver", optional_argument, NULL, 'r'},
-		{"sender", optional_argument, NULL, 's'},
-		{"daemon", no_argument, NULL, 'D'},
-		{"multi-clients", no_argument, NULL, 'M'},
-		{"last-client", no_argument, NULL, 'L'},
-		{"epoll", no_argument, NULL, 'e'},
-		{"hold", no_argument, NULL, 'H'},
-		{"mapping", required_argument, NULL, 'm'},
-		{"nports", required_argument, NULL, 'P'},
-		{"nthread", required_argument, NULL, 'n'},
-		{"nconnections", required_argument, NULL, 'l'},
-		{"ipv6", no_argument, NULL, '6'},
-		{"udp", no_argument, NULL, 'u'},
-		{"base-dst-port", required_argument, NULL, 'p'},
-		{"base-src-port", optional_argument, NULL, 'f'},
-		{"buffer", required_argument, NULL, 'b'},
-		{"warmup", required_argument, NULL, 'W'},
-		{"duration", required_argument, NULL, 't'},
-		{"cooldown", required_argument, NULL, 'C'},
-		{"no-synch", no_argument, NULL, 'N'},
-		{"show-retrans", no_argument, NULL, 'R'},
-		{"save-xml", optional_argument, NULL, 'x'},
-		{"verbose", no_argument, NULL, 'V'},
-		{"help", no_argument, NULL, 'h'},
+		{"fq-rate-limit", required_argument, NULL, LO_FQ_RATE_LIMIT},
 		{0, 0, 0, 0}
 	};
-	*/
 
 	int opt;
 
-	while ((opt = getopt(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:NRK:I:x::Vh")) != -1) {
+	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:NRK:I:x::Vh", longopts, NULL)) != -1) {
 		switch (opt) {
 		case 'r':
 		case 's':
@@ -474,6 +462,10 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 		case 'B':
 			test->bandwidth_limit = unit_atod(optarg);
+			break;
+
+		case LO_FQ_RATE_LIMIT:
+			test->fq_rate_limit = unit_atod(optarg);
 			break;
 
 		case 'W':

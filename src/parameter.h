@@ -14,6 +14,8 @@
 
 enum {S_THREADS = 0, S_PROCESSOR, S_HOST, S_DONE};
 
+#define LO_FQ_RATE_LIMIT	1
+
 int parse_arguments(struct ntttcp_test *test, int argc, char **argv);
 int verify_args(struct ntttcp_test *test);
 

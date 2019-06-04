@@ -210,18 +210,9 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 			PRINT_INFO_FREE(log);
 		}
 
-		/* set bandwidth limit if specified */
-		/*if (sc->sc_bandwidth_limit_bytes > 0 ) {
-			unsigned int fqrate_bytes = sc->sc_bandwidth_limit_bytes;
-			if (fqrate_bytes > 0) {
-				if (setsockopt(sockfd, SOL_SOCKET, SO_MAX_PACING_RATE, &fqrate_bytes, sizeof(fqrate_bytes)) < 0) {
-					ASPRINTF(&log,
-						 "failed to set fq bit rate for socket[%d]",
-						 sockfd);
-					PRINT_INFO_FREE(log);
-				}
-			}
-		}*/
+		/* set socket rate limit if specified by user */
+		if (sc->socket_fq_rate_limit_bytes != 0)
+			enable_fq_rate_limit(sc, sockfd);
 
 		ASPRINTF(&log, "New connection: local:%d [socket:%d] --> %s:%d",
 				ntohs(sc->domain == AF_INET?

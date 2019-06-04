@@ -83,6 +83,10 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 		PRINT_INFO_FREE(log);
 	}
 
+	/* set socket rate limit if specified by user */
+	if (sc->socket_fq_rate_limit_bytes != 0)
+		enable_fq_rate_limit(sc, sockfd);
+
 	ASPRINTF(&log, "Running UDP stream: local:%d [socket:%d] --> %s:%d",
 		 ntohs(((struct sockaddr_in *)&local_addr)->sin_port),
 		 sockfd,

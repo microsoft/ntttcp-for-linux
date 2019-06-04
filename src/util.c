@@ -6,6 +6,20 @@
 
 #include "util.h"
 
+void enable_fq_rate_limit(struct ntttcp_stream_client *sc, int sockfd)
+{
+	unsigned int fqrate_bytes = sc->socket_fq_rate_limit_bytes;
+	if (fqrate_bytes > 0) {
+		if (setsockopt(sockfd, SOL_SOCKET, SO_MAX_PACING_RATE, &fqrate_bytes, sizeof(fqrate_bytes)) < 0) {
+			char *log = NULL;
+			ASPRINTF(&log,
+				 "failed to set fq bit rate for socket[%d]",
+				 sockfd);
+			PRINT_INFO_FREE(log);
+		}
+	}
+}
+
 void run_ntttcp_rtt_calculation_for_sender(struct ntttcp_test_endpoint *tep)
 {
 	uint i = 0;
