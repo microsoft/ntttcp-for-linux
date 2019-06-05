@@ -99,8 +99,8 @@ void print_flags(struct ntttcp_test *test)
 void print_usage()
 {
 	printf("Author: %s\n", AUTHOR_NAME);
-	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-B|-W|-t|-C|-N|-R|-K|-I|-x|-V|-h|-m <mapping>]\n");
-	printf("        [--fq-rate-limit]\n\n");
+	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-B|-W|-t|-C|-N|-x|-V|-h|-m <mapping>]\n");
+	printf("        [--show-tcp-retrans|--show-nic-packets|--show-dev-interrupts|--fq-rate-limit]\n\n");
 	printf("\t-r   Run as a receiver\n");
 	printf("\t-s   Run as a sender\n");
 	printf("\t-D   Run as daemon\n");
@@ -127,13 +127,6 @@ void print_usage()
 	printf("\t-C   Cool-down time in seconds        [default: %d]\n", DEFAULT_COOLDOWN_SEC);
 	printf("\t-N   No sync, senders will start sending as soon as possible\n");
 	printf("\t     Otherwise, will use 'destination port - 1' as sync port	[default: %d]\n", DEFAULT_BASE_DST_PORT - 1);
-
-	printf("\t-R   Show system TCP retransmit counters in log from /proc\n");
-	printf("\t-K   <network interface name>\n");
-	printf("\t\t    Show number of packets transferred (tx and rx) through this network interface\n");
-	printf("\t-I   <device differentiator>\n");
-	printf("\t\t    Show number of interrupts for the devices specified by the differentiator\n");
-	printf("\t\t    Examples for differentiator: Hyper-V PCIe MSI, mlx4, Hypervisor callback interrupts, ...\n");
 	printf("\t-x   Save output to XML file, by default saves to %s\n", DEFAULT_LOG_FILE_NAME);
 	printf("\t-V   Verbose mode\n");
 	printf("\t-h   Help, tool usage\n");
@@ -145,19 +138,31 @@ void print_usage()
 	printf("\t     e.g. -m 8,*,192.168.1.1\n");
 	printf("\t\t    If for receiver role: 8 threads listening on 8 ports (one port per thread) on the network 192.168.1.1;\n\t\t\tand those threads will run on all processors.\n");
 	printf("\t\t    If for sender role: receiver has 8 ports listening on the network 192.168.1.1;\n\t\t\tsender will create 8 threads to talk to all of those receiver ports\n\t\t\t(1 sender thread to one receiver port; this can be overridden by '-n');\n\t\t\tand all sender threads will run on all processors.\n");
-	printf("\t--fq-rate-limit   Limit rate by Fair Queue traffic policing (FQ)\n");
+	printf("\n");
+
+	printf("\t--show-tcp-retrans\tShow system TCP retransmit counters in log from /proc\n ");
+	printf("\t--show-nic-packets <network interface name>\n");
+	printf("\t\t\t\tShownumber of packets transferred (tx and rx) through this network interface\n");
+	printf("\t--show-dev-interrupts <device differentiator>\n");
+	printf("\t\t\t\tShow number of interrupts for the devices specified by the differentiator\n");
+	printf("\t\t\t\tExamples for differentiator: Hyper-V PCIe MSI, mlx4, Hypervisor callback interrupts, ...\n");
+	printf("\t--fq-rate-limit\t\tLimit socket rate by Fair Queue (FQ) traffic policing\n");
+	printf("\n");
 
 	printf("Example:\n");
 	printf("\treceiver:\n");
 	printf("\t1) ./ntttcp -r\n");
-	printf("\t2) ./ntttcp -r192.168.1.1\n");
+	printf("\t2) ./ntttcp -r 192.168.1.1\n");
 	printf("\t3) ./ntttcp -r -m 8,*,192.168.1.1 -6\n");
-	printf("\t4) ./ntttcp -r -m 8,0,192.168.1.1 -6 -R -K eth0 -I mlx4 -V\n");
+	printf("\t4) ./ntttcp -r -m 8,0,192.168.1.1 -6 --show-tcp-retrans --show-nic-packets eth0 --show-dev-interrupts mlx4 -V\n");
 	printf("\tsender:\n");
 	printf("\t1) ./ntttcp -s\n");
-	printf("\t2) ./ntttcp -s192.168.1.1\n");
+	printf("\t2) ./ntttcp -s 192.168.1.1\n");
 	printf("\t3) ./ntttcp -s -m 8,*,192.168.1.1 -n 16 -6\n");
-	printf("\t4) ./ntttcp -s -m 8,0,192.168.1.1 -n 16 -f25001 -6 -V\n");
+	printf("\t4) ./ntttcp -s 192.168.1.1 -P 64 -n 16 -l 10 -f25001 -6 -V\n");
+	printf("\t3) ./ntttcp -s 192.168.1.1 --fq-rate-limit 10G\n");
+	printf("\t4) ./ntttcp -s 192.168.1.1 -B 10G\n");
+	printf("\t4) ./ntttcp -s 192.168.1.1 --show-tcp-retrans --show-nic-packets eth0 --show-dev-interrupts mlx4 -V\n");
 }
 
 void print_version()
@@ -370,13 +375,16 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 	/* long options, for uncommon usage */
 	static struct option longopts[] =
 	{
+		{"show-tcp-retrans", no_argument, NULL, LO_SHOW_TCP_RETRANS},
+		{"show-nic-packets", required_argument, NULL, LO_SHOW_NIC_PACKETS},
+		{"show-dev-interrupts", required_argument, NULL, LO_SHOW_DEV_INTERRUPTS},
 		{"fq-rate-limit", required_argument, NULL, LO_FQ_RATE_LIMIT},
 		{0, 0, 0, 0}
 	};
 
 	int opt;
 
-	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:NRK:I:x::Vh", longopts, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:Nx::Vh", longopts, NULL)) != -1) {
 		switch (opt) {
 		case 'r':
 		case 's':
@@ -484,15 +492,15 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			test->no_synch = true;
 			break;
 
-		case 'R':
+		case LO_SHOW_TCP_RETRANS:
 			test->show_tcp_retransmit = true;
 			break;
 
-		case 'K':
+		case LO_SHOW_NIC_PACKETS:
 			test->show_interface_packets = optarg;
 			break;
 
-		case 'I':
+		case LO_SHOW_DEV_INTERRUPTS:
 			test->show_dev_interrupts = optarg;
 			break;
 
