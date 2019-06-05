@@ -142,7 +142,7 @@ void print_usage()
 
 	printf("\t--show-tcp-retrans\tShow system TCP retransmit counters in log from /proc\n ");
 	printf("\t--show-nic-packets <network interface name>\n");
-	printf("\t\t\t\tShownumber of packets transferred (tx and rx) through this network interface\n");
+	printf("\t\t\t\tShow number of packets transferred (tx and rx) through this network interface\n");
 	printf("\t--show-dev-interrupts <device differentiator>\n");
 	printf("\t\t\t\tShow number of interrupts for the devices specified by the differentiator\n");
 	printf("\t\t\t\tExamples for differentiator: Hyper-V PCIe MSI, mlx4, Hypervisor callback interrupts, ...\n");

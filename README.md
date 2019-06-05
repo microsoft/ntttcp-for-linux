@@ -6,11 +6,11 @@ A multiple-thread based Linux network throughput benchmark tool.
 
 ## Features
 
-* Multiple threads to send/receive data. By default, Receiver ("-r") uses 16 threads and Sender ("-s") uses 64 threads to exchange data.
+* Multiple threads to send/receive data ('-P', '-n', and '-l'). By default, Receiver ('-r') uses 16 threads and Sender ('-s') uses 64 threads to exchange data.
 
-* Support cpu affinity.
+* Support cpu affinity ('-m').
 
-* Support running in background (daemon).
+* Support running in background (daemon, '-D').
 
 * Support Sender and Receiver sync mode by default. Use "-N" (no_sync) to disable the sync.
 
@@ -24,7 +24,11 @@ A multiple-thread based Linux network throughput benchmark tool.
 
 * Support test Warmup ('-W') and Cooldown ('-C').
 
-* Support reporting TCP retransmit ('-R').
+* Support reporting TCP retransmit ('--show-tcp-retrans').
+
+* Support reporting number of packets ('--show-nic-packets') and number of interrupts ('--show-dev-interrupts')
+
+* Support bandwidth limit ('-B' or '--fq-rate-limit')
 
 * Support writing log into XML file ('-x').
 
