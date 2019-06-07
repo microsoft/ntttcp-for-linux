@@ -24,9 +24,11 @@ void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
 	unsigned long long int user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice;
 	user = nice = system = idle = iowait = irq = softirq = steal = guest = guest_nice = 0;
 
+	char *log = NULL;
 	FILE* file = fopen(PROC_FILE_STAT, "r");
 	if (file == NULL) {
-		PRINT_ERR("Cannot open /proc/stat");
+		ASPRINTF(&log, "Cannot open %s", PROC_FILE_STAT);
+		PRINT_ERR_FREE(log);
 		return;
 	}
 
@@ -37,7 +39,9 @@ void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
 		char *s = fgets(buffer, 255, file);
 		/* We should not reach to the file end, because we only read lines starting with 'cpu' */
 		if (s == NULL) {
-			PRINT_ERR("Error when reading /proc/stat");
+			ASPRINTF(&log, "Error when reading %s", PROC_FILE_STAT);
+			PRINT_ERR_FREE(log);
+			fclose(file);
 			return;
 		}
 
@@ -81,9 +85,11 @@ bool is_str_number(char *str)
 
 uint64_t get_interrupts_from_proc_by_dev(char *dev_name)
 {
+	char *log = NULL;
 	FILE* file = fopen(PROC_FILE_INTERRUPTS, "r");
 	if (file == NULL) {
-		PRINT_ERR("Cannot open /proc/interrupts");
+		ASPRINTF(&log, "Cannot open %s", PROC_FILE_INTERRUPTS);
+		PRINT_ERR_FREE(log);
 		return 0;
 	}
 	if(!strcmp(dev_name, ""))
