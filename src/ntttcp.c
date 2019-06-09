@@ -147,7 +147,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 		/* For receiver role, if synch mechanism is being used (the last thread in the list is synch thread),
 		   then mark that one;
 		   Note: for sender role, if synch mechanism is being used, we will use the main thread to sync with receiver,
-		   so thers is no specially created thread for synch;
+		   so there is no specially created thread for synch;
 		   all threads are testing threads which will transfer test data*/
 		if (i == (total_threads - 1)
 		    && e->endpoint_role == ROLE_RECEIVER

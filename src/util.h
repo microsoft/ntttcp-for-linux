@@ -75,7 +75,7 @@ struct ntttcp_test_endpoint_results{
 	uint64_t	total_interrupts;
 	double	packets_per_interrupt;
 
-	/* fields for xml log (compatiable with Windows ntttcp.exe) */
+	/* fields for xml log (compatible with Windows ntttcp.exe) */
 	double	total_bytes_MB;
 	double	throughput_MBps;
 	double	throughput_mbps;

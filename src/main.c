@@ -290,7 +290,7 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		process_test_results(tep);
 		print_test_results(tep);
 
-		/* reset thiss variable, in case receiver is running as '-H' (receiver is running in loop) */
+		/* reset this variable, in case receiver is running as '-H' (receiver is running in loop) */
 		tep->num_remote_endpoints = 0;
 		for (t=0; t<MAX_REMOTE_ENDPOINTS; t++)
 			tep->remote_endpoints[t] = -1;

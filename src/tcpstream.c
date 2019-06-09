@@ -330,7 +330,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 	/* get the first entry to bind and listen */
 	for (p = serv_info; p != NULL; p = p->ai_next) {
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
-			PRINT_ERR("cannot create socket ednpoint");
+			PRINT_ERR("cannot create socket endpoint");
 			freeaddrinfo(serv_info);
 			free(local_addr_str);
 			return -1;
@@ -467,7 +467,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 				continue;
 			}
 
-			/* then, we got one fd to hanle */
+			/* then, we got one fd to handle */
 			/* a NEW connection coming */
 			if (current_fd == ss->listener) {
 				/* We have a notification on the listening socket, which means one or more incoming connections. */
@@ -604,7 +604,7 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 			if ( !FD_ISSET(current_fd, &read_set) )
 				continue;
 
-			/* then, we got one fd to hanle */
+			/* then, we got one fd to handle */
 			/* a NEW connection coming */
 			if (current_fd == ss->listener) {
  				/* handle new connections */

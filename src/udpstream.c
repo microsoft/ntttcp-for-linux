@@ -57,7 +57,7 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	for (i = 0; i < sc->num_connections; i++) {
 
 	if ((sockfd = socket(sc->domain, sc->domain, 0)) < 0){
-		PRINT_ERR("cannot create socket ednpoint");
+		PRINT_ERR("cannot create socket endpoint");
 		sockfds[i] = -1;
 		continue;
 	}
@@ -207,7 +207,7 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 	/* get the first entry to bind and listen */
 	for (p = serv_info; p != NULL; p = p->ai_next) {
 		if ((sockfd = socket(p->ai_family, UDP, p->ai_protocol)) < 0) {
-			PRINT_ERR("cannot create socket ednpoint");
+			PRINT_ERR("cannot create socket endpoint");
 			freeaddrinfo(serv_info);
 			free(local_addr_str);
 			return 0;

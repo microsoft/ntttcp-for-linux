@@ -129,7 +129,7 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	tepr->cpu_ps_iowait_usage = (tepr->final_cpu_ps->iowait_time - tepr->init_cpu_ps->iowait_time) / cpu_ps_total_diff;
 	tepr->cpu_ps_softirq_usage = (tepr->final_cpu_ps->softirq_time - tepr->init_cpu_ps->softirq_time) / cpu_ps_total_diff;
 
-	/* calculate for counters for xml log (compatiable with Windows ntttcp.exe) */
+	/* calculate for counters for xml log (compatible with Windows ntttcp.exe) */
 	tepr->total_bytes_MB = total_bytes / MEBI;
 	tepr->throughput_MBps = tepr->total_bytes_MB / test_duration;
 	tepr->throughput_mbps = tepr->throughput_MBps * BYTE_TO_BITS;
@@ -511,7 +511,7 @@ bool check_resource_limit(struct ntttcp_test *test)
 		total_connections = test->server_ports * test->threads_per_server_port * test->conns_per_thread;
 	} else {
 		/*
-		 * for receiver, just do a minial check;
+		 * for receiver, just do a minimal check;
 		 * because we don't know how many threads_per_server_port will be used by sender.
 		 */
 		total_connections = test->server_ports * 1;

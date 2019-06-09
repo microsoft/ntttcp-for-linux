@@ -50,7 +50,7 @@ int create_sender_sync_socket( struct ntttcp_test_endpoint *tep )
 	/* only get the first entry to connect */
 	for (p = serv_info; p != NULL; p = p->ai_next) {
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
-			PRINT_ERR("cannot create socket ednpoint");
+			PRINT_ERR("cannot create socket endpoint");
 			freeaddrinfo(serv_info);
 			free(ip_address_str);
 			return 0;
@@ -143,7 +143,7 @@ int query_receiver_busy_state(int sockfd)
 	return 0;  //server is not busy
 }
 
-/* negotiate the total_test_time (warmup + test_duration + coldown) with receiver. if receiver returns:
+/* negotiate the total_test_time (warmup + test_duration + cooldown) with receiver. if receiver returns:
  * -1: indicates error;
  *  Non-Zero positive integer: negotiated total_test_time, returned from receiver;
  */
