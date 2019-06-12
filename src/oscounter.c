@@ -38,6 +38,7 @@ void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
 		/* We should not reach to the file end, because we only read lines starting with 'cpu' */
 		if (s == NULL) {
 			PRINT_ERR("Error when reading /proc/stat");
+			fclose(file);
 			return;
 		}
 
@@ -114,6 +115,8 @@ uint64_t get_interrupts_from_proc_by_dev(char *dev_name)
 			value = strtok(NULL, " ");
 		}
 	}
+	fclose(file);
+
 	return total_interrupts;
 }
 
@@ -122,7 +125,7 @@ uint64_t get_single_value_from_os_file(char *if_name, char *tx_or_rx)
 	char *log = NULL;
 	char buffer[16];
 	char *line;
-	uint64_t value;
+	uint64_t value = 0;
 	char *filename;
 
 	if (!strcmp(if_name, ""))
@@ -133,23 +136,28 @@ uint64_t get_single_value_from_os_file(char *if_name, char *tx_or_rx)
 	if (file == NULL) {
 		ASPRINTF(&log, "Cannot open %s", filename);
 		PRINT_ERR_FREE(log);
-		return 0;
+		goto cleanup2;
 	}
 
 	line = fgets(buffer, 16, file);
 	if (line == NULL) {
 		ASPRINTF(&log, "Empty file: %s", filename);
 		PRINT_ERR_FREE(log);
-		return 0;
+		goto cleanup1;
 	}
 
 	if (!is_str_number(line)) {
 		ASPRINTF(&log, "Cannot convert the content to a number: %s", filename);
 		PRINT_ERR_FREE(log);
-		return 0;
+		goto cleanup1;
 	}
 
 	value = strtoull(line, NULL, 10);
+
+cleanup1:
+	fclose(file);
+
+cleanup2:
 	free(filename);
 
 	return value;
