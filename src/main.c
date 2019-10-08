@@ -20,7 +20,6 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	uint conns_created = 0, conns_total = 0;
 	struct ntttcp_stream_client *cs;
 	int rc, reply_received;
-	void *p_retval;
 	struct timeval start_time, now;
 	long int conns_creation_time_usec = 0;
 
@@ -101,6 +100,8 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 				ASPRINTF(&log, "pthread_create() create thread failed. errno = %d", errno);
 				PRINT_ERR_FREE(log);
 				err_code = ERROR_PTHREAD_CREATE;
+				/* Set self tid to mark current thread as unused */
+				tep->threads[threads_created] = pthread_self();
 				continue;
 			}
 			else{
@@ -169,13 +170,6 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	 * (calling wait_light_off() inside of below
 	 */
 	run_ntttcp_throughput_management(tep);
-
-	for (n = 0; n < threads_created; n++) {
-		if (pthread_join(tep->threads[n], &p_retval) !=0 ) {
-			PRINT_ERR("sender: error when pthread_join");
-			continue;
-		}
-	}
 
 	process_test_results(tep);
 	print_test_results(tep);

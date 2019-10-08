@@ -179,6 +179,21 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 			break;
 	}
 
+	/* Wait for stream processing completion before capturing statistics */
+	if (tep->endpoint_role == ROLE_SENDER) {
+		for (n = 0; n < tep->total_threads; n++) {
+			void *p_retval;
+
+			if (pthread_equal(tep->threads[n], pthread_self())) {
+				continue;
+			}
+			if (pthread_join(tep->threads[n], &p_retval) !=0 ) {
+				PRINT_ERR("sender: error when pthread_join");
+				continue;
+			}
+		}
+	}
+
 	/* calculate the end resource usage */
 	get_cpu_usage( tep->results->final_cpu_usage );
 	get_cpu_usage_from_proc_stat( tep->results->final_cpu_ps );
