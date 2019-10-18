@@ -64,7 +64,6 @@ int n_write(int fd, const char *buffer, size_t total)
 void *run_ntttcp_sender_tcp_stream( void *ptr )
 {
 	char *log        = NULL;
-	bool verbose_log = false;
 	int sockfd       = 0; //socket id
 	uint i           = 0; //for loop iterator
 	char *buffer;         //send buffer
@@ -91,7 +90,6 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	uint bytes = sizeof(tcpinfo);
 
 	sc = (struct ntttcp_stream_client *) ptr;
-	verbose_log = sc->verbose;
 
 	/* get address of remote receiver */
 	memset(&hints, 0, sizeof hints);
@@ -300,7 +298,6 @@ CLEANUP:
 int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 {
 	char *log;
-	bool verbose_log = ss->verbose;
 	int i            = 0; //hold function return value
 	int opt          = 1;
 	int sockfd       = 0;  //socket file descriptor
@@ -403,7 +400,6 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 {
 	int err_code = NO_ERROR;
 	char *log    = NULL;
-	bool verbose_log = ss->verbose;
 
 	int efd = 0, n_fds = 0, newfd = 0, current_fd = 0;
 	char *buffer;  //receive buffer
@@ -558,7 +554,6 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 {
 	int err_code = NO_ERROR;
 	char *log    = NULL;
-	bool verbose_log = ss->verbose;
 
 	int n_fds = 0, newfd, current_fd = 0;
 	char *buffer;  //receive buffer

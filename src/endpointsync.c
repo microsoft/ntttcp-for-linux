@@ -14,7 +14,6 @@ int create_sender_sync_socket( struct ntttcp_test_endpoint *tep )
 	char *log = NULL;
 	int sockfd = 0; //socket id
 	struct ntttcp_test *test = tep->test;
-	bool verbose_log = test->verbose;
 
 	struct sockaddr_storage local_addr; //for local address
 	socklen_t local_addr_size; //local address size, for getsockname(), to get local port
@@ -225,8 +224,6 @@ void *create_receiver_sync_socket( void *ptr )
 	struct ntttcp_stream_server *ss;
 
 	int sync_listener = 0;
-	bool verbose_log = test->verbose;
-
 	int answer_to_send = 0;  //the int to be sent
 	int converted = 0;
 	int request_received = 0; //the int to be received

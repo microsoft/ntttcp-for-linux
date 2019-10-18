@@ -8,12 +8,14 @@ CFLAGS=-Wall -W -O2 -fno-strict-aliasing
 endif
 CLIBS=-pthread
 OUT=ntttcp
-OBJS=ntttcp.o oscounter.o util.o throughputmanagement.o tcpstream.o udpstream.o endpointsync.o multithreading.o parameter.o main.o
+OBJS=ntttcp.o logger.o oscounter.o util.o throughputmanagement.o tcpstream.o udpstream.o endpointsync.o multithreading.o parameter.o main.o
 
-$(OUT): ntttcp.o oscounter.o util.o throughputmanagement.o tcpstream.o udpstream.o endpointsync.o multithreading.o parameter.o main.o
+$(OUT): ntttcp.o logger.o oscounter.o util.o throughputmanagement.o tcpstream.o udpstream.o endpointsync.o multithreading.o parameter.o main.o
 	$(CC) $(CFLAGS) $(CLIBS) -o $(OUT) $(OBJS)
 ntttcp.o: ntttcp.c
 	$(CC) $(CFLAGS) -c ntttcp.c -o ntttcp.o
+logger.o: logger.c
+	$(CC) $(CFLAGS) -c logger.c -o logger.o
 oscounter.o: oscounter.c
 	$(CC) $(CFLAGS) -c oscounter.c -o oscounter.o
 util.o: util.c

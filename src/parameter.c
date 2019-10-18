@@ -89,8 +89,11 @@ void print_flags(struct ntttcp_test *test)
 		printf("%s:\t\t %s\n", "show packets for", test->show_interface_packets);
 	if (strcmp(test->show_dev_interrupts, ""))
 		printf("%s:\t %s\n", "show device interrupts for", test->show_dev_interrupts);
+
 	if (test->save_xml_log)
 		printf("%s:\t %s\n", "save output to xml file:", test->xml_log_filename);
+	if (test->save_console_log)
+		printf("%s:\t %s\n", "capture console output to:", test->console_log_filename);
 
 	printf("%s:\t\t\t %s\n", "verbose mode", test->verbose ? "enabled" : "disabled");
 	printf("---------------------------------------------------------\n");
@@ -99,7 +102,7 @@ void print_flags(struct ntttcp_test *test)
 void print_usage()
 {
 	printf("Author: %s\n", AUTHOR_NAME);
-	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-B|-W|-t|-C|-N|-x|-V|-h|-m <mapping>]\n");
+	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-B|-W|-t|-C|-N|-x|-O|-V|-h|-m <mapping>]\n");
 	printf("        [--show-tcp-retrans|--show-nic-packets|--show-dev-interrupts|--fq-rate-limit]\n\n");
 	printf("\t-r   Run as a receiver\n");
 	printf("\t-s   Run as a sender\n");
@@ -127,7 +130,8 @@ void print_usage()
 	printf("\t-C   Cool-down time in seconds        [default: %d]\n", DEFAULT_COOLDOWN_SEC);
 	printf("\t-N   No sync, senders will start sending as soon as possible\n");
 	printf("\t     Otherwise, will use 'destination port - 1' as sync port	[default: %d]\n", DEFAULT_BASE_DST_PORT - 1);
-	printf("\t-x   Save output to XML file, by default saves to %s\n", DEFAULT_LOG_FILE_NAME);
+	printf("\t-x   Save output to XML file, by default saves to %s\n", DEFAULT_XML_LOG_FILE_NAME);
+	printf("\t-O   Save console log to file, by default saves to %s\n", DEFAULT_CONSOLE_LOG_FILE_NAME);
 	printf("\t-V   Verbose mode\n");
 	printf("\t-h   Help, tool usage\n");
 
@@ -227,8 +231,6 @@ int process_mappings(struct ntttcp_test *test)
 /* Check flag or role compatibility; set default value for some params */
 int verify_args(struct ntttcp_test *test)
 {
-	bool verbose_log = test->verbose;
-
 	if (test->server_role && test->client_role) {
 		PRINT_ERR("both sender and receiver roles provided");
 		return ERROR_ARGS;
@@ -384,7 +386,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 	int opt;
 
-	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:Nx::Vh", longopts, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:Nx::O::Vh", longopts, NULL)) != -1) {
 		switch (opt) {
 		case 'r':
 		case 's':
@@ -506,11 +508,21 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 		case 'x':
 			test->save_xml_log = true;
-			if (optarg){
+			if (optarg) {
 				test->xml_log_filename = optarg;
 			} else {
 				if(optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
 					test->xml_log_filename = argv[optind++];
+			}
+			break;
+
+		case 'O':
+			test->save_console_log = true;
+			if (optarg) {
+				test->console_log_filename = optarg;
+			} else {
+				if(optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
+					test->console_log_filename = argv[optind++];
 			}
 			break;
 

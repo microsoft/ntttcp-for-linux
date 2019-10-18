@@ -350,6 +350,8 @@ int main(int argc, char **argv)
 		exit (-1);
 	}
 
+	prepare_logging(test->verbose, test->save_console_log, test->console_log_filename);
+
 	if (test->verbose)
 		print_flags(test);
 

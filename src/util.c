@@ -493,7 +493,6 @@ bool check_resource_limit(struct ntttcp_test *test)
 	unsigned long soft_limit = 0;
 	unsigned long hard_limit = 0;
 	uint total_connections = 0;
-	bool verbose_log = test->verbose;
 
 	struct rlimit limitstruct;
 	if(-1 == getrlimit(RLIMIT_NOFILE, &limitstruct))

@@ -224,7 +224,7 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 	 *    Then, this endpoint will have 110 secs of test cycle time (total time), which is negotiated with remote endpoint (use the max one);
 	 *    Then, this endpoint will have 45 seconds of cooldown time (= 110 - 5 - 60) */
 	if (tep->negotiated_test_cycle_time - tep->test->warmup - tep->test->duration > 0)
-		PRINT_INFO("Test cooldown is in progress...")
+		PRINT_INFO("Test cooldown is in progress...");
 
 	wait_light_off();
 	PRINT_INFO("Test cycle finished.");

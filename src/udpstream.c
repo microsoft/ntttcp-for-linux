@@ -39,8 +39,6 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	uint client_port = 0;
 	struct hostent *hp;
 
-	bool verbose_log = sc->verbose;
-
 	struct sockaddr_in local_addr, serv_addr;
 	int sa_size = sizeof(struct sockaddr_in);
 	memset((char*)&serv_addr, 0, sa_size);
@@ -168,7 +166,6 @@ void *run_ntttcp_receiver_udp_stream( void *ptr )
 void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 {
 	char *log;
-	bool verbose_log = false;
 
 	int ret          = 0;  //hold function return value
 //	int opt          = 1;
@@ -182,8 +179,6 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 	socklen_t addrlen = sizeof(remote_addr);  // length of addresses
 	ssize_t nbytes    = 0; //bytes received
 	struct timeval timeout = {SOCKET_TIMEOUT_SEC, 0}; //set socket timeout
-
-	verbose_log = ss->verbose;
 
 	/* get receiver/itself address */
 	memset(&hints, 0, sizeof hints);
