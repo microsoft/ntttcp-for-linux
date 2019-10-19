@@ -4,6 +4,7 @@ project (ntttcp)
 
 set (SRC_NTTTCP
 endpointsync.c
+logger.c
 main.c
 multithreading.c
 ntttcp.c
