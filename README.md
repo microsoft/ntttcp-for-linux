@@ -2,7 +2,7 @@
 
 ## Summary
 
-A multiple-thread based Linux network throughput benchmark tool.
+A multiple-threaded Linux network throughput benchmark tool.
 
 ## Features
 
@@ -26,11 +26,13 @@ A multiple-thread based Linux network throughput benchmark tool.
 
 * Support reporting TCP retransmit ('--show-tcp-retrans').
 
-* Support reporting number of packets ('--show-nic-packets') and number of interrupts ('--show-dev-interrupts')
+* Support reporting number of packets ('--show-nic-packets') and number of interrupts ('--show-dev-interrupts').
 
-* Support bandwidth limit ('-B' or '--fq-rate-limit')
+* Support bandwidth limit ('-B' or '--fq-rate-limit').
 
 * Support writing log into XML file ('-x').
+
+* Support capturing console log to file ('-O').
 
 
 ## Getting Started
