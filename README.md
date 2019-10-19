@@ -41,15 +41,17 @@ A multiple-threaded Linux network throughput benchmark tool.
 ### Building NTTTCP-for-Linux ###
 
 - Using `make`:
-
+```
 	make; make install
+```
 
 - Using `CMake`:
-
+```
 	cd src
 	mkdir build && cd build
 	cmake ..
 	make && make install
+```
 
 ### Usage
 	
