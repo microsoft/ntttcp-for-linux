@@ -17,5 +17,11 @@ util.c)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -W -O2 -fno-strict-aliasing")
 
+include(GNUInstallDirs)
+
 add_executable(${PROJECT_NAME} ${SRC_NTTTCP})
 target_link_libraries(${PROJECT_NAME} pthread)
+
+install(TARGETS ntttcp
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
