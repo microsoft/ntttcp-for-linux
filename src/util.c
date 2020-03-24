@@ -528,3 +528,46 @@ bool check_resource_limit(struct ntttcp_test *test)
 	}
 }
 
+bool check_is_ip_addr_valid_local(int ss_family, char *ip_to_check)
+{
+	struct ifaddrs *ifaddrp, *ifap;
+	bool is_valid = false;
+	char *ip_addr_str;
+	size_t ip_addr_len;
+	char *log;
+
+	if ((ss_family == AF_INET) && strcmp(ip_to_check, "0.0.0.0")== 0)
+		return true;
+
+	if ((ss_family == AF_INET6) && strcmp(ip_to_check, "::")== 0)
+		return true;
+
+	ip_addr_len = (ss_family == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
+	if ( (ip_addr_str = (char *)malloc(ip_addr_len)) == (char *)NULL) {
+		PRINT_ERR("cannot allocate memory for ip address string");
+		return false;
+	}
+
+	getifaddrs (&ifaddrp);
+
+	for (ifap = ifaddrp; ifap; ifap = ifap->ifa_next) {
+		if (ifap->ifa_addr && ifap->ifa_addr->sa_family == ss_family) {
+			if (ss_family == AF_INET)
+				inet_ntop(AF_INET, &(((struct sockaddr_in *)ifap->ifa_addr)->sin_addr), ip_addr_str, ip_addr_len);
+			else
+				inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)ifap->ifa_addr)->sin6_addr), ip_addr_str, ip_addr_len);
+
+			ASPRINTF(&log, "Interface:[%s]\tAddress: %s", ifap->ifa_name, ip_addr_str);
+			PRINT_DBG_FREE(log);
+
+			if (strcmp(ip_to_check, ip_addr_str) == 0) {
+				is_valid = true;
+				// do not break here; just want to loop all of the interfaces, for DBG log
+			}
+		}
+	}
+
+	free(ip_addr_str);
+	freeifaddrs(ifaddrp);
+	return is_valid;
+}

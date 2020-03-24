@@ -193,6 +193,11 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	struct ntttcp_stream_server *ss;
 	int rc;
 
+	if (!check_is_ip_addr_valid_local(test->domain, test->bind_address)) {
+		PRINT_ERR("cannot listen on the IP address specified");
+		return ERROR_ARGS;
+	}
+
 	/* create test threads */
 	for (t = 0; t < test->server_ports; t++) {
 		ss = tep->server_streams[t];
