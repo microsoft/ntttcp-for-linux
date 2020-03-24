@@ -241,6 +241,9 @@ int verify_args(struct ntttcp_test *test)
 		return ERROR_ARGS;
 	}
 
+	if (test->domain == AF_INET6 && strcmp(test->bind_address, "0.0.0.0") == 0)
+		test->bind_address = "::";
+
 	if (test->domain == AF_INET6 && !strstr( test->bind_address, ":") ) {
 		PRINT_ERR("invalid ipv6 address provided");
 		return ERROR_ARGS;
@@ -295,9 +298,6 @@ int verify_args(struct ntttcp_test *test)
 		PRINT_INFO("invalid connections-per-thread provided. use 1");
 		test->conns_per_thread = 1;
 	}
-
-	if (test->domain == AF_INET6 && strcmp( test->bind_address, "0.0.0.0")== 0 )
-		test->bind_address = "::";
 
 	if (test->client_role) {
 		if (test->use_epoll)
