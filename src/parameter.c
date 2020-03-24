@@ -95,6 +95,7 @@ void print_flags(struct ntttcp_test *test)
 	if (test->save_console_log)
 		printf("%s:\t %s\n", "capture console output to:", test->console_log_filename);
 
+	printf("%s:\t\t\t %s\n", "quiet mode", test->quiet ? "enabled" : "disabled");
 	printf("%s:\t\t\t %s\n", "verbose mode", test->verbose ? "enabled" : "disabled");
 	printf("---------------------------------------------------------\n");
 }
@@ -102,7 +103,7 @@ void print_flags(struct ntttcp_test *test)
 void print_usage()
 {
 	printf("Author: %s\n", AUTHOR_NAME);
-	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-B|-W|-t|-C|-N|-x|-O|-V|-h|-m <mapping>]\n");
+	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-B|-W|-t|-C|-N|-x|-O|-Q|-V|-h|-m <mapping>]\n");
 	printf("        [--show-tcp-retrans|--show-nic-packets|--show-dev-interrupts|--fq-rate-limit]\n\n");
 	printf("\t-r   Run as a receiver\n");
 	printf("\t-s   Run as a sender\n");
@@ -132,6 +133,7 @@ void print_usage()
 	printf("\t     Otherwise, will use 'destination port - 1' as sync port	[default: %d]\n", DEFAULT_BASE_DST_PORT - 1);
 	printf("\t-x   Save output to XML file, by default saves to %s\n", DEFAULT_XML_LOG_FILE_NAME);
 	printf("\t-O   Save console log to file, by default saves to %s\n", DEFAULT_CONSOLE_LOG_FILE_NAME);
+	printf("\t-Q   Quiet mode\n");
 	printf("\t-V   Verbose mode\n");
 	printf("\t-h   Help, tool usage\n");
 
@@ -364,7 +366,7 @@ int verify_args(struct ntttcp_test *test)
 		PRINT_INFO("invalid test warm-up seconds provided. use the default value");
 	}
 
-	if(test->cooldown <0) {
+	if (test->cooldown <0) {
 		test->cooldown = DEFAULT_COOLDOWN_SEC;
 		PRINT_INFO("invalid test cool-down seconds provided. use the default value");
 	}
@@ -386,7 +388,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 	int opt;
 
-	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:Nx::O::Vh", longopts, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:Nx::O::QVh", longopts, NULL)) != -1) {
 		switch (opt) {
 		case 'r':
 		case 's':
@@ -524,6 +526,10 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 				if(optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
 					test->console_log_filename = argv[optind++];
 			}
+			break;
+
+		case 'Q':
+			test->quiet = true;
 			break;
 
 		case 'V':
