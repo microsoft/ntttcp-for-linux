@@ -279,7 +279,6 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 		    ss->endpoint->state == TEST_FINISHED)
 			break;
 
-		bzero(buffer, ss->recv_buf_size);
 		nbytes = recvfrom(sockfd, buffer, ss->recv_buf_size, 0, (struct sockaddr *)&remote_addr, &addrlen);
 		if (nbytes > 0) {
 			__sync_fetch_and_add(&(ss->total_bytes_transferred), nbytes);

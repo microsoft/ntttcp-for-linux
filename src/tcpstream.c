@@ -521,7 +521,6 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 			/* handle data from an EXISTING client */
 			else {
 				for (int max_io = 0; max_io < MAX_IO_PER_POLL; max_io++) {
-					bzero(buffer, ss->recv_buf_size);
 					bytes_to_be_read = ss->is_sync_thread ? 1 : ss->recv_buf_size;
 
 					/* got error or connection closed by client */
@@ -657,7 +656,6 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 			/* handle data from an EXISTING client */
 			else{
 				for (int max_io = 0; max_io < MAX_IO_PER_POLL; max_io++) {
-					bzero(buffer, ss->recv_buf_size);
 					bytes_to_be_read = ss->is_sync_thread ? 1 : ss->recv_buf_size;
 
 					/* got error or connection closed by client */
