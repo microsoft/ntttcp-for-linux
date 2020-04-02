@@ -37,8 +37,8 @@ main.o: main.c
 
 .PHONY: clean
 clean:
-	rm -rf /usr/bin/$(OUT)
-	rm -rf *.o $(OUT)
+	rm -f *.o $(OUT)
+	rm -f /usr/bin/$(OUT)
 
 .PHONY: install
 install:

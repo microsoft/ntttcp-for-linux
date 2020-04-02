@@ -117,7 +117,7 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 			elapsed_sec += last_checkpoint.interval_sec;
 
 			/* if test was interrupted by CTRL + C */
-			if (!is_light_turned_on(tep->test->duration == 0)) {
+			if (!is_light_turned_on()) {
 				PRINT_INFO("Test was interrupted.");
 				goto END;
 			}
@@ -155,7 +155,7 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 	tep->results->init_rx_packets = get_single_value_from_os_file(tep->test->show_interface_packets, "rx");
 	tep->results->init_interrupts = get_interrupts_from_proc_by_dev(tep->test->show_dev_interrupts);
 
-	while(is_light_turned_on(tep->test->duration == 0)) {
+	while(is_light_turned_on()) {
 		/* Wait 500 micro-seconds. We don't want to pull the status too often.
 		 * But, we also don't want to wait too long time;
 		 * otherwise, in the case of CTRL+C, the test streams have been stopped by CTRL+C (then light is turned off), but we are still waiting here

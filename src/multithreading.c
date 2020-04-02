@@ -45,18 +45,9 @@ void wait_light_off( void )
 	pthread_mutex_unlock( &light_mutex );
 }
 
-int is_light_turned_on( bool ignore )
+int is_light_turned_on( void )
 {
-	int temp;
-
-	if (ignore)
-		return true;
-
-	pthread_mutex_lock( &light_mutex );
-	temp = run_light;
-	pthread_mutex_unlock( &light_mutex );
-
-	return temp;
+	return run_light;
 }
 
 /************************************************************/
@@ -68,7 +59,7 @@ void sig_handler(int signo)
 	if (signo == SIGINT) {
 		PRINT_INFO("Interrupted by Ctrl+C");
 
-		if (is_light_turned_on(false))
+		if (is_light_turned_on())
 			turn_off_light();
 		else
 			exit (1);

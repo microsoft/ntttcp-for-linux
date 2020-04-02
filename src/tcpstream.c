@@ -6,16 +6,18 @@
 
 #include "tcpstream.h"
 
+#define MAX_IO_PER_POLL 32
+
 /************************************************************/
 //		ntttcp socket functions
 /************************************************************/
-int n_read(int fd, char *buffer, size_t total)
+int n_recv(int fd, char *buffer, size_t total)
 {
 	register ssize_t rtn;
 	register size_t left = total;
 
 	while (left > 0) {
-		rtn = read(fd, buffer, left);
+		rtn = recv(fd, buffer, left, 0);
 		if (rtn < 0) {
 			if (errno == EINTR || errno == EAGAIN) {
 				break;
@@ -34,13 +36,13 @@ int n_read(int fd, char *buffer, size_t total)
 	return total - left;
 }
 
-int n_write(int fd, const char *buffer, size_t total)
+int n_send(int fd, const char *buffer, size_t total)
 {
 	register ssize_t rtn;
 	register size_t left = total;
 
 	while (left > 0) {
-		rtn = write(fd, buffer, left);
+		rtn = send(fd, buffer, left, 0);
 		if (rtn < 0) {
 			if (errno == EINTR || errno == EAGAIN) {
 				return total - left;
@@ -249,7 +251,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	//fill_buffer(buffer, sc->send_buf_size);
 	memset(buffer, 'A', buffer_len);
 
-	while ( is_light_turned_on(sc->continuous_mode) ) {
+	while ( is_light_turned_on() ) {
 		if (sc->hold_on)
 			continue;
 
@@ -258,7 +260,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 			/* skip those socket fds ('-1') if failed in creation phase */
 			if (sockfd < 0)
 				continue;
-			n = n_write(sockfd, buffer, buffer_len);
+			n = n_send(sockfd, buffer, buffer_len);
 			if (n < 0) {
 //				PRINT_ERR("cannot write data to a socket");
 				continue;
@@ -481,6 +483,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 							break;
 						}
 					}
+
 					if (set_socket_non_blocking(newfd) == -1) {
 						ASPRINTF(&log, "cannot set the new socket as non-blocking: %d", newfd);
 						PRINT_DBG_FREE(log);
@@ -504,39 +507,46 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 						PRINT_DBG_FREE(log);
 					}
 
-					event.data.fd = newfd;
-					event.events = EPOLLIN;
-					if (epoll_ctl (efd, EPOLL_CTL_ADD, newfd, &event) != 0)
-						PRINT_ERR("epoll_ctl failed");
-
 					//if there is no synch thread, if any new connection coming, indicates ss started
 					if ( ss->no_synch )
 						turn_on_light();
 					//else, leave the sync thread to fire the trigger
+
+					event.data.fd = newfd;
+					event.events = EPOLLIN;
+					if (epoll_ctl (efd, EPOLL_CTL_ADD, newfd, &event) != 0)
+						PRINT_ERR("epoll_ctl failed");
 				}
 			}
 			/* handle data from an EXISTING client */
 			else {
-				bzero(buffer, ss->recv_buf_size);
-				bytes_to_be_read = ss->is_sync_thread ? 1 : ss->recv_buf_size;
+				for (int max_io = 0; max_io < MAX_IO_PER_POLL; max_io++) {
+					bzero(buffer, ss->recv_buf_size);
+					bytes_to_be_read = ss->is_sync_thread ? 1 : ss->recv_buf_size;
 
-				/* got error or connection closed by client */
-				if ((nbytes = n_read(current_fd, buffer, bytes_to_be_read)) <= 0) {
-					if (nbytes == 0) {
-						ASPRINTF(&log, "socket closed: %d", i);
-						PRINT_DBG_FREE(log);
+					/* got error or connection closed by client */
+					errno = 0;
+					nbytes = n_recv(current_fd, buffer, bytes_to_be_read);
+					if (nbytes <= 0) {
+						if (errno != EAGAIN) {
+							if (nbytes == 0) {
+								ASPRINTF(&log, "socket closed: %d", i);
+								PRINT_DBG_FREE(log);
+							}
+							else {
+								ASPRINTF(&log, "error: cannot read data from socket: %d", i);
+								PRINT_INFO_FREE(log);
+								err_code = ERROR_NETWORK_READ;
+								/* need to continue ss and check other socket, so don't end the ss */
+							}
+							close (current_fd);
+						}
+						break;
 					}
-					else {
-						ASPRINTF(&log, "error: cannot read data from socket: %d", i);
-						PRINT_INFO_FREE(log);
-						err_code = ERROR_NETWORK_READ;
-						/* need to continue ss and check other socket, so don't end the ss */
+					/* report how many bytes received */
+					else if (nbytes > 0) {
+						__sync_fetch_and_add(&(ss->total_bytes_transferred), nbytes);
 					}
-					close (current_fd);
-				}
-				/* report how many bytes received */
-				else {
-					__sync_fetch_and_add(&(ss->total_bytes_transferred), nbytes);
 				}
 			}
 		}
@@ -646,27 +656,34 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 			}
 			/* handle data from an EXISTING client */
 			else{
-				bzero(buffer, ss->recv_buf_size);
-				bytes_to_be_read = ss->is_sync_thread ? 1 : ss->recv_buf_size;
+				for (int max_io = 0; max_io < MAX_IO_PER_POLL; max_io++) {
+					bzero(buffer, ss->recv_buf_size);
+					bytes_to_be_read = ss->is_sync_thread ? 1 : ss->recv_buf_size;
 
-				/* got error or connection closed by client */
-				if ((nbytes = n_read(current_fd, buffer, bytes_to_be_read)) <= 0) {
-					if (nbytes == 0) {
-						ASPRINTF(&log, "socket closed: %d", current_fd);
-						PRINT_DBG_FREE(log);
+					/* got error or connection closed by client */
+					errno = 0;
+					nbytes = n_recv(current_fd, buffer, bytes_to_be_read);
+					if (nbytes <= 0) {
+						if (errno != EAGAIN) {
+							if (nbytes == 0) {
+								ASPRINTF(&log, "socket closed: %d", current_fd);
+								PRINT_DBG_FREE(log);
+							}
+							else{
+								ASPRINTF(&log, "error: cannot read data from socket: %d", current_fd);
+								PRINT_INFO_FREE(log);
+								err_code = ERROR_NETWORK_READ;
+								/* need to continue test and check other socket, so don't end the test */
+							}
+							close(current_fd);
+							FD_CLR(current_fd, &ss->read_set); /* remove from master set when finished */
+						}
+						break;
 					}
+					/* report how many bytes received */
 					else{
-						ASPRINTF(&log, "error: cannot read data from socket: %d", current_fd);
-						PRINT_INFO_FREE(log);
-						err_code = ERROR_NETWORK_READ;
-						/* need to continue test and check other socket, so don't end the test */
+						__sync_fetch_and_add(&(ss->total_bytes_transferred), nbytes);
 					}
-					close(current_fd);
-					FD_CLR(current_fd, &ss->read_set); /* remove from master set when finished */
-				}
-				/* report how many bytes received */
-				else{
-					__sync_fetch_and_add(&(ss->total_bytes_transferred), nbytes);
 				}
 			}
 		}
