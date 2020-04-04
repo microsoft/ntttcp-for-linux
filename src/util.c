@@ -347,8 +347,8 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "		<send_socket_buff>%lu</send_socket_buff>\n", test->send_buf_size);
 	fprintf(logfile, "		<recv_socket_buff>%lu</recv_socket_buff>\n", test->recv_buf_size);
 	fprintf(logfile, "		<port>%d</port>\n", test->server_base_port);
-	fprintf(logfile, "		<sync_port>%s</sync_port>\n", "False");
-	fprintf(logfile, "		<no_sync>%s</no_sync>\n", "False");
+	fprintf(logfile, "		<sync_port>%d</sync_port>\n", test->server_base_port - 1);
+	fprintf(logfile, "		<no_sync>%s</no_sync>\n", test->no_synch == 0 ? "False": "True");
 	fprintf(logfile, "		<wait_timeout_milliseconds>%d</wait_timeout_milliseconds>\n", 0);
 	fprintf(logfile, "		<async>%s</async>\n", "False");
 	fprintf(logfile, "		<verbose>%s</verbose>\n", test->verbose ? "True":"False");
@@ -358,8 +358,8 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "		<verify_data>%s</verify_data>\n", "False");
 	fprintf(logfile, "		<wait_all>%s</wait_all>\n", "False");
 	fprintf(logfile, "		<run_time>%d</run_time>\n", test->duration);
-	fprintf(logfile, "		<warmup_time>%d</warmup_time>\n", 0);
-	fprintf(logfile, "		<cooldown_time>%d</cooldown_time>\n", 0);
+	fprintf(logfile, "		<warmup_time>%d</warmup_time>\n", test->warmup);
+	fprintf(logfile, "		<cooldown_time>%d</cooldown_time>\n", test->cooldown);
 	fprintf(logfile, "		<dash_n_timeout>%d</dash_n_timeout>\n", 0);
 	fprintf(logfile, "		<bind_sender>%s</bind_sender>\n", "False");
 	fprintf(logfile, "		<sender_name>%s</sender_name>\n", "NA");
