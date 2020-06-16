@@ -68,7 +68,7 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 			? sc->client_port + i
 			: sc->client_port;
 
-	(*(struct sockaddr_in*)&local_addr).sin_port = client_port;
+	(*(struct sockaddr_in*)&local_addr).sin_port = htons(client_port);
 	(*(struct sockaddr_in*)&local_addr).sin_family = sc->domain; //AF_INET
 
 	if (( ret = bind(sockfd, (struct sockaddr *)&local_addr, sa_size)) < 0 ){
