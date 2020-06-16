@@ -39,6 +39,8 @@ struct ntttcp_test_endpoint_thread_result{
 };
 
 struct ntttcp_test_endpoint_results{
+	struct  ntttcp_test_endpoint *endpoint;
+
 	/* raw data of counters collected before and after test run */
 	uint64_t	total_bytes;
 	double	actual_test_time;

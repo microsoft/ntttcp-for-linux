@@ -193,6 +193,11 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 	ASPRINTF(&log, "\t throughput\t:%s", log_tmp);
 	free(log_tmp);
 	PRINT_INFO_FREE(log);
+	/* only show RetransSegs for TCP traffic */
+	if (tepr->endpoint->test->protocol == TCP) {
+		ASPRINTF(&log, "\t retrans segs\t:%lu", tepr->packets_retransmitted);
+		PRINT_INFO_FREE(log);
+	}
 
 	if (tep->test->show_tcp_retransmit) {
 		PRINT_INFO("tcp retransmit:");
