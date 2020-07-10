@@ -4,6 +4,11 @@
 // Author: Shihua (Simon) Xiao, sixiao@microsoft.com
 // ----------------------------------------------------------------------------------
 
+#define _GNU_SOURCE	// for asprintf()
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+
 #include "util.h"
 
 void enable_fq_rate_limit(struct ntttcp_stream_client *sc, int sockfd)
@@ -575,4 +580,25 @@ bool check_is_ip_addr_valid_local(int ss_family, char *ip_to_check)
 	free(ip_addr_str);
 	freeifaddrs(ifaddrp);
 	return is_valid;
+}
+
+char clear_current_line(void)
+{
+	static int is_stdout_a_tty = -1;
+
+	if (is_stdout_a_tty < 0) {
+		// If two threads race this check/modification of is_stdout_a_tty here,
+		// it should be fine.
+		const char *term = getenv("TERM");
+		bool is_dumb_term = term && !strcmp(term, "dumb");
+
+		is_stdout_a_tty = !is_dumb_term && isatty(fileno(stdout));
+	}
+
+	if (is_stdout_a_tty) {
+		printf("%c[2K", 27);
+		return '\r';
+	}
+
+	return '\n';
 }
