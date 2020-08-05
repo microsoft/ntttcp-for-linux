@@ -6,6 +6,9 @@ CFLAGS=-Wall -W -O0 -ggdb3 -fno-omit-frame-pointer
 else
 CFLAGS=-Wall -W -O2 -fno-strict-aliasing
 endif
+ifeq ($(PREFIX),)
+PREFIX=/usr/local
+endif
 CLIBS=-pthread
 OUT=ntttcp
 OBJS=ntttcp.o logger.o oscounter.o util.o throughputmanagement.o tcpstream.o udpstream.o endpointsync.o multithreading.o parameter.o main.o
@@ -37,10 +40,10 @@ main.o: main.c
 
 .PHONY: clean
 clean:
-	rm -rf /usr/bin/$(OUT)
+	rm -rf $(PREFIX)/bin/$(OUT)
 	rm -rf *.o $(OUT)
 
 .PHONY: install
 install:
-	cp $(OUT) /usr/bin
+	cp $(OUT) $(PREFIX)/bin/
 
