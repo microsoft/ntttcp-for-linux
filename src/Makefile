@@ -7,7 +7,7 @@ else
 CFLAGS=-Wall -W -O2 -fno-strict-aliasing
 endif
 ifeq ($(PREFIX),)
-PREFIX=/usr/local
+PREFIX=/usr/local/bin
 endif
 CLIBS=-pthread
 OUT=ntttcp
@@ -40,10 +40,10 @@ main.o: main.c
 
 .PHONY: clean
 clean:
-	rm -rf $(PREFIX)/bin/$(OUT)
+	rm -rf $(PREFIX)/$(OUT)
 	rm -rf *.o $(OUT)
 
 .PHONY: install
 install:
-	cp $(OUT) $(PREFIX)/bin/
+	cp $(OUT) $(PREFIX)/
 
