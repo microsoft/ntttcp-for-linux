@@ -543,7 +543,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 						break;
 					}
 					/* report how many bytes received */
-					else if (nbytes > 0) {
+					else {
 						__sync_fetch_and_add(&(ss->total_bytes_transferred), nbytes);
 					}
 				}
