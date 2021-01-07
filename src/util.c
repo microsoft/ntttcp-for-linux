@@ -4,6 +4,11 @@
 // Author: Shihua (Simon) Xiao, sixiao@microsoft.com
 // ----------------------------------------------------------------------------------
 
+#define _GNU_SOURCE	// for asprintf()
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+
 #include "util.h"
 
 void enable_fq_rate_limit(struct ntttcp_stream_client *sc, int sockfd)
@@ -193,6 +198,11 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 	ASPRINTF(&log, "\t throughput\t:%s", log_tmp);
 	free(log_tmp);
 	PRINT_INFO_FREE(log);
+	/* only show RetransSegs for TCP traffic */
+	if (tepr->endpoint->test->protocol == TCP) {
+		ASPRINTF(&log, "\t retrans segs\t:%lu", tepr->packets_retransmitted);
+		PRINT_INFO_FREE(log);
+	}
 
 	if (tep->test->show_tcp_retransmit) {
 		PRINT_INFO("tcp retransmit:");
@@ -347,8 +357,8 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "		<send_socket_buff>%lu</send_socket_buff>\n", test->send_buf_size);
 	fprintf(logfile, "		<recv_socket_buff>%lu</recv_socket_buff>\n", test->recv_buf_size);
 	fprintf(logfile, "		<port>%d</port>\n", test->server_base_port);
-	fprintf(logfile, "		<sync_port>%s</sync_port>\n", "False");
-	fprintf(logfile, "		<no_sync>%s</no_sync>\n", "False");
+	fprintf(logfile, "		<sync_port>%d</sync_port>\n", test->server_base_port - 1);
+	fprintf(logfile, "		<no_sync>%s</no_sync>\n", test->no_synch == 0 ? "False": "True");
 	fprintf(logfile, "		<wait_timeout_milliseconds>%d</wait_timeout_milliseconds>\n", 0);
 	fprintf(logfile, "		<async>%s</async>\n", "False");
 	fprintf(logfile, "		<verbose>%s</verbose>\n", test->verbose ? "True":"False");
@@ -358,8 +368,8 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "		<verify_data>%s</verify_data>\n", "False");
 	fprintf(logfile, "		<wait_all>%s</wait_all>\n", "False");
 	fprintf(logfile, "		<run_time>%d</run_time>\n", test->duration);
-	fprintf(logfile, "		<warmup_time>%d</warmup_time>\n", 0);
-	fprintf(logfile, "		<cooldown_time>%d</cooldown_time>\n", 0);
+	fprintf(logfile, "		<warmup_time>%d</warmup_time>\n", test->warmup);
+	fprintf(logfile, "		<cooldown_time>%d</cooldown_time>\n", test->cooldown);
 	fprintf(logfile, "		<dash_n_timeout>%d</dash_n_timeout>\n", 0);
 	fprintf(logfile, "		<bind_sender>%s</bind_sender>\n", "False");
 	fprintf(logfile, "		<sender_name>%s</sender_name>\n", "NA");
@@ -570,4 +580,25 @@ bool check_is_ip_addr_valid_local(int ss_family, char *ip_to_check)
 	free(ip_addr_str);
 	freeifaddrs(ifaddrp);
 	return is_valid;
+}
+
+char clear_current_line(void)
+{
+	static int is_stdout_a_tty = -1;
+
+	if (is_stdout_a_tty < 0) {
+		// If two threads race this check/modification of is_stdout_a_tty here,
+		// it should be fine.
+		const char *term = getenv("TERM");
+		bool is_dumb_term = term && !strcmp(term, "dumb");
+
+		is_stdout_a_tty = !is_dumb_term && isatty(fileno(stdout));
+	}
+
+	if (is_stdout_a_tty) {
+		printf("%c[2K", 27);
+		return '\r';
+	}
+
+	return '\n';
 }

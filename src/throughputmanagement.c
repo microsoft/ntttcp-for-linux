@@ -5,6 +5,7 @@
 // ----------------------------------------------------------------------------------
 
 #include "throughputmanagement.h"
+#include "util.h"
 
 void check_bandwidth_limit(struct ntttcp_test_endpoint *tep)
 {
@@ -62,9 +63,9 @@ struct report_segment report_real_time_throughput(struct ntttcp_test_endpoint *t
 	total_bytes = this_total_bytes - last_total_bytes;
 
 	if (!tep->test->quiet) {
-		printf("%c[2K", 27); /* cleanup current line */
 		char *throughput = format_throughput(total_bytes, test_time);
-		printf("%s: %s\r", "Real-time throughput", throughput);
+		char line_end = clear_current_line();
+		printf("%s: %s%c", "Real-time throughput", throughput, line_end);
 		fflush(stdout);
 		free(throughput);
 	}
@@ -232,7 +233,7 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 	PRINT_INFO("Test cycle finished.");
 
 END:
-	if (tep->test->client_role == true) {
+	if (tep->test->client_role == true && tep->test->no_synch == false) {
 		/*
 		 * if actual_test_time < tep->negotiated_test_cycle_time;
 		 * then this indicates that in the sender side, test is being interrupted.
