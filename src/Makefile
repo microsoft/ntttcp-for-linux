@@ -40,8 +40,8 @@ main.o: main.c
 
 .PHONY: clean
 clean:
-	rm -rf $(PREFIX)/$(OUT)
 	rm -rf *.o $(OUT)
+	rm -rf $(PREFIX)/$(OUT)
 
 .PHONY: install
 install:

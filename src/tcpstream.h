@@ -14,8 +14,8 @@
 #include "util.h"
 #include "multithreading.h"
 
-int n_read(int fd, char *buffer, size_t total);
-int n_write(int fd, const char *buffer, size_t total);
+int n_recv(int fd, char *buffer, size_t total);
+int n_send(int fd, const char *buffer, size_t total);
 
 void *run_ntttcp_sender_tcp_stream( void *ptr );
 

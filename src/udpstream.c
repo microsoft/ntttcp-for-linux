@@ -85,6 +85,17 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	if (sc->socket_fq_rate_limit_bytes != 0)
 		enable_fq_rate_limit(sc, sockfd);
 
+	if (connect(sockfd, &serv_addr, sa_size) == -1) {
+		ASPRINTF(&log,
+			 "failed to connect socket[%d] to remote: [%s:%d]. errno = %d.",
+			 sockfd,
+			 sc->bind_address,
+			 sc->server_port,
+			 errno);
+		PRINT_ERR(log);
+		continue;
+	}
+
 	ASPRINTF(&log, "Running UDP stream: local:%d [socket:%d] --> %s:%d",
 		 ntohs(((struct sockaddr_in *)&local_addr)->sin_port),
 		 sockfd,
@@ -110,7 +121,7 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 	}
 
 	memset(buffer, 'B', sc->send_buf_size * sizeof(char));
-	while (is_light_turned_on(sc->continuous_mode)) {
+	while (is_light_turned_on()) {
 		if (sc->hold_on)
 			continue;
 
@@ -120,7 +131,7 @@ void *run_ntttcp_sender_udp4_stream( struct ntttcp_stream_client * sc )
 			if (sockfd < 0)
 				continue;
 
-			n = sendto(sockfd, buffer, sc->send_buf_size, 0, (struct sockaddr *)&serv_addr, sa_size);
+			n = send(sockfd, buffer, sc->send_buf_size, 0);
 			if (n < 0) {
 	//			PRINT_ERR("cannot write data to a socket");
 	//			printf("error: %d \n", errno);
@@ -268,7 +279,6 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 		    ss->endpoint->state == TEST_FINISHED)
 			break;
 
-		bzero(buffer, ss->recv_buf_size);
 		nbytes = recvfrom(sockfd, buffer, ss->recv_buf_size, 0, (struct sockaddr *)&remote_addr, &addrlen);
 		if (nbytes > 0) {
 			__sync_fetch_and_add(&(ss->total_bytes_transferred), nbytes);
