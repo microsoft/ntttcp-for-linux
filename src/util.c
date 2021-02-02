@@ -200,7 +200,7 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 	PRINT_INFO_FREE(log);
 	/* only show RetransSegs for TCP traffic */
 	if (tepr->endpoint->test->protocol == TCP) {
-		ASPRINTF(&log, "\t retrans segs\t:%lu", tepr->packets_retransmitted);
+		ASPRINTF(&log, "\t retrans segs\t:%"PRIu64, tepr->packets_retransmitted);
 		PRINT_INFO_FREE(log);
 	}
 
@@ -414,9 +414,9 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<dpcs metric=\"count/sec\">%.3f</dpcs>\n", 0.000);
 	fprintf(logfile, "	<avg_packets_per_dpc metric=\"packets/dpc\">%.3f</avg_packets_per_dpc>\n", 0.000);
 	fprintf(logfile, "	<cycles metric=\"cycles/byte\">%.3f</cycles>\n", tepr->cycles_per_byte);
-	fprintf(logfile, "	<packets_sent>%lu</packets_sent>\n", tepr->packets_sent);
-	fprintf(logfile, "	<packets_received>%lu</packets_received>\n", tepr->packets_received);
-	fprintf(logfile, "	<packets_retransmitted>%lu</packets_retransmitted>\n", tepr->packets_retransmitted);
+	fprintf(logfile, "	<packets_sent>%" PRIu64"</packets_sent>\n", tepr->packets_sent);
+	fprintf(logfile, "	<packets_received>%" PRIu64"</packets_received>\n", tepr->packets_received);
+	fprintf(logfile, "	<packets_retransmitted>%" PRIu64"</packets_retransmitted>\n", tepr->packets_retransmitted);
 	fprintf(logfile, "	<errors>%d</errors>\n", tepr->errors);
 	fprintf(logfile, "	<cpu metric=\"%%\">%.3f</cpu>\n", tepr->cpu_busy_percent * 100);
 	fprintf(logfile, "	<bufferCount>%u</bufferCount>\n", 0);
