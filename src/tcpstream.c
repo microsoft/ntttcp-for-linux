@@ -414,6 +414,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 	char *ip_address_str;
 	int ip_addr_max_size;
 	int i = 0;
+	int max_io = 0;
 
 	if ( (buffer = (char *)malloc(ss->recv_buf_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for receive buffer");
@@ -520,7 +521,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 			}
 			/* handle data from an EXISTING client */
 			else {
-				for (int max_io = 0; max_io < MAX_IO_PER_POLL; max_io++) {
+				for (max_io = 0; max_io < MAX_IO_PER_POLL; max_io++) {
 					bytes_to_be_read = ss->is_sync_thread ? 1 : ss->recv_buf_size;
 
 					/* got error or connection closed by client */
@@ -574,6 +575,7 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 	socklen_t peer_addr_size, local_addr_size;
 	char *ip_address_str;
 	int ip_addr_max_size;
+	int max_io = 0;
 
 	if ( (buffer = (char *)malloc(ss->recv_buf_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for receive buffer");
@@ -655,7 +657,7 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 			}
 			/* handle data from an EXISTING client */
 			else{
-				for (int max_io = 0; max_io < MAX_IO_PER_POLL; max_io++) {
+				for (max_io = 0; max_io < MAX_IO_PER_POLL; max_io++) {
 					bytes_to_be_read = ss->is_sync_thread ? 1 : ss->recv_buf_size;
 
 					/* got error or connection closed by client */
