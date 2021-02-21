@@ -64,7 +64,11 @@ struct report_segment report_real_time_throughput(struct ntttcp_test_endpoint *t
 
 	if (!tep->test->quiet) {
 		char *throughput = format_throughput(total_bytes, test_time);
-		char line_end = clear_current_line();
+		char line_end = '\n';
+		if (tep->running_tty) {
+			printf("%c[2K", 27); /* cleanup current line */
+			line_end = '\r';
+		}
 		printf("%s: %s%c", "Real-time throughput", throughput, line_end);
 		fflush(stdout);
 		free(throughput);
