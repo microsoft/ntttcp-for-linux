@@ -5,7 +5,6 @@
 // ----------------------------------------------------------------------------------
 
 #include "throughputmanagement.h"
-#include "util.h"
 
 void check_bandwidth_limit(struct ntttcp_test_endpoint *tep)
 {

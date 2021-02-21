@@ -4,11 +4,6 @@
 // Author: Shihua (Simon) Xiao, sixiao@microsoft.com
 // ----------------------------------------------------------------------------------
 
-#define _GNU_SOURCE	// for asprintf()
-#include <string.h>
-#include <stdio.h>
-#include <unistd.h>
-
 #include "util.h"
 
 void enable_fq_rate_limit(struct ntttcp_stream_client *sc, int sockfd)
