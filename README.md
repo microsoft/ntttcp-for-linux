@@ -110,11 +110,11 @@ NTTTCP for Linux 1.3.4
 
 # Related topics
 
-1. [NTTTCP](https://gallery.technet.microsoft.com/NTttcp-Version-528-Now-f8b12769)
+1. [Windows ntttcp.exe](https://github.com/microsoft/ntttcp)
 
-2. [Microsoft Server & Cloud Blog](http://blogs.technet.com/b/server-cloud/)
+2. [Use ntttcp to test network throughput](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-bandwidth-testing)
 
-3. [HyperV Linux Integrated Services Test](https://github.com/LIS/lis-test)
+3. [Linux Integration Services Automation, LISA](https://github.com/microsoft/lisa)
 
 
 ## Terms of Use
