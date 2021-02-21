@@ -79,6 +79,7 @@ struct ntttcp_test_endpoint{
 	struct	ntttcp_stream_server **server_streams;	/* alloc memory for this if server/receiver role */
 	pthread_t	*threads;			/* linux threads created to transfer test data */
 
+	bool	running_tty;				/* print log to tty, or redirect it to a file */
 	struct	ntttcp_test_endpoint_results	*results;	/* test results */
 
 	/* to support testing with multiple senders */

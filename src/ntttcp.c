@@ -56,6 +56,13 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->verbose          = false;
 }
 
+bool is_running_tty(void)
+{
+	const char *term = getenv("TERM");
+	bool is_dumb_term = term && !strcmp(term, "dumb");
+	return  !is_dumb_term && isatty(fileno(stdout));
+}
+
 struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, int endpoint_role)
 {
 	unsigned int i = 0;
@@ -77,6 +84,7 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	e->negotiated_test_cycle_time = test->warmup + test->duration + test->cooldown;
 	e->start_time = now;
 	e->end_time = now;
+	e->running_tty = is_running_tty();
 	e->synch_socket = 0;
 	e->num_remote_endpoints = 0;
 	for (i=0; i<MAX_REMOTE_ENDPOINTS; i++) e->remote_endpoints[i] = -1;
