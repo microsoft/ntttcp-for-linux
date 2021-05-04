@@ -77,8 +77,6 @@ const char *unit_bps[] =
 	"Gbps"
 };
 
-#define K 1000;
-
 int process_test_results(struct ntttcp_test_endpoint *tep)
 {
 	struct ntttcp_test_endpoint_results *tepr = tep->results;
