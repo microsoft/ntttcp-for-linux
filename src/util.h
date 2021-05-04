@@ -92,7 +92,7 @@ struct ntttcp_test_endpoint_results{
 };
 
 void fill_buffer(register char *buf, register int count);
-double unit_atod(const char *s);
+double unit_atod(const char *s, int unit_k);
 double get_time_diff(struct timeval *t1, struct timeval *t2);
 
 int process_test_results(struct ntttcp_test_endpoint *tep);

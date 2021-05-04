@@ -38,14 +38,22 @@
 #define MAX_UDP_SEND_SIZE		(65535 - 8 - 20)
 #define MAX_LOCAL_IP_PORT		65535
 
+/* Unit conversion */
+#define BYTE_TO_BITS			8
+/* decimal based, used for throughput unit conversion */
+#define DECIMAL_BASED_UNIT_K		1000
+#define DECIMAL_BASED_UNIT_M		(1000 * 1000)
+/* binary based, used for buffer size unit conversion */
+#define BINARY_BASED_UNIT_K		1024
+
 /* default values */
 #define DEFAULT_NUM_SERVER_PORTS	16
 #define DEFAULT_THREADS_PER_SERVER_PORT	4
 #define DEFAULT_CLIENT_CONNS_PER_THREAD	1
 #define DEFAULT_BASE_DST_PORT		5001
 #define DEFAULT_BASE_SRC_PORT 		25001
-#define DEFAULT_RECV_BUFFER_SIZE	64 * 1024
-#define DEFAULT_SEND_BUFFER_SIZE	128 * 1024
+#define DEFAULT_RECV_BUFFER_SIZE	(64 * 1024)
+#define DEFAULT_SEND_BUFFER_SIZE	(128 * 1024)
 #define DEFAULT_WARMUP_SEC		0
 #define DEFAULT_TEST_DURATION		60
 #define DEFAULT_COOLDOWN_SEC		0

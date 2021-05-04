@@ -47,12 +47,7 @@ double get_time_diff(struct timeval *t1, struct timeval *t2)
 	return fabs( (t1->tv_sec + (t1->tv_usec / 1000000.0)) - (t2->tv_sec + (t2->tv_usec / 1000000.0)) );
 }
 
-const long KIBI = 1<<10;
-const long MEBI = 1<<20;
-const long GIBI = 1<<30;
-const int BYTE_TO_BITS = 8;
-
-double unit_atod(const char *s)
+double unit_atod(const char *s, int unit_k)
 {
 	double n;
 	char suffix = '\0';
@@ -60,13 +55,13 @@ double unit_atod(const char *s)
 	sscanf(s, "%lf%c", &n, &suffix);
 	switch (suffix) {
 	case 'g': case 'G':
-		n *= GIBI;
+		n *= (unit_k * unit_k * unit_k);
 		break;
 	case 'm': case 'M':
-		n *= MEBI;
+		n *= (unit_k * unit_k);
 		break;
 	case 'k': case 'K':
-		n *= KIBI;
+		n *= unit_k;
 		break;
 	default:
 		break;
@@ -81,6 +76,8 @@ const char *unit_bps[] =
 	"Mbps",
 	"Gbps"
 };
+
+#define K 1000;
 
 int process_test_results(struct ntttcp_test_endpoint *tep)
 {
@@ -100,8 +97,8 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 		if (tep->results->threads[i]->is_sync_thread == true)
 			continue;
 
-		tepr->threads[i]->KBps = tepr->threads[i]->total_bytes / KIBI / tepr->threads[i]->actual_test_time;
-		tepr->threads[i]->MBps = tepr->threads[i]->KBps / KIBI;
+		tepr->threads[i]->KBps = tepr->threads[i]->total_bytes / tepr->threads[i]->actual_test_time / DECIMAL_BASED_UNIT_K;
+		tepr->threads[i]->MBps = tepr->threads[i]->KBps / DECIMAL_BASED_UNIT_K;
 		tepr->threads[i]->mbps = tepr->threads[i]->MBps * BYTE_TO_BITS;
 	}
 
@@ -130,7 +127,7 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	tepr->cpu_ps_softirq_usage = (tepr->final_cpu_ps->softirq_time - tepr->init_cpu_ps->softirq_time) / cpu_ps_total_diff;
 
 	/* calculate for counters for xml log (compatible with Windows ntttcp.exe) */
-	tepr->total_bytes_MB = total_bytes / MEBI;
+	tepr->total_bytes_MB = total_bytes / DECIMAL_BASED_UNIT_M;
 	tepr->throughput_MBps = tepr->total_bytes_MB / test_duration;
 	tepr->throughput_mbps = tepr->throughput_MBps * BYTE_TO_BITS;
 	tepr->cycles_per_byte = total_bytes == 0 ? 0 :
@@ -439,8 +436,8 @@ char *format_throughput(uint64_t bytes_transferred, double test_duration)
 	char *throughput;
 
 	tmp = bytes_transferred * 8.0 / test_duration;
-	while (tmp > 1000 && unit_idx < 3) {
-		tmp /= 1000.0;
+	while (tmp > DECIMAL_BASED_UNIT_K && unit_idx < 3) {
+		tmp /= DECIMAL_BASED_UNIT_K;
 		unit_idx++;
 	}
 
