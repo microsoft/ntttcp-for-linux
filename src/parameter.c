@@ -468,16 +468,16 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			break;
 
 		case 'b':
-			test->recv_buf_size = unit_atod(optarg);
-			test->send_buf_size = unit_atod(optarg);
+			test->recv_buf_size = unit_atod(optarg, BINARY_BASED_UNIT_K);
+			test->send_buf_size = unit_atod(optarg, BINARY_BASED_UNIT_K);
 			break;
 
 		case 'B':
-			test->bandwidth_limit = unit_atod(optarg);
+			test->bandwidth_limit = unit_atod(optarg, DECIMAL_BASED_UNIT_K);
 			break;
 
 		case LO_FQ_RATE_LIMIT:
-			test->fq_rate_limit = unit_atod(optarg);
+			test->fq_rate_limit = unit_atod(optarg, DECIMAL_BASED_UNIT_K);
 			break;
 
 		case 'W':
