@@ -378,17 +378,19 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "		<packet_spacing>%d</packet_spacing>\n", 0);
 	fprintf(logfile, "	</parameters>\n");
 
-	for(i = 0; i < tep->total_threads; i++ ){
-		if (tep->results->threads[i]->is_sync_thread == true)
-			continue;
+	if (test->verbose) {
+		for(i = 0; i < tep->total_threads; i++ ){
+			if (tep->results->threads[i]->is_sync_thread == true)
+				continue;
 
-		fprintf(logfile, "	<thread index=\"%i\">\n", i);
-		fprintf(logfile, "		<realtime metric=\"s\">%.3f</realtime>\n", tepr->threads[i]->actual_test_time);
-		fprintf(logfile, "		<throughput metric=\"KB/s\">%.3f</throughput>\n", tepr->threads[i]->KBps);
-		fprintf(logfile, "		<throughput metric=\"MB/s\">%.3f</throughput>\n", tepr->threads[i]->MBps);
-		fprintf(logfile, "		<throughput metric=\"mbps\">%.3f</throughput>\n", tepr->threads[i]->mbps);
-		fprintf(logfile, "		<avg_bytes_per_compl metric=\"B\">%.3f</avg_bytes_per_compl>\n", 0.000);
-		fprintf(logfile, "	</thread>\n");
+			fprintf(logfile, "	<thread index=\"%i\">\n", i);
+			fprintf(logfile, "		<realtime metric=\"s\">%.3f</realtime>\n", tepr->threads[i]->actual_test_time);
+			fprintf(logfile, "		<throughput metric=\"KB/s\">%.3f</throughput>\n", tepr->threads[i]->KBps);
+			fprintf(logfile, "		<throughput metric=\"MB/s\">%.3f</throughput>\n", tepr->threads[i]->MBps);
+			fprintf(logfile, "		<throughput metric=\"mbps\">%.3f</throughput>\n", tepr->threads[i]->mbps);
+			fprintf(logfile, "		<avg_bytes_per_compl metric=\"B\">%.3f</avg_bytes_per_compl>\n", 0.000);
+			fprintf(logfile, "	</thread>\n");
+		}
 	}
 
 	fprintf(logfile, "	<total_bytes metric=\"MB\">%.6f</total_bytes>\n", tepr->total_bytes_MB);
