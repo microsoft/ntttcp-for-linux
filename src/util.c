@@ -379,7 +379,7 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	</parameters>\n");
 
 	if (test->verbose) {
-		for(i = 0; i < tep->total_threads; i++ ){
+		for(i = 0; i < tep->total_threads; i++) {
 			if (tep->results->threads[i]->is_sync_thread == true)
 				continue;
 
