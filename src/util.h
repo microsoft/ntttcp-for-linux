@@ -81,8 +81,8 @@ struct ntttcp_test_endpoint_results{
 	/* fields for xml log (compatible with Windows ntttcp.exe) */
 	double	total_bytes_MB;
 	double	throughput_MBps;
+	double  throughput_Bps;
 	double	throughput_mbps;
-	double  throughput_bps;
 	double	cycles_per_byte;
 	uint64_t	packets_sent;
 	uint64_t	packets_received;

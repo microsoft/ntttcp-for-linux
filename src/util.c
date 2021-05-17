@@ -125,10 +125,10 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	tepr->cpu_ps_softirq_usage = (tepr->final_cpu_ps->softirq_time - tepr->init_cpu_ps->softirq_time) / cpu_ps_total_diff;
 
 	/* calculate for counters for xml log (compatible with Windows ntttcp.exe) */
+	tepr->throughput_Bps  = (double)total_bytes / test_duration;
 	tepr->total_bytes_MB  = (double)total_bytes / DECIMAL_BASED_UNIT_M;
 	tepr->throughput_MBps = tepr->total_bytes_MB / test_duration;
 	tepr->throughput_mbps = tepr->throughput_MBps * BYTE_TO_BITS;
-	tepr->throughput_bps  = (double)total_bytes * BYTE_TO_BITS / test_duration;
 	tepr->cycles_per_byte = total_bytes == 0 ? 0 :
 			cpu_speed_mhz * 1000 * 1000 * test_duration * (tepr->final_cpu_ps->nproc) * (1 - tepr->cpu_ps_idle_usage) / total_bytes;
 	tepr->packets_retransmitted = tepr->final_tcp_retrans->retrans_segs - tepr->init_tcp_retrans->retrans_segs;
@@ -400,7 +400,7 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<avg_frame_size metric=\"B\">%.3f</avg_frame_size>\n", 0.000);
 	fprintf(logfile, "	<throughput metric=\"MB/s\">%.3f</throughput>\n", tepr->throughput_MBps);
 	fprintf(logfile, "	<throughput metric=\"mbps\">%.3f</throughput>\n", tepr->throughput_mbps);
-	fprintf(logfile, "	<throughput metric=\"bps\">%.3f</throughput>\n", tepr->throughput_bps);
+	fprintf(logfile, "	<throughput metric=\"Bps\">%.3f</throughput>\n", tepr->throughput_Bps);
 	fprintf(logfile, "	<total_buffers>%.3f</total_buffers>\n", 0.000);
 	fprintf(logfile, "	<throughput metric=\"buffers/s\">%.3f</throughput>\n", 0.000);
 	fprintf(logfile, "	<avg_packets_per_interrupt metric=\"packets/interrupt\">%.3f</avg_packets_per_interrupt>\n", tepr->packets_per_interrupt);
