@@ -108,6 +108,39 @@ NTTTCP for Linux 1.3.4
 22:40:52 INFO: Test cycle finished.
 ```
 
+# Tuning Linux maximum TCP connection
+If you want to test the maximum TCP connection, you may need to add below settings.
+```
+net.core.netdev_max_backlog=30000
+net.ipv4.tcp_max_syn_backlog=80960
+net.core.somaxconn=65535
+net.core.rmem_default=134217728
+net.core.rmem_max=134217728
+net.core.wmem_default=134217728
+net.core.wmem_max=134217728
+net.ipv4.tcp_wmem="4096 87380 67108864"
+net.ipv4.tcp_congestion_control=htcp
+net.ipv4.tcp_slow_start_after_idle=0
+net.ipv4.tcp_tw_reuse=1
+net.ipv4.ip_local_port_range="1024 65535"
+net.ipv4.tcp_abort_on_overflow=1
+vm.overcommit_memory=2
+vm.max_map_count=6553500
+kernel.pid_max=512000
+
+ulimit -n 512000
+
+# Systemd v239 and later
+sed -i 's/TasksMax.*/TasksMax=122880/' /usr/lib/systemd/system/user-.slice.d/10-defaults.conf
+
+# Systemd older than v239
+sed -i '$aUserTasksMax=512000' /etc/systemd/logind.conf
+
+# Disable connection tracking
+iptables -t raw -I OUTPUT -j NOTRACK
+iptables -t raw -I PREROUTING -j NOTRACK
+```
+
 # Related topics
 
 1. [Windows ntttcp.exe](https://github.com/microsoft/ntttcp)
