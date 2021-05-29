@@ -77,7 +77,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	uint client_port = 0;
 	int sockfds[MAX_CLIENT_CONNS_PER_THREAD] = {-1};
 	struct sockaddr_storage local_addr; //for local address
-	socklen_t local_addr_size;    //local address size
+	socklen_t local_addr_size = sizeof(local_addr); //local address size
 
 	char *remote_addr_str = NULL; //used to get remote peer's ip address
 	int ip_addr_max_size;         //used to get remote peer's ip address
@@ -140,32 +140,31 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 			}
 		}
 
-		/* 2. bind this socket fd to a local (random/ephemeral, or fixed) TCP port */
-		client_port = (sc->num_connections > 1 && sc->client_port != 0 )
-				? sc->client_port + i
-				: sc->client_port;
+		if (sc->client_port != 0) {
+			/* 2. bind this socket fd to a local fixed TCP port */
+			client_port = sc->client_port + i;
 
-		memset(&local_addr, 0, sizeof(local_addr));
-		if (sc->domain == AF_INET) {
-			(*(struct sockaddr_in*)&local_addr).sin_family = AF_INET; //local_addrs[i].ss_family = AF_INET;
-		//	(*(struct sockaddr_in*)&local_addr).sin_addr.s_addr = inet_addr(INADDR_ANY);
-			(*(struct sockaddr_in*)&local_addr).sin_port = htons(client_port);
-		}
-		else{
-			(*(struct sockaddr_in6*)&local_addr).sin6_family = AF_INET6; //local_addrs[i].ss_family = AF_INET6;
-			(*(struct sockaddr_in6*)&local_addr).sin6_port = htons(client_port);
-		}
+			memset(&local_addr, 0, sizeof(local_addr));
+			if (sc->domain == AF_INET) {
+				(*(struct sockaddr_in*)&local_addr).sin_family = AF_INET; //local_addrs[i].ss_family = AF_INET;
+			//	(*(struct sockaddr_in*)&local_addr).sin_addr.s_addr = inet_addr(INADDR_ANY);
+				(*(struct sockaddr_in*)&local_addr).sin_port = htons(client_port);
+			}
+			else{
+				(*(struct sockaddr_in6*)&local_addr).sin6_family = AF_INET6; //local_addrs[i].ss_family = AF_INET6;
+				(*(struct sockaddr_in6*)&local_addr).sin6_port = htons(client_port);
+			}
 
-		local_addr_size = sizeof(local_addr);
-		if (( ret = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0 ) {
-			ASPRINTF(&log,
-				"failed to bind socket[%d] to a local port: [%s:%d]. errno = %d. Ignored",
-				sockfd,
-				sc->domain == AF_INET ? inet_ntoa((*(struct sockaddr_in*)&local_addr).sin_addr)
-						      : "::", //TODO - get the IPv6 addr string
-				client_port,
-				errno);
-			PRINT_INFO_FREE(log);
+			if (( ret = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0 ) {
+				ASPRINTF(&log,
+					"failed to bind socket[%d] to a local port: [%s:%d]. errno = %d. Ignored",
+					sockfd,
+					sc->domain == AF_INET ? inet_ntoa((*(struct sockaddr_in*)&local_addr).sin_addr)
+								: "::", //TODO - get the IPv6 addr string
+					client_port,
+					errno);
+				PRINT_INFO_FREE(log);
+			}
 		}
 
 		/* 3. connect to receiver */
@@ -202,7 +201,8 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 			}
 		}
 
-		/* get the local TCP ephemeral port number assigned to this socket, for logging purpose */
+		/* get the local TCP port number assigned to this socket, for logging purpose */
+		memset(&local_addr, 0, sizeof(local_addr));
 		if (getsockname(sockfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0) {
 			ASPRINTF(&log,
 				"failed to get local address information for socket[%d]",
