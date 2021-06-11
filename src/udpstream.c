@@ -271,8 +271,13 @@ void *run_ntttcp_receiver_udp4_stream( struct ntttcp_stream_server * ss )
 		return 0;
 	}
 
-	/* wait for sync thread to finish */
-	wait_light_on();
+	if (ss->no_synch) {
+		/* no_sync mode; start the testing immediately */
+		turn_on_light();
+	} else {
+		/* else, leave the sync thread to fire the trigger */
+		wait_light_on();
+	}
 
 	while(1) {
 		if (ss->endpoint->receiver_exit_after_done &&
