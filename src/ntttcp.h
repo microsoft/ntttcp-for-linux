@@ -29,6 +29,7 @@ struct ntttcp_test
 
 	bool	daemon;             /* '-D' for daemon mode */
 	bool	use_epoll;          /* '-e' for epoll() to watch fd for events. receiver only */
+	bool    use_iouring;        /* '-U' for io_uring FILL THIS OUT LATER WHEN YOU UNDERSTAND IT BETTER */
 	bool	exit_after_done;    /* exit receiver after test done. use '-H' to hold receiver always running. receiver only */
 	char	*mapping;           /* '-m' for connection(s),Processor,StartReceiver IP map set */
 	uint	server_ports;       /*    How many ports opening in receiver side, from -m flag, or -P flag */
@@ -123,6 +124,9 @@ struct ntttcp_stream_server{
 	bool    continuous_mode;
 	bool	verbose;
 	bool	use_epoll;
+        
+	/* io_uring stuff here  */
+	bool    use_iouring;
 
 	int	listener;     /* this is the socket to listen on port to accept new connections */
 	int	max_fd;       /* track the max socket fd */

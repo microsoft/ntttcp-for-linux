@@ -708,6 +708,12 @@ void *run_ntttcp_receiver_tcp_stream( void *ptr )
 		PRINT_ERR_FREE(log);
 	}
 	else{
+		if (ss->use_iouring == true) {
+		        printf("io_uring activated\n");
+		}
+		else {
+			printf("io_uring not activated\n");
+		}
 		if (ss->use_epoll == true) {
 			if ( ntttcp_server_epoll(ss) != NO_ERROR ) {
 				ASPRINTF(&log, "epoll error at port: %d", ss->server_port);
