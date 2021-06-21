@@ -15,6 +15,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <liburing.h> /* io_uring library */
 #include "const.h"
 #include "logger.h"
 
@@ -126,7 +127,11 @@ struct ntttcp_stream_server{
 	bool	use_epoll;
         
 	/* io_uring stuff here  */
+	uint	stream_server_num;
+	struct	io_uring ring;
+	int	work_queue_fd, first_work_queue_fd;
 	bool    use_iouring;
+	
 
 	int	listener;     /* this is the socket to listen on port to accept new connections */
 	int	max_fd;       /* track the max socket fd */

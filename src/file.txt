@@ -1,0 +1,61 @@
+diff --git a/src/ntttcp.h b/src/ntttcp.h
+index a9df0b7..fed6311 100644
+--- a/src/ntttcp.h
++++ b/src/ntttcp.h
+@@ -15,6 +15,7 @@
+ #include <sys/socket.h>
+ #include <sys/time.h>
+ #include <sys/types.h>
++#include <linux/io_uring.h> /* io_uring library */
+ #include "const.h"
+ #include "logger.h"
+ 
+@@ -125,8 +126,13 @@ struct ntttcp_stream_server{
+ 	bool	verbose;
+ 	bool	use_epoll;
+         
+-	/* io_uring stuff here  */
+-	bool    use_iouring;
++	/* io_uring parameters  */
++	//uint	stream_server_num;
++	//struct 	io_uring *ring;
++	//int	work_queue_fd, first_work_queue_fd;
++	//bool    use_iouring;
++	
++
+ 
+ 	int	listener;     /* this is the socket to listen on port to accept new connections */
+ 	int	max_fd;       /* track the max socket fd */
+diff --git a/src/tcpstream.c b/src/tcpstream.c
+index 22b7f6b..8ad8893 100644
+--- a/src/tcpstream.c
++++ b/src/tcpstream.c
+@@ -560,6 +560,20 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
+ 	return err_code;
+ }
+ 
++//int ntttcp_server_iouring(struct ntttcp_stream_server *ss)
++//{
++//	struct io_uring_params p = {};
++//
++//	p.flags = IORING_SETUP_SQPOLL;
++//	//if (ss->stream_server_num > 0) {
++//	//	p.work_queue_fd = ss->first_work_queue_fd;
++//	//	p.flags |= IORING_SETUP_ATTACH_WQ;
++//	//}
++//
++//	return 1;
++//}
++
++
+ int ntttcp_server_select(struct ntttcp_stream_server *ss)
+ {
+ 	int err_code = NO_ERROR;
+@@ -708,6 +722,7 @@ void *run_ntttcp_receiver_tcp_stream( void *ptr )
+ 		PRINT_ERR_FREE(log);
+ 	}
+ 	else{
++		/* Delete the io_uring if else below and combine it with the epoll/select if/else logic to call when io_uring is activated  */
+ 		if (ss->use_iouring == true) {
+ 		        printf("io_uring activated\n");
+ 		}

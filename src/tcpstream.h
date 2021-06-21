@@ -22,4 +22,5 @@ void *run_ntttcp_sender_tcp_stream( void *ptr );
 int ntttcp_server_listen(struct ntttcp_stream_server *ss);
 int ntttcp_server_epoll(struct ntttcp_stream_server *ss);
 int ntttcp_server_select(struct ntttcp_stream_server *ss);
+int ntttcp_server_iouring(struct ntttcp_stream_server *ss);
 void *run_ntttcp_receiver_tcp_stream( void *ptr );
