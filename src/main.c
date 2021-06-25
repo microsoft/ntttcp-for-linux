@@ -183,8 +183,57 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	return err_code;
 }
 
+/* helper struct to pass in these three counter related values as on value in the create_server_stream method  */
+struct thread_count {
+	struct ntttcp_test *test;
+	uint t; // thread currently on
+	uint *threads_created;
+};
+
+static struct ntttcp_stream_server *create_server_stream(struct ntttcp_test_endpoint *tep, struct thread_count *counter, int first_work_queue_fd, pthread_barrier_t *init_barrier)
+{
+	struct ntttcp_test *test = counter->test;
+	uint t = counter->t;
+	uint* threads_created = counter->threads_created;
+
+	int err_code = NO_ERROR;
+	struct ntttcp_stream_server *ss;
+	int rc;
+
+	ss = tep->server_streams[t];
+	ss->server_port = test->server_base_port + t;
+	ss->stream_server_num = t;
+	ss->first_work_queue_fd = first_work_queue_fd;
+	ss->init_barrier_pt = init_barrier;
+
+	if (test->protocol == TCP) {
+		printf("starting thread %d\n", t);
+		rc = pthread_create(&tep->threads[t],
+					NULL,
+					run_ntttcp_receiver_tcp_stream,
+					(void*)ss);
+	}
+	else {
+		rc = pthread_create(&tep->threads[t],
+					NULL,
+					run_ntttcp_receiver_udp_stream,
+					(void*)ss);
+	}
+	
+	if (rc) {
+		PRINT_ERR("pthread_create() create thread failed");
+		err_code = ERROR_PTHREAD_CREATE;
+		//continue;
+	}
+
+	(*threads_created)++;
+	return ss;
+}
+
 int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 {
+	printf("receiver starting \n");
+
 	int err_code = NO_ERROR;
 	struct ntttcp_test *test = tep->test;
 	char *log = NULL;
@@ -193,36 +242,42 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	struct ntttcp_stream_server *ss;
 	int rc;
 
+	struct thread_count counter = { .test = tep->test, .threads_created = &threads_created }; // initialize params for method call
+	
+	printf("initialized variables  \n");
+
 	if (!check_is_ip_addr_valid_local(test->domain, test->bind_address)) {
 		PRINT_ERR("cannot listen on the IP address specified");
 		return ERROR_ARGS;
 	}
+	
+	printf("listening \n");
 
 	/* create test threads */
-	for (t = 0; t < test->server_ports; t++) {
-		ss = tep->server_streams[t];
-		ss->server_port = test->server_base_port + t;
+	int first_work_queue_fd = -1;
+	for (t = 0; t < test->server_ports; t++) { 
+		struct ntttcp_stream_server *ss = malloc(sizeof(struct ntttcp_stream_server));
+		ss->init_barrier_pt = &(ss->init_barrier);
 
-		if (test->protocol == TCP) {
-			rc = pthread_create(&tep->threads[t],
-						NULL,
-						run_ntttcp_receiver_tcp_stream,
-						(void*)ss);
+		if (t == 0) {
+			pthread_barrier_init(ss->init_barrier_pt, NULL, 2);
 		}
-		else {
-			rc = pthread_create(&tep->threads[t],
-						NULL,
-						run_ntttcp_receiver_udp_stream,
-						(void*)ss);
+		
+		counter.t = t;
+		ss = create_server_stream(tep, &counter, first_work_queue_fd, ss->init_barrier_pt);
+	
+		if (!ss) {
+			// print error, add more detail to the error message later
+			PRINT_ERR("something happened to creating ss" );
 		}
 
-		if (rc) {
-			PRINT_ERR("pthread_create() create thread failed");
-			err_code = ERROR_PTHREAD_CREATE;
-			continue;
-		}
-		threads_created++;
+		if (t == 0) {
+			pthread_barrier_wait(ss->init_barrier_pt);
+			first_work_queue_fd = ss->ring.ring_fd;
+			printf("work queue fd %d\n", first_work_queue_fd);
+ 		}
 	}
+	printf("threads created \n");
 
 	/* create synch thread; and put it to the end of the thread array */
 	if (test->no_synch == false) {

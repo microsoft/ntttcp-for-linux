@@ -400,6 +400,9 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 
 int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 {
+	// here to unblock threads until I figure out a way to do it nicely
+	pthread_barrier_wait(ss->init_barrier_pt);
+
 	int err_code = NO_ERROR;
 	char *log    = NULL;
 
@@ -562,6 +565,9 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 
 int ntttcp_server_select(struct ntttcp_stream_server *ss)
 {
+	// here to unblock threads until I figure out how to do it nicely
+	pthread_barrier_wait(ss->init_barrier_pt);
+
 	int err_code = NO_ERROR;
 	char *log    = NULL;
 
@@ -720,7 +726,7 @@ void fatal_error(const char *syscall) {
 }
 
 int add_accept_request(struct ntttcp_stream_server *ss, struct sockaddr_in *client_addr, socklen_t *client_addr_len) {
-	/* io_uring_get_sqe doesn't work yet and I don't know why, it is imported in ntttcp.h */
+
 	struct io_uring_sqe *sqe = io_uring_get_sqe(&(ss->ring));	
 	io_uring_prep_accept(sqe, ss->listener, (struct sockaddr *) client_addr, client_addr_len, 0);
 	struct request *req = malloc(sizeof(*req));
@@ -751,6 +757,33 @@ int add_read_request(struct ntttcp_stream_server *ss) {
 
 int ntttcp_server_iouring(struct ntttcp_stream_server *ss)
 {
+	printf("thread %d iouring\n", ss->stream_server_num);
+	
+	/* can customize params based on flags later  */
+	struct io_uring_params p = {};
+	int ret;
+
+
+	p.flags = IORING_SETUP_SQPOLL;
+	if(ss->stream_server_num > 0) {
+		p.wq_fd = ss->first_work_queue_fd;
+		p.flags |= IORING_SETUP_ATTACH_WQ;
+	}
+	
+	else {
+		ret = io_uring_queue_init_params(QUEUE_DEPTH, &(ss->ring), &p); 
+		
+		// unblock the other threads, thread 1 initialization is done
+		pthread_barrier_wait(ss->init_barrier_pt);
+	}
+
+
+
+
+
+
+
+	/* select code below  */
 	int err_code = NO_ERROR;
 	char *log    = NULL;
 
@@ -776,6 +809,14 @@ int ntttcp_server_iouring(struct ntttcp_stream_server *ss)
 		free(buffer);
 		return ERROR_MEMORY_ALLOC;
 	}
+
+
+
+
+	/* select code to deit out below  */
+
+
+
 
 	/* accept new client, receive data from client */
 	while (1) {
@@ -898,7 +939,7 @@ void *run_ntttcp_receiver_tcp_stream( void *ptr )
 		PRINT_ERR_FREE(log);
 	}
 	else{
-		/* Decide on which method to transfer data with (io_uring, epoll, select)  */	
+		/* decide on which method to transfer data with (io_uring, epoll, select)  */	
 		if (ss->use_iouring == true) {	
 			if ( ntttcp_server_iouring(ss) != NO_ERROR ) {
 				ASPRINTF(&log, "select error at port: %d", ss->server_port);
@@ -918,7 +959,7 @@ void *run_ntttcp_receiver_tcp_stream( void *ptr )
 			}
 		}
 	}
-
+	
 	return NULL;
 }
 

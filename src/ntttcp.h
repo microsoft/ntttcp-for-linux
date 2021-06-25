@@ -132,6 +132,10 @@ struct ntttcp_stream_server{
 	int	work_queue_fd, first_work_queue_fd;
 	bool    use_iouring;
 	
+	/* blocking barrier so that all subsequent threads are mad after the first one  */
+	pthread_barrier_t init_barrier;	
+	pthread_barrier_t *init_barrier_pt;
+
 
 	int	listener;     /* this is the socket to listen on port to accept new connections */
 	int	max_fd;       /* track the max socket fd */
