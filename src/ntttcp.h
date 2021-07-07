@@ -128,7 +128,7 @@ struct ntttcp_stream_server{
         
 	/* io_uring stuff here  */
 	uint	stream_server_num;
-	struct	io_uring ring;
+	struct	io_uring rings[15];
 	int	work_queue_fd, first_work_queue_fd;
 	bool    use_iouring;
 	

@@ -5,6 +5,7 @@
 // ----------------------------------------------------------------------------------
 
 #include "tcpstream.h"
+#include <sys/uio.h>
 
 #define MAX_IO_PER_POLL 32
 
@@ -343,6 +344,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 			close(sockfd);
 			return -1;
 		}
+		/*
 		if ( set_socket_non_blocking(sockfd) == -1) {
 			ASPRINTF(&log, "cannot set socket as non-blocking: %d", sockfd);
 			PRINT_ERR_FREE(log);
@@ -351,6 +353,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 			close(sockfd);
 			return -1;
 		}
+		*/
 		if (( i = bind(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
 			ASPRINTF(&log,
 				"failed to bind the socket to local address: %s on socket: %d. return = %d",
@@ -401,7 +404,9 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 {
 	// here to unblock threads until I figure out a way to do it nicely
-	pthread_barrier_wait(ss->init_barrier_pt);
+	if(ss->stream_server_num == 0){
+		pthread_barrier_wait(ss->init_barrier_pt);
+	}
 
 	int err_code = NO_ERROR;
 	char *log    = NULL;
@@ -557,7 +562,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 
 	free(buffer);
 	free(ip_address_str);
-	free(events);
+    	free(events);
 	close(efd);
 	close(ss->listener);
 	return err_code;
@@ -566,7 +571,9 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 int ntttcp_server_select(struct ntttcp_stream_server *ss)
 {
 	// here to unblock threads until I figure out how to do it nicely
-	pthread_barrier_wait(ss->init_barrier_pt);
+	if(ss->stream_server_num == 0){
+		pthread_barrier_wait(ss->init_barrier_pt);
+	}
 
 	int err_code = NO_ERROR;
 	char *log    = NULL;
@@ -726,66 +733,26 @@ void fatal_error(const char *syscall) {
 }
 
 int add_accept_request(struct ntttcp_stream_server *ss, struct sockaddr_in *client_addr, socklen_t *client_addr_len) {
-
-	struct io_uring_sqe *sqe = io_uring_get_sqe(&(ss->ring));	
+	struct io_uring_sqe *sqe = io_uring_get_sqe(&ss->rings[ss->stream_server_num]);
 	io_uring_prep_accept(sqe, ss->listener, (struct sockaddr *) client_addr, client_addr_len, 0);
-	struct request *req = malloc(sizeof(*req));
+	//struct request *req = malloc(sizeof(*req));
+	//req->event_type = EVENT_TYPE_ACCEPT;
+	io_uring_sqe_set_data(sqe, &ss->listener);
+	return io_uring_submit(&ss->rings[ss->stream_server_num]);
+}
+
+int add_read_request(struct ntttcp_stream_server *ss, int client_socket, const struct iovec *buffer_iov) {
+	struct io_uring_sqe *sqe = io_uring_get_sqe(&ss->rings[ss->stream_server_num]);
 	
-	req->event_type = EVENT_TYPE_ACCEPT;
-	io_uring_sqe_set_data(sqe, req);
-	io_uring_submit(&(ss->ring));
-	return 0;
-}
-
-int add_read_request(struct ntttcp_stream_server *ss) {
-
-	struct io_uring_sqe *sqe = io_uring_get_sqe(&(ss->ring));
-	struct request *req = malloc(sizeof(*req) + sizeof(struct iovec));
-	req->iov[0].iov_base = malloc(READ_SZ);
-	req->iov[0].iov_len = READ_SZ;
-	req->event_type = EVENT_TYPE_READ;
-	req->client_socket = ss->listener;
-	memset(req->iov[0].iov_base, 0, READ_SZ);
 	/* Linux kernel 5.5 has support for readv, but not for recv() or read() */
-	io_uring_prep_readv(sqe, ss->listener, &req->iov[0], 1, 0);
-	io_uring_sqe_set_data(sqe, req);
-	io_uring_submit(&(ss->ring));
-	return 0;
+	io_uring_prep_readv(sqe, client_socket, buffer_iov, 1, 0);
+	io_uring_sqe_set_data(sqe, &client_socket);
+	return io_uring_submit(&ss->rings[ss->stream_server_num]);
 }
-
-
 
 int ntttcp_server_iouring(struct ntttcp_stream_server *ss)
 {
-	printf("thread %d iouring\n", ss->stream_server_num);
-	
-	/* can customize params based on flags later  */
-	struct io_uring_params p = {};
-	int ret;
-
-
-	p.flags = IORING_SETUP_SQPOLL;
-	if(ss->stream_server_num > 0) {
-		p.wq_fd = ss->first_work_queue_fd;
-		p.flags |= IORING_SETUP_ATTACH_WQ;
-	}
-	
-	else {
-		ret = io_uring_queue_init_params(QUEUE_DEPTH, &(ss->ring), &p); 
-		
-		// unblock the other threads, thread 1 initialization is done
-		pthread_barrier_wait(ss->init_barrier_pt);
-	}
-
-
-
-
-
-
-
-	/* select code below  */
-	int err_code = NO_ERROR;
-	char *log    = NULL;
+	int err_code;
 
 	int n_fds = 0, newfd, current_fd = 0;
 	char *buffer;  //receive buffer
@@ -799,6 +766,12 @@ int ntttcp_server_iouring(struct ntttcp_stream_server *ss)
 	int ip_addr_max_size;
 	int max_io = 0;
 
+	/* io uring params */
+	struct io_uring_cqe *cqe;
+        struct sockaddr_in client_addr;
+	socklen_t client_addr_len = sizeof(client_addr);
+
+
 	if ( (buffer = (char *)malloc(ss->recv_buf_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for receive buffer");
 		return ERROR_MEMORY_ALLOC;
@@ -809,14 +782,50 @@ int ntttcp_server_iouring(struct ntttcp_stream_server *ss)
 		free(buffer);
 		return ERROR_MEMORY_ALLOC;
 	}
+	
+	struct iovec buffer_iov = {.iov_base = buffer, .iov_len = ss->recv_buf_size};
+
+	/* can customize params based on flags later  */
+	struct io_uring_params p = {};
+	int ret;
+
+	printf("server num: %d, ringfd: %d, fwqfd: %d\n", ss->stream_server_num, ss->rings[0].ring_fd, ss->first_work_queue_fd);
+	
+	p.flags = IORING_SETUP_SQPOLL;
+	if(ss->stream_server_num > 0) {
+		printf("ring fd: %d\n",  ss->first_work_queue_fd);
+		p.wq_fd = ss->rings[0].ring_fd; //ss->first_work_queue_fd;
+
+		printf("p flags before: %d\n", p.flags);
+		p.flags |= IORING_SETUP_ATTACH_WQ;
+		printf("p flags after:  %d\n", p.flags);
 
 
-
-
-	/* select code to deit out below  */
-
-
-
+		// initialize io uring queue and return an error if something goes wrong
+		ret = io_uring_queue_init_params(QUEUE_DEPTH, &ss->rings[ss->stream_server_num], &p);
+	}
+	else {
+		// initialize io uring queue and return an error if something goes wrong
+		ret = io_uring_queue_init_params(QUEUE_DEPTH, &ss->rings[ss->stream_server_num], &p);
+	        
+		// unblock the other threads, thread 1 initialization is done
+        	pthread_barrier_wait(ss->init_barrier_pt);
+	}
+		
+	// initialize io uring queue and return an error if something goes wrong
+	//ret = io_uring_queue_init_params(QUEUE_DEPTH, &ss->rings[ss->stream_server_num], &p);
+	
+	if(ret < 0) {
+		char* error_msg = strerror(-ret);
+		printf("%s\n", error_msg);
+	
+		printf("io_uring stream %d init failed...\n", ss->stream_server_num);
+		exit(1);
+	}
+		
+	printf("ss->listener: %d\n", ss->listener);
+	ret = add_accept_request(ss, &client_addr, &client_addr_len);
+	
 
 	/* accept new client, receive data from client */
 	while (1) {
@@ -824,99 +833,52 @@ int ntttcp_server_iouring(struct ntttcp_stream_server *ss)
 		    ss->endpoint->state == TEST_FINISHED)
 			break;
 
-		memcpy(&read_set, &ss->read_set, sizeof(fd_set));
-		memcpy(&write_set, &ss->write_set, sizeof(fd_set));
+		//ss->read_set
+		//bytes_to_be_read = ss->is_sync_thread ? 1 : ss->recv_buf_size;
+		// accept the clients
+			
+		ret = io_uring_wait_cqe(&ss->rings[ss->stream_server_num], &cqe);
+		//struct request *req = (struct request *) cqe->user_data;
+		int cqe_fd = *(int *)cqe->user_data;
+		printf("cqe fd: %d\n cqe res: %d\n", cqe_fd, cqe->res);
 
-		/* we are notified by select() */
-		n_fds = select(ss->max_fd + 1, &read_set, NULL, NULL, NULL);
-		if (n_fds < 0 && errno != EINTR) {
-			PRINT_ERR("error happened when select()");
-			err_code = ERROR_SELECT;
-			continue;
+		if (ret < 0)
+            		printf("io_uring wait cqe failed...\n");
+        	if (cqe->res < 0) {
+			breakpoint_debug(1);
+
+			int i = 1;
+
+            		fprintf(stderr, "Async request failed: %s for event: %d\n",
+                    	strerror(-cqe->res), cqe_fd);
+            		exit(1);
+        	}
+		
+       		if (cqe_fd == ss->listener) {
+			add_accept_request(ss, &client_addr, &client_addr_len);
+			printf("adding a listener\n");
+		}
+		else {
+			if (!cqe->res) {
+                    		fprintf(stderr, "Empty request!\n");
+                    		break;
+                	}
+			
+			printf("doing something here: %zu\n", buffer_iov.iov_len);	
+			__sync_fetch_and_add(&(ss->total_bytes_transferred), buffer_iov.iov_len);
 		}
 
-		/*run through the existing connections looking for data to be read*/
-		for (current_fd = 0; current_fd <= ss->max_fd; current_fd++){
-			if ( !FD_ISSET(current_fd, &read_set) )
-				continue;
+                add_read_request(ss, cqe->res, &buffer_iov);
+        	printf("adding a read request\n");
+        	/* Mark this request as processed */
+        	io_uring_cqe_seen(&ss->rings[ss->stream_server_num], cqe);
 
-			/* then, we got one fd to handle */
-			/* a NEW connection coming */
-			if (current_fd == ss->listener) {
- 				/* handle new connections */
-				peer_addr_size = sizeof(peer_addr);
-				if ((newfd = accept(ss->listener, (struct sockaddr *) &peer_addr, &peer_addr_size)) < 0 ) {
-					err_code = ERROR_ACCEPT;
-					break;
-				}
+		//
+		// go through the fd set and submit to read into the buffer
+		// wait for completion
+		// increment count of bytes received 
+		// resubmit the fds
 
-				/* then we got a new connection */
-				if (set_socket_non_blocking(newfd) == -1) {
-					ASPRINTF(&log, "cannot set the new socket as non-blocking: %d", newfd);
-					PRINT_DBG_FREE(log);
-				}
-				FD_SET(newfd, &ss->read_set); /* add the new one to read_set */
-				if (newfd > ss->max_fd) {
-					/* update the maximum */
-					ss->max_fd = newfd;
-				}
-
-				/* print out new connection info */
-				local_addr_size = sizeof(local_addr);
-				if (getsockname(newfd, (struct sockaddr *) &local_addr, &local_addr_size) != 0) {
-					ASPRINTF(&log, "failed to get local address information for the new socket: %d", newfd);
-					PRINT_DBG_FREE(log);
-				}
-				else{
-					ASPRINTF(&log, "New connection: %s:%d --> local:%d [socket %d]",
-							ip_address_str = retrive_ip_address_str(&peer_addr, ip_address_str, ip_addr_max_size),
-							ntohs( ss->domain == AF_INET ?
-									((struct sockaddr_in *)&peer_addr)->sin_port
-									:((struct sockaddr_in6 *)&peer_addr)->sin6_port),
-							ntohs( ss->domain == AF_INET ?
-									((struct sockaddr_in *)&local_addr)->sin_port
-									:((struct sockaddr_in6 *)&local_addr)->sin6_port),
-							newfd);
-					PRINT_DBG_FREE(log);
-				}
-
-				//if there is no synch thread, if any new connection coming, indicates ss started
-				if ( ss->no_synch )
-					turn_on_light();
-				//else, leave the sync thread to fire the trigger
-			}
-			/* handle data from an EXISTING client */
-			else{
-				for (max_io = 0; max_io < MAX_IO_PER_POLL; max_io++) {
-					bytes_to_be_read = ss->is_sync_thread ? 1 : ss->recv_buf_size;
-
-					/* got error or connection closed by client */
-					errno = 0;
-					nbytes = n_recv(current_fd, buffer, bytes_to_be_read);
-					if (nbytes <= 0) {
-						if (errno != EAGAIN) {
-							if (nbytes == 0) {
-								ASPRINTF(&log, "socket closed: %d", current_fd);
-								PRINT_DBG_FREE(log);
-							}
-							else{
-								ASPRINTF(&log, "error: cannot read data from socket: %d", current_fd);
-								PRINT_INFO_FREE(log);
-								err_code = ERROR_NETWORK_READ;
-								/* need to continue test and check other socket, so don't end the test */
-							}
-							close(current_fd);
-							FD_CLR(current_fd, &ss->read_set); /* remove from master set when finished */
-						}
-						break;
-					}
-					/* report how many bytes received */
-					else{
-						__sync_fetch_and_add(&(ss->total_bytes_transferred), nbytes);
-					}
-				}
-			}
-		}
 	}
 
 	free(buffer);
@@ -926,6 +888,11 @@ int ntttcp_server_iouring(struct ntttcp_stream_server *ss)
 
 }
 
+int breakpoint_debug(int i) {
+	return i;
+}
+
+
 void *run_ntttcp_receiver_tcp_stream( void *ptr )
 {
 	char *log = NULL;
@@ -934,6 +901,7 @@ void *run_ntttcp_receiver_tcp_stream( void *ptr )
 	ss = (struct ntttcp_stream_server *) ptr;
 
 	ss->listener = ntttcp_server_listen(ss);
+
 	if (ss->listener < 0) {
 		ASPRINTF(&log, "listen error at port: %d", ss->server_port);
 		PRINT_ERR_FREE(log);

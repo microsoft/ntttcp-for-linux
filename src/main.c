@@ -232,8 +232,6 @@ static struct ntttcp_stream_server *create_server_stream(struct ntttcp_test_endp
 
 int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 {
-	printf("receiver starting \n");
-
 	int err_code = NO_ERROR;
 	struct ntttcp_test *test = tep->test;
 	char *log = NULL;
@@ -243,18 +241,15 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	int rc;
 
 	struct thread_count counter = { .test = tep->test, .threads_created = &threads_created }; // initialize params for method call
-	
-	printf("initialized variables  \n");
 
 	if (!check_is_ip_addr_valid_local(test->domain, test->bind_address)) {
 		PRINT_ERR("cannot listen on the IP address specified");
 		return ERROR_ARGS;
 	}
-	
-	printf("listening \n");
 
 	/* create test threads */
 	int first_work_queue_fd = -1;
+	// t < test->server_ports
 	for (t = 0; t < test->server_ports; t++) { 
 		struct ntttcp_stream_server *ss = malloc(sizeof(struct ntttcp_stream_server));
 		ss->init_barrier_pt = &(ss->init_barrier);
@@ -273,9 +268,12 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 
 		if (t == 0) {
 			pthread_barrier_wait(ss->init_barrier_pt);
-			first_work_queue_fd = ss->ring.ring_fd;
+			first_work_queue_fd = ss->rings[0].ring_fd;
 			printf("work queue fd %d\n", first_work_queue_fd);
  		}
+		else {
+			ss->first_work_queue_fd = first_work_queue_fd;
+		}
 	}
 	printf("threads created \n");
 
