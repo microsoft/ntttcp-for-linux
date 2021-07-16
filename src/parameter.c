@@ -391,7 +391,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 	int opt;
 
-	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:Nx::O::QVh", longopts, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:Nx::O::J::QVh", longopts, NULL)) != -1) {
 		switch (opt) {
 		case 'r':
 		case 's':
