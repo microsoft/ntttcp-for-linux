@@ -270,6 +270,10 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 	if (tep->test->save_xml_log)
 		if (write_result_into_log_file(tep) != 0)
 			PRINT_ERR("Error writing log to xml file");
+
+	if (tep->test->save_json_log)
+                if (write_result_into_json_file(tep) != 0)
+                        PRINT_ERR("Error writing log to json file");
 }
 
 size_t execute_system_cmd_by_process(char *command, char *type, char *output)
@@ -452,7 +456,20 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 
 	gethostname(str_temp1, 256);
 	fprintf(json_file, "<ntttcp%s computername=\"%s\"",tep->endpoint_role == ROLE_RECEIVER ? "r" :"s", str_temp1);
-	
+
+	for(i = 0; i < tep->total_threads; i++ ){
+		if (tep->results->threads[i]->is_sync_thread == true)
+			continue;
+
+		fprintf(json_file, "	<thread index=\"%i\">\n", i);
+		fprintf(json_file, "		<realtime metric=\"s\">%.3f</realtime>\n", tepr->threads[i]->actual_test_time);
+		fprintf(json_file, "		<throughput metric=\"KB/s\">%.3f</throughput>\n", tepr->threads[i]->KBps);
+		fprintf(json_file, "		<throughput metric=\"MB/s\">%.3f</throughput>\n", tepr->threads[i]->MBps);
+		fprintf(json_file, "		<throughput metric=\"mbps\">%.3f</throughput>\n", tepr->threads[i]->mbps);
+		fprintf(json_file, "		<avg_bytes_per_compl metric=\"B\">%.3f</avg_bytes_per_compl>\n", 0.000);
+		fprintf(json_file, "	</thread>\n");
+	}
+
 	if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
                 fprintf(json_file, " <tcp_average_rtt metric=\"us\">%u</tcp_average_rtt>\n",tepr->average_rtt);
         }
