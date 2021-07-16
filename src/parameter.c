@@ -95,7 +95,7 @@ void print_flags(struct ntttcp_test *test)
 	if (test->save_console_log)
 		printf("%s:\t %s\n", "capture console output to:", test->console_log_filename);
 	if (test->save_json_log)
-		printf("%s:\t %s\n","save output to json file:", test->json_log_file);
+		printf("%s:\t %s\n","save output to json file:", test->json_log_filename);
 
 	printf("%s:\t\t\t %s\n", "quiet mode", test->quiet ? "enabled" : "disabled");
 	printf("%s:\t\t\t %s\n", "verbose mode", test->verbose ? "enabled" : "disabled");

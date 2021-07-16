@@ -452,6 +452,19 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 
 	gethostname(str_temp1, 256);
 	fprintf(json_file, "<ntttcp%s computername=\"%s\"",tep->endpoint_role == ROLE_RECEIVER ? "r" :"s", str_temp1);
+	
+	if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
+                fprintf(json_file, " <tcp_average_rtt metric=\"us\">%u</tcp_average_rtt>\n",tepr->average_rtt);
+        }
+
+        count = execute_system_cmd_by_process("uname -a", "r", str_temp1);
+        fprintf(json_file," <os>%s</os>\n", count == 0 ? "Unkown" : str_temp2);
+
+        fprintf(json_file,"</ntttcp%s>\n",tep->endpoint_role ==ROLE_RECEIVER ? "r" : "s");
+
+        fclose(json_file);
+        return 0;
+
 }
 
 char *format_throughput(uint64_t bytes_transferred, double test_duration)
