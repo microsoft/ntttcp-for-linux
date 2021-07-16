@@ -94,6 +94,8 @@ void print_flags(struct ntttcp_test *test)
 		printf("%s:\t %s\n", "save output to xml file:", test->xml_log_filename);
 	if (test->save_console_log)
 		printf("%s:\t %s\n", "capture console output to:", test->console_log_filename);
+	if (test->save_json_log)
+		printf("%s:\t %s\n","save output to json file:", test->json_log_file);
 
 	printf("%s:\t\t\t %s\n", "quiet mode", test->quiet ? "enabled" : "disabled");
 	printf("%s:\t\t\t %s\n", "verbose mode", test->verbose ? "enabled" : "disabled");
@@ -133,6 +135,7 @@ void print_usage()
 	printf("\t     Otherwise, will use 'destination port - 1' as sync port	[default: %d]\n", DEFAULT_BASE_DST_PORT - 1);
 	printf("\t-x   Save output to XML file, by default saves to %s\n", DEFAULT_XML_LOG_FILE_NAME);
 	printf("\t-O   Save console log to file, by default saves to %s\n", DEFAULT_CONSOLE_LOG_FILE_NAME);
+	printf("\t-J   save json log to file, by default saves to %s\n", DEFAULT_JSON_LOG_FILE_NAME);
 	printf("\t-Q   Quiet mode\n");
 	printf("\t-V   Verbose mode\n");
 	printf("\t-h   Help, tool usage\n");

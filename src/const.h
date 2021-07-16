@@ -77,3 +77,4 @@
 
 #define DEFAULT_XML_LOG_FILE_NAME	"ntttcp-for-linux-log.xml"
 #define DEFAULT_CONSOLE_LOG_FILE_NAME	"ntttcp-for-linux-log.log"
+#define DEFAULT_JSON_LOG_FILE_NAME     	"ntttcp-for-linux-log.json"

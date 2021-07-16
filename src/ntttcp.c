@@ -52,6 +52,8 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->xml_log_filename       = DEFAULT_XML_LOG_FILE_NAME;	//"ntttcp-for-linux-log.xml"
 	test->save_console_log       = false;
 	test->console_log_filename   = DEFAULT_CONSOLE_LOG_FILE_NAME;	//"ntttcp-for-linux-log.log"
+	test->save_json_log          =false;
+	test->json_log_filename      =DEFAULT_JSON_LOG_FILE_NAME;       //"ntttcp-for-linux-log.json"
 	test->quiet            = false;
 	test->verbose          = false;
 }

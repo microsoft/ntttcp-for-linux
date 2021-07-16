@@ -432,6 +432,28 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	return 0;
 }
 
+int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
+{
+	struct ntttcp_test *test = tep->test;
+	struct ntttcp_test_endpoint_results *tepr = tep->results;
+	char str_temp1[256];
+	char str_temp2[2048];
+	size_t count = 0;
+	unsigned int i;
+
+	memset(str_temp1, '\0', sizeof(char)*256);
+	memset(str_temp2, '\0', sizeof(char)*2048);
+
+	FILE *json_file = fopen(test->json_log_filename, "w");
+	if (json_file == NULL) {
+		PRINT_ERR("Error opening file to write log");
+		return -1;
+	}
+
+	gethostname(str_temp1, 256);
+	fprintf(json_file, "<ntttcp%s computername=\"%s\"",tep->endpoint_role == ROLE_RECEIVER ? "r" :"s", str_temp1);
+}
+
 char *format_throughput(uint64_t bytes_transferred, double test_duration)
 {
 	double tmp = 0;
