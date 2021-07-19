@@ -460,12 +460,12 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 	fprintf(json_file, "\"parameters\":[\n");
 	fprintf(json_file, "{\"send_socket_buff\":\"%lu\"\n",test->send_buf_size);
 	fprintf(json_file, "{\"recv_socket_buff\":\"%lu\"\n",test->recv_buf_size);
-	fprintf(json_file, "{\"port\":\"%d\"\n",test_server_base_port);
-	fprintf(json_file, "{\"sync_port\":\"%d\"\n",test_server_base_port - 1);
+	fprintf(json_file, "{\"port\":\"%d\"\n",test->server_base_port);
+	fprintf(json_file, "{\"sync_port\":\"%d\"\n",test->server_base_port - 1);
 	fprintf(json_file, "{\"no_sync\":\"%s\"\n",test->no_synch == 0 ? "False" : "True");
 	fprintf(json_file, "{\"wait_timeout_milliseconds\":\"%d\"\n",0);
 	fprintf(json_file, "{\"async\":\"%s\"\n","False");
-	fprintf(json_flle, "{\"verbose\":\"%s\"\n",test_verbose ? "True" : "False");
+	fprintf(json_file, "{\"verbose\":\"%s\"\n",test->verbose ? "True" : "False");
 	fprintf(json_file, "{\"wsa\":\"%s\"\n","False");
 	fprintf(json_file, "{\"use_ipv6\":\"%s\"\n",test->domain == AF_INET6 ? "True" : "False");
 	fprintf(json_file, "{\"udp\":\"%s\"\n",test->protocol == UDP ? "True" : "False");
@@ -513,17 +513,17 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 	fprintf(json_file, "\"throughput mrtric\":\"%.3f mbps\"\n", tepr->throughput_mbps);
 	fprintf(json_file, "\"total_buffers\":\"%.3f\"\n", 0.000);
 	fprintf(json_file, "\"throughput metric\":\"%.3f buffrts/s\"\n", 0.000);
-	fprinft(json_file, "\"avg_packets_per_interrupt metric\":\"%.3f\"\n", tepr->packet_per_interrupt);
+	fprintf(json_file, "\"avg_packets_per_interrupt metric\":\"%.3f\"\n", tepr->packets_per_interrupt);
 	fprintf(json_file, "\"interrupt metric\":\"%.3f count/sec\"\n", 0.000);
 	fprintf(json_file, "\"dpcs metric\":\"%.3f count/sec\"\n", 0.000);
 	fprintf(json_file, "\"avg_packets_per_dpc metric\":\"%.3f packets/dpc\"\n", 0.000);
 	fprintf(json_file, "\"cycles metric\":\"%.3f cycles/byte\"\n", tepr->cycles_per_byte);
 	fprintf(json_file, "\"packets_sent\":%"PRIu64"\n", tepr->packets_sent);
-	fprintf(json_file, "\"packets_received\":%"PRIu64"\n", tepr->packets->received);
+	fprintf(json_file, "\"packets_received\":%"PRIu64"\n", tepr->packets_received);
 	fprintf(json_file, "\"errors\":\"%d\"\n", tepr->errors);
-	fprintf(json_file, "\"cpu metric\":\"%.3f %\"\n", tepr->cpu_busy_percent * 100);
+	fprintf(json_file, "\"cpu metric\":\"%.3f %%\"\n", tepr->cpu_busy_percent * 100);
 	fprintf(json_file, "\"bufferCount\":\"%u\"\n", 0);
-	fprinft(json_file, "\"bufferLen\":\"%u\"\n",  0);
+	fprintf(json_file, "\"bufferLen\":\"%u\"\n",  0);
 	fprintf(json_file, "\"io\":\"%u\"\n", 0);
 
 	if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
