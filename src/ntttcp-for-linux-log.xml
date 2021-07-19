@@ -1,0 +1,170 @@
+<ntttcpr computername="centos8.3" version="5.33-linux">
+	<parameters>
+		<send_socket_buff>131072</send_socket_buff>
+		<recv_socket_buff>65536</recv_socket_buff>
+		<port>5001</port>
+		<sync_port>5000</sync_port>
+		<no_sync>False</no_sync>
+		<wait_timeout_milliseconds>0</wait_timeout_milliseconds>
+		<async>False</async>
+		<verbose>False</verbose>
+		<wsa>False</wsa>
+		<use_ipv6>False</use_ipv6>
+		<udp>False</udp>
+		<verify_data>False</verify_data>
+		<wait_all>False</wait_all>
+		<run_time>4</run_time>
+		<warmup_time>1</warmup_time>
+		<cooldown_time>1</cooldown_time>
+		<dash_n_timeout>0</dash_n_timeout>
+		<bind_sender>False</bind_sender>
+		<sender_name>NA</sender_name>
+		<max_active_threads>0</max_active_threads>
+		<tp>False</tp>
+		<no_stdio_buffer>False</no_stdio_buffer>
+		<throughput_Bpms>0</throughput_Bpms>
+		<cpu_burn>0</cpu_burn>
+		<latency_measurement>False</latency_measurement>
+		<use_io_compl_ports>NA</use_io_compl_ports>
+		<cpu_from_idle_flag>False</cpu_from_idle_flag>
+		<get_estats>False</get_estats>
+		<qos_flag>False</qos_flag>
+		<jitter_measurement>False</jitter_measurement>
+		<packet_spacing>0</packet_spacing>
+	</parameters>
+	<thread index="0">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">4923.515</throughput>
+		<throughput metric="MB/s">4.808</throughput>
+		<throughput metric="mbps">38.465</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="1">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">7166.556</throughput>
+		<throughput metric="MB/s">6.999</throughput>
+		<throughput metric="mbps">55.989</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="2">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">12692.304</throughput>
+		<throughput metric="MB/s">12.395</throughput>
+		<throughput metric="mbps">99.159</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="3">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">6940.200</throughput>
+		<throughput metric="MB/s">6.778</throughput>
+		<throughput metric="mbps">54.220</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="4">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">5273.635</throughput>
+		<throughput metric="MB/s">5.150</throughput>
+		<throughput metric="mbps">41.200</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="5">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">4829.000</throughput>
+		<throughput metric="MB/s">4.716</throughput>
+		<throughput metric="mbps">37.727</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="6">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">7005.029</throughput>
+		<throughput metric="MB/s">6.841</throughput>
+		<throughput metric="mbps">54.727</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="7">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">3580.440</throughput>
+		<throughput metric="MB/s">3.497</throughput>
+		<throughput metric="mbps">27.972</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="8">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">9025.644</throughput>
+		<throughput metric="MB/s">8.814</throughput>
+		<throughput metric="mbps">70.513</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="9">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">3781.039</throughput>
+		<throughput metric="MB/s">3.692</throughput>
+		<throughput metric="mbps">29.539</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="10">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">4840.787</throughput>
+		<throughput metric="MB/s">4.727</throughput>
+		<throughput metric="mbps">37.819</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="11">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">3074.905</throughput>
+		<throughput metric="MB/s">3.003</throughput>
+		<throughput metric="mbps">24.023</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="12">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">3285.326</throughput>
+		<throughput metric="MB/s">3.208</throughput>
+		<throughput metric="mbps">25.667</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="13">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">5069.544</throughput>
+		<throughput metric="MB/s">4.951</throughput>
+		<throughput metric="mbps">39.606</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="14">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">4787.527</throughput>
+		<throughput metric="MB/s">4.675</throughput>
+		<throughput metric="mbps">37.403</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<thread index="15">
+		<realtime metric="s">4.581</realtime>
+		<throughput metric="KB/s">4066.986</throughput>
+		<throughput metric="MB/s">3.972</throughput>
+		<throughput metric="mbps">31.773</throughput>
+		<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	</thread>
+	<total_bytes metric="MB">404.000000</total_bytes>
+	<realtime metric="s">4.581280</realtime>
+	<avg_bytes_per_compl metric="B">0.000</avg_bytes_per_compl>
+	<threads_avg_bytes_per_compl metric="B">0.000</threads_avg_bytes_per_compl>
+	<avg_frame_size metric="B">0.000</avg_frame_size>
+	<throughput metric="MB/s">88.185</throughput>
+	<throughput metric="mbps">705.480</throughput>
+	<total_buffers>0.000</total_buffers>
+	<throughput metric="buffers/s">0.000</throughput>
+	<avg_packets_per_interrupt metric="packets/interrupt">0.000</avg_packets_per_interrupt>
+	<interrupts metric="count/sec">0.000</interrupts>
+	<dpcs metric="count/sec">0.000</dpcs>
+	<avg_packets_per_dpc metric="packets/dpc">0.000</avg_packets_per_dpc>
+	<cycles metric="cycles/byte">3.915</cycles>
+	<packets_sent>0</packets_sent>
+	<packets_received>0</packets_received>
+	<packets_retransmitted>2</packets_retransmitted>
+	<errors>0</errors>
+	<cpu metric="%">6.371</cpu>
+	<bufferCount>0</bufferCount>
+	<bufferLen>0</bufferLen>
+	<io>0</io>
+	<os>centos8.3</os>
+</ntttcpr>
