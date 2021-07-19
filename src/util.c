@@ -504,16 +504,36 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 		fprintf(json_file, "]");
 	}
 	
-	fprintf(json_file, "\"total_bytes metric
+	fprintf(json_file, "\"total_bytes metric\":\"%.6f MB\"\n", tepr->total_bytes_MB);
+	fprintf(json_file, "\"realtime metric\":\"%.6f\"\n", tepr->actual_test_time);
+	fprintf(json_file, "\"avg_bytes_per_compl metric\":\"%.3f B\"\n", 0.000);
+	fprintf(json_file, "\"threads_avg_bytes_per_compl metric\":\"%.3f B\"\n",0.000);
+	fprintf(json_file, "\"avg_frame_size metric\":\"%.3f\"\n",0.000);
+	fprintf(json_file, "\"throughput metric\":\"%.3f MB/s\"\n", tepr->throughput_MBps);
+	fprintf(json_file, "\"throughput mrtric\":\"%.3f mbps\"\n", tepr->throughput_mbps);
+	fprintf(json_file, "\"total_buffers\":\"%.3f\"\n", 0.000);
+	fprintf(json_file, "\"throughput metric\":\"%.3f buffrts/s\"\n", 0.000);
+	fprinft(json_file, "\"avg_packets_per_interrupt metric\":\"%.3f\"\n", tepr->packet_per_interrupt);
+	fprintf(json_file, "\"interrupt metric\":\"%.3f count/sec\"\n", 0.000);
+	fprintf(json_file, "\"dpcs metric\":\"%.3f count/sec\"\n", 0.000);
+	fprintf(json_file, "\"avg_packets_per_dpc metric\":\"%.3f packets/dpc\"\n", 0.000);
+	fprintf(json_file, "\"cycles metric\":\"%.3f cycles/byte\"\n", tepr->cycles_per_byte);
+	fprintf(json_file, "\"packets_sent\":%"PRIu64"\n", tepr->packets_sent);
+	fprintf(json_file, "\"packets_received\":%"PRIu64"\n", tepr->packets->received);
+	fprintf(json_file, "\"errors\":\"%d\"\n", tepr->errors);
+	fprintf(json_file, "\"cpu metric\":\"%.3f %\"\n", tepr->cpu_busy_percent * 100);
+	fprintf(json_file, "\"bufferCount\":\"%u\"\n", 0);
+	fprinft(json_file, "\"bufferLen\":\"%u\"\n",  0);
+	fprintf(json_file, "\"io\":\"%u\"\n", 0);
 
 	if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
-                fprintf(json_file, " <tcp_average_rtt metric=\"us\">%u</tcp_average_rtt>\n",tepr->average_rtt);
+                fprintf(json_file, " \"tcp_average_rtt metric\":\"%u us\"\n",tepr->average_rtt);
         }
 
         count = execute_system_cmd_by_process("uname -a", "r", str_temp1);
-        fprintf(json_file," <os>%s</os>\n", count == 0 ? "Unkown" : str_temp2);
+        fprintf(json_file," \"os\":\"%s\"\n", count == 0 ? "Unkown" : str_temp2);
 
-        fprintf(json_file,"</ntttcp%s>\n",tep->endpoint_role ==ROLE_RECEIVER ? "r" : "s");
+        fprintf(json_file,"\"ntttcp\":\"%s\"\n",tep->endpoint_role ==ROLE_RECEIVER ? "r" : "s");
 
         fclose(json_file);
         return 0;
