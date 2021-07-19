@@ -455,85 +455,85 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 	}
 
 	gethostname(str_temp1, 256);
-	fprintf(json_file,"{");
-	fprintf(json_file, "\"ntttcp%s computername\":\"%s\"",tep->endpoint_role == ROLE_RECEIVER ? "r" :"s", str_temp1);
-	fprintf(json_file, "\"parameters\":[\n");
-	fprintf(json_file, "{\"send_socket_buff\":\"%lu\"\n",test->send_buf_size);
-	fprintf(json_file, "{\"recv_socket_buff\":\"%lu\"\n",test->recv_buf_size);
-	fprintf(json_file, "{\"port\":\"%d\"\n",test->server_base_port);
-	fprintf(json_file, "{\"sync_port\":\"%d\"\n",test->server_base_port - 1);
-	fprintf(json_file, "{\"no_sync\":\"%s\"\n",test->no_synch == 0 ? "False" : "True");
-	fprintf(json_file, "{\"wait_timeout_milliseconds\":\"%d\"\n",0);
-	fprintf(json_file, "{\"async\":\"%s\"\n","False");
-	fprintf(json_file, "{\"verbose\":\"%s\"\n",test->verbose ? "True" : "False");
-	fprintf(json_file, "{\"wsa\":\"%s\"\n","False");
-	fprintf(json_file, "{\"use_ipv6\":\"%s\"\n",test->domain == AF_INET6 ? "True" : "False");
-	fprintf(json_file, "{\"udp\":\"%s\"\n",test->protocol == UDP ? "True" : "False");
-	fprintf(json_file, "{\"verify_data\":\"%s\"\n","False");
-	fprintf(json_file, "{\"wait_all\":\"%s\"\n","False");
-	fprintf(json_file, "{\"run_time\":\"%d\"\n",test->duration);
-	fprintf(json_file, "{\"warmup_time\":\"%d\"\n",test->warmup);
-	fprintf(json_file, "{\"cooldown_time\":\"%d\"\n",test->cooldown);
-	fprintf(json_file, "{\"dash_n_timeout\":\"%d\"\n",0);
-	fprintf(json_file, "{\"bind_sender\":\"%s\"\n","False");
-	fprintf(json_file, "{\"sender_name\":\"%s\"\n","NA");
-	fprintf(json_file, "{\"max_active_threads\":\"%d\"\n",0);
-	fprintf(json_file, "{\"tp\":\"%s\"\n","False");
-	fprintf(json_file, "{\"no_stdio_buffer\":\"%s\"\n","False");
-	fprintf(json_file, "{\"throughput_Bpms\":\"%d\"\n",0);
-	fprintf(json_file, "{\"cpu_burn\":\"%d\"\n",0);
-	fprintf(json_file, "{\"latency_mwasurement\":\"%s\"\n","False");
-	fprintf(json_file, "{\"use_io_compl_ports\":\"%s\"\n","NA");
-	fprintf(json_file, "{\"cpu_from_idle_flag\":\"%s\"\n","False");
-	fprintf(json_file, "{\"get_estats\":\"%s\"\n","False");
-	fprintf(json_file, "{\"qos_flag\":\"%s\"\n","False");
-	fprintf(json_file, "{\"jitter_measurement\":\"%s\"\n","False");
-	fprintf(json_file, "{\"packet-spacing\":\"%d\"\n",0);
-	fprintf(json_file, "]");
+	fprintf(json_file,"{\n");
+	fprintf(json_file, "\"ntttcp%s computername\":\"%s\"\n",tep->endpoint_role == ROLE_RECEIVER ? "r" :"s", str_temp1);
+	fprintf(json_file, "	\"parameters\":{\n");
+	fprintf(json_file, "		\"send_socket_buff\":\"%lu\"\n",test->send_buf_size);
+	fprintf(json_file, "		\"recv_socket_buff\":\"%lu\"\n",test->recv_buf_size);
+	fprintf(json_file, "		\"port\":\"%d\"\n",test->server_base_port);
+	fprintf(json_file, "		\"sync_port\":\"%d\"\n",test->server_base_port - 1);
+	fprintf(json_file, "		\"no_sync\":\"%s\"\n",test->no_synch == 0 ? "False" : "True");
+	fprintf(json_file, "		\"wait_timeout_milliseconds\":\"%d\"\n",0);
+	fprintf(json_file, "		\"async\":\"%s\"\n","False");
+	fprintf(json_file, "		\"verbose\":\"%s\"\n",test->verbose ? "True" : "False");
+	fprintf(json_file, "		\"wsa\":\"%s\"\n","False");
+	fprintf(json_file, "		\"use_ipv6\":\"%s\"\n",test->domain == AF_INET6 ? "True" : "False");
+	fprintf(json_file, "		\"udp\":\"%s\"\n",test->protocol == UDP ? "True" : "False");
+	fprintf(json_file, "		\"verify_data\":\"%s\"\n","False");
+	fprintf(json_file, "		\"wait_all\":\"%s\"\n","False");
+	fprintf(json_file, "		\"run_time\":\"%d\"\n",test->duration);
+	fprintf(json_file, "		\"warmup_time\":\"%d\"\n",test->warmup);
+	fprintf(json_file, "		\"cooldown_time\":\"%d\"\n",test->cooldown);
+	fprintf(json_file, "		\"dash_n_timeout\":\"%d\"\n",0);
+	fprintf(json_file, "		\"bind_sender\":\"%s\"\n","False");
+	fprintf(json_file, "		\"sender_name\":\"%s\"\n","NA");
+	fprintf(json_file, "		\"max_active_threads\":\"%d\"\n",0);
+	fprintf(json_file, "		\"tp\":\"%s\"\n","False");
+	fprintf(json_file, "		\"no_stdio_buffer\":\"%s\"\n","False");
+	fprintf(json_file, "		\"throughput_Bpms\":\"%d\"\n",0);
+	fprintf(json_file, "		\"cpu_burn\":\"%d\"\n",0);
+	fprintf(json_file, "		\"latency_mwasurement\":\"%s\"\n","False");
+	fprintf(json_file, "		\"use_io_compl_ports\":\"%s\"\n","NA");
+	fprintf(json_file, "		\"cpu_from_idle_flag\":\"%s\"\n","False");
+	fprintf(json_file, "		\"get_estats\":\"%s\"\n","False");
+	fprintf(json_file, "		\"qos_flag\":\"%s\"\n","False");
+	fprintf(json_file, "		\"jitter_measurement\":\"%s\"\n","False");
+	fprintf(json_file, "		\"packet-spacing\":\"%d\"\n",0);
+	fprintf(json_file, "	}\n");
 
 	for(i = 0; i < tep->total_threads; i++ ){
 		if (tep->results->threads[i]->is_sync_thread == true)
 			continue;
 
-		fprintf(json_file, "\"thread index :%i\":[\n", i);
-		fprintf(json_file, "\"realtime metric\":\"%.3f s\"\n", tepr->threads[i]->actual_test_time);
-		fprintf(json_file, "\"throughput metric\":\"%.3f KB/s\"\n", tepr->threads[i]->KBps);
-		fprintf(json_file, "\"throughput metric\":\"%.3f MB/s\"\n", tepr->threads[i]->MBps);
-		fprintf(json_file, "\"throughput metric\":\"%.3f bps\"\n", tepr->threads[i]->mbps);
-		fprintf(json_file, "\"avg_bytes_per_compl metric\":\"%.3f B\"\n", 0.000);
-		fprintf(json_file, "]");
+		fprintf(json_file, "	\"thread index :%i\":{\n", i);
+		fprintf(json_file, "		\"realtime metric\":\"%.3f s\"\n", tepr->threads[i]->actual_test_time);
+		fprintf(json_file, "		\"throughput metric\":\"%.3f KB/s\"\n", tepr->threads[i]->KBps);
+		fprintf(json_file, "		\"throughput metric\":\"%.3f MB/s\"\n", tepr->threads[i]->MBps);
+		fprintf(json_file, "		\"throughput metric\":\"%.3f bps\"\n", tepr->threads[i]->mbps);
+		fprintf(json_file, "		\"avg_bytes_per_compl metric\":\"%.3f B\"\n", 0.000);
+		fprintf(json_file, "	}\n");
 	}
 	
-	fprintf(json_file, "\"total_bytes metric\":\"%.6f MB\"\n", tepr->total_bytes_MB);
-	fprintf(json_file, "\"realtime metric\":\"%.6f\"\n", tepr->actual_test_time);
-	fprintf(json_file, "\"avg_bytes_per_compl metric\":\"%.3f B\"\n", 0.000);
-	fprintf(json_file, "\"threads_avg_bytes_per_compl metric\":\"%.3f B\"\n",0.000);
-	fprintf(json_file, "\"avg_frame_size metric\":\"%.3f\"\n",0.000);
-	fprintf(json_file, "\"throughput metric\":\"%.3f MB/s\"\n", tepr->throughput_MBps);
-	fprintf(json_file, "\"throughput mrtric\":\"%.3f mbps\"\n", tepr->throughput_mbps);
-	fprintf(json_file, "\"total_buffers\":\"%.3f\"\n", 0.000);
-	fprintf(json_file, "\"throughput metric\":\"%.3f buffrts/s\"\n", 0.000);
-	fprintf(json_file, "\"avg_packets_per_interrupt metric\":\"%.3f\"\n", tepr->packets_per_interrupt);
-	fprintf(json_file, "\"interrupt metric\":\"%.3f count/sec\"\n", 0.000);
-	fprintf(json_file, "\"dpcs metric\":\"%.3f count/sec\"\n", 0.000);
-	fprintf(json_file, "\"avg_packets_per_dpc metric\":\"%.3f packets/dpc\"\n", 0.000);
-	fprintf(json_file, "\"cycles metric\":\"%.3f cycles/byte\"\n", tepr->cycles_per_byte);
-	fprintf(json_file, "\"packets_sent\":%"PRIu64"\n", tepr->packets_sent);
-	fprintf(json_file, "\"packets_received\":%"PRIu64"\n", tepr->packets_received);
-	fprintf(json_file, "\"errors\":\"%d\"\n", tepr->errors);
-	fprintf(json_file, "\"cpu metric\":\"%.3f %%\"\n", tepr->cpu_busy_percent * 100);
-	fprintf(json_file, "\"bufferCount\":\"%u\"\n", 0);
-	fprintf(json_file, "\"bufferLen\":\"%u\"\n",  0);
-	fprintf(json_file, "\"io\":\"%u\"\n", 0);
+	fprintf(json_file, "		\"total_bytes metric\":\"%.6f MB\"\n", tepr->total_bytes_MB);
+	fprintf(json_file, "		\"realtime metric\":\"%.6f\"\n", tepr->actual_test_time);
+	fprintf(json_file, "		\"avg_bytes_per_compl metric\":\"%.3f B\"\n", 0.000);
+	fprintf(json_file, "		\"threads_avg_bytes_per_compl metric\":\"%.3f B\"\n",0.000);
+	fprintf(json_file, "		\"avg_frame_size metric\":\"%.3f\"\n",0.000);
+	fprintf(json_file, "		\"throughput metric\":\"%.3f MB/s\"\n", tepr->throughput_MBps);
+	fprintf(json_file, "		\"throughput mrtric\":\"%.3f mbps\"\n", tepr->throughput_mbps);
+	fprintf(json_file, "		\"total_buffers\":\"%.3f\"\n", 0.000);
+	fprintf(json_file, "		\"throughput metric\":\"%.3f buffrts/s\"\n", 0.000);
+	fprintf(json_file, "		\"avg_packets_per_interrupt metric\":\"%.3f\"\n", tepr->packets_per_interrupt);
+	fprintf(json_file, "		\"interrupt metric\":\"%.3f count/sec\"\n", 0.000);
+	fprintf(json_file, "		\"dpcs metric\":\"%.3f count/sec\"\n", 0.000);
+	fprintf(json_file, "		\"avg_packets_per_dpc metric\":\"%.3f packets/dpc\"\n", 0.000);
+	fprintf(json_file, "		\"cycles metric\":\"%.3f cycles/byte\"\n", tepr->cycles_per_byte);
+	fprintf(json_file, "		\"packets_sent\":%"PRIu64"\n", tepr->packets_sent);
+	fprintf(json_file, "		\"packets_received\":%"PRIu64"\n", tepr->packets_received);
+	fprintf(json_file, "		\"errors\":\"%d\"\n", tepr->errors);
+	fprintf(json_file, "		\"cpu metric\":\"%.3f %%\"\n", tepr->cpu_busy_percent * 100);
+	fprintf(json_file, "		\"bufferCount\":\"%u\"\n", 0);
+	fprintf(json_file, "		\"bufferLen\":\"%u\"\n",  0);
+	fprintf(json_file, "		\"io\":\"%u\"\n", 0);
 
 	if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
-                fprintf(json_file, " \"tcp_average_rtt metric\":\"%u us\"\n",tepr->average_rtt);
+                fprintf(json_file, "		\"tcp_average_rtt metric\":\"%u us\"\n",tepr->average_rtt);
         }
 
-        count = execute_system_cmd_by_process("uname -a", "r", str_temp1);
-        fprintf(json_file," \"os\":\"%s\"\n", count == 0 ? "Unkown" : str_temp2);
+        count = execute_system_cmd_by_process("		uname -a", "r", str_temp1);
+        fprintf(json_file,"		\"os\":\"%s\"\n", count == 0 ? "Unkown" : str_temp2);
 
-        fprintf(json_file,"\"ntttcp\":\"%s\"\n",tep->endpoint_role ==ROLE_RECEIVER ? "r" : "s");
+        fprintf(json_file,"		\"ntttcp\":\"%s\"\n",tep->endpoint_role ==ROLE_RECEIVER ? "r" : "s");
 
         fclose(json_file);
         return 0;

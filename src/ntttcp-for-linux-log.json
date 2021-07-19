@@ -1,0 +1,170 @@
+{
+"ntttcpr computername":"centos8.3"
+	"parameters":{
+		"send_socket_buff":"131072"
+		"recv_socket_buff":"65536"
+		"port":"5001"
+		"sync_port":"5000"
+		"no_sync":"False"
+		"wait_timeout_milliseconds":"0"
+		"async":"False"
+		"verbose":"False"
+		"wsa":"False"
+		"use_ipv6":"False"
+		"udp":"False"
+		"verify_data":"False"
+		"wait_all":"False"
+		"run_time":"4"
+		"warmup_time":"1"
+		"cooldown_time":"1"
+		"dash_n_timeout":"0"
+		"bind_sender":"False"
+		"sender_name":"NA"
+		"max_active_threads":"0"
+		"tp":"False"
+		"no_stdio_buffer":"False"
+		"throughput_Bpms":"0"
+		"cpu_burn":"0"
+		"latency_mwasurement":"False"
+		"use_io_compl_ports":"NA"
+		"cpu_from_idle_flag":"False"
+		"get_estats":"False"
+		"qos_flag":"False"
+		"jitter_measurement":"False"
+		"packet-spacing":"0"
+	}
+	"thread index :0":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"7287.772 KB/s"
+		"throughput metric":"7.117 MB/s"
+		"throughput metric":"56.936 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :1":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"9044.370 KB/s"
+		"throughput metric":"8.832 MB/s"
+		"throughput metric":"70.659 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :2":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"10539.370 KB/s"
+		"throughput metric":"10.292 MB/s"
+		"throughput metric":"82.339 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :3":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"7640.048 KB/s"
+		"throughput metric":"7.461 MB/s"
+		"throughput metric":"59.688 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :4":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"5330.898 KB/s"
+		"throughput metric":"5.206 MB/s"
+		"throughput metric":"41.648 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :5":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"4871.417 KB/s"
+		"throughput metric":"4.757 MB/s"
+		"throughput metric":"38.058 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :6":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"5161.284 KB/s"
+		"throughput metric":"5.040 MB/s"
+		"throughput metric":"40.323 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :7":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"7633.307 KB/s"
+		"throughput metric":"7.454 MB/s"
+		"throughput metric":"59.635 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :8":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"3962.022 KB/s"
+		"throughput metric":"3.869 MB/s"
+		"throughput metric":"30.953 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :9":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"3524.068 KB/s"
+		"throughput metric":"3.441 MB/s"
+		"throughput metric":"27.532 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :10":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"6250.296 KB/s"
+		"throughput metric":"6.104 MB/s"
+		"throughput metric":"48.830 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :11":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"3309.658 KB/s"
+		"throughput metric":"3.232 MB/s"
+		"throughput metric":"25.857 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :12":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"5120.837 KB/s"
+		"throughput metric":"5.001 MB/s"
+		"throughput metric":"40.007 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :13":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"4205.571 KB/s"
+		"throughput metric":"4.107 MB/s"
+		"throughput metric":"32.856 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :14":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"3158.745 KB/s"
+		"throughput metric":"3.085 MB/s"
+		"throughput metric":"24.678 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+	"thread index :15":{
+		"realtime metric":"4.599 s"
+		"throughput metric":"3443.393 KB/s"
+		"throughput metric":"3.363 MB/s"
+		"throughput metric":"26.902 bps"
+		"avg_bytes_per_compl metric":"0.000 B"
+	}
+		"total_bytes metric":"406.000000 MB"
+		"realtime metric":"4.598662"
+		"avg_bytes_per_compl metric":"0.000 B"
+		"threads_avg_bytes_per_compl metric":"0.000 B"
+		"avg_frame_size metric":"0.000"
+		"throughput metric":"88.287 MB/s"
+		"throughput mrtric":"706.292 mbps"
+		"total_buffers":"0.000"
+		"throughput metric":"0.000 buffrts/s"
+		"avg_packets_per_interrupt metric":"0.000"
+		"interrupt metric":"0.000 count/sec"
+		"dpcs metric":"0.000 count/sec"
+		"avg_packets_per_dpc metric":"0.000 packets/dpc"
+		"cycles metric":"4.188 cycles/byte"
+		"packets_sent":0
+		"packets_received":0
+		"errors":"0"
+		"cpu metric":"7.123 %"
+		"bufferCount":"0"
+		"bufferLen":"0"
+		"io":"0"
+		"os":""
+		"ntttcp":"r"
