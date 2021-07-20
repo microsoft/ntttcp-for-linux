@@ -502,7 +502,7 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 		fprintf(json_file, "   \"realtime\":{\n");
 		fprintf(json_file, "   \"-metric\":\"s\",\n");
 		fprintf(json_file, "   \"#text\":\"%.3f\"\n",tepr->threads[i]->actual_test_time);
-		fprintf(json_file, "    },\n");
+		fprintf(json_file, "   },\n");
 		fprintf(json_file, "   \"throughput\":[\n");
 		fprintf(json_file, "   	{\n");
 		fprintf(json_file, "  	 \"-metric\":\"KB/s\",\n");
@@ -516,25 +516,25 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 		fprintf(json_file, "   	 \"-metric\":\"mbps\",\n");
 		fprintf(json_file, "     \"#text\":\"%.3f\"\n",tepr->threads[i]->mbps);
 		fprintf(json_file, "    }\n");
-		fprintf(json_file, "    ],\n");
+		fprintf(json_file, "   ],\n");
 		fprintf(json_file, "     \"avg_bytes_per_compl\":{\n");
 		fprintf(json_file, "     \"-metric\":\"B\",\n");
 		fprintf(json_file, "     \"#text\":\"%.3f\"\n",0.000);
-		fprintf(json_file, "    }\n");
+		fprintf(json_file, "     }\n");
 		if (i == tep->total_threads - 2)
-			fprintf(json_file, "  }\n");
-		else fprintf(json_file, "  },\n");
+			fprintf(json_file, "    }\n");
+		else fprintf(json_file, "   },\n");
 	}
 	fprintf(json_file, "  ],\n");
 
-	fprintf(json_file, "  \"total_bytes\":{\n");
-	fprintf(json_file, "   \"-metric\":\"MB\",\n");
-	fprintf(json_file, "   \"#text\":\"%.6f\"\n", tepr->total_bytes_MB);
-	fprintf(json_file, "	},\n");
-	fprintf(json_file, "  \"realtime\":{\n");
+	fprintf(json_file, "    \"total_bytes\":{\n");
+	fprintf(json_file, "    \"-metric\":\"MB\",\n");
+	fprintf(json_file, "    \"#text\":\"%.6f\"\n", tepr->total_bytes_MB);
+	fprintf(json_file, "    },\n");
+	fprintf(json_file, "    \"realtime\":{\n");
        	fprintf(json_file, "	\"-metric\":\"s\",\n");
 	fprintf(json_file, "	\"#text\":\"%.6f\"\n", tepr->actual_test_time);
-	fprintf(json_file, "	},\n");
+	fprintf(json_file, "    },\n");
 	fprintf(json_file, "	\"avg_bytes_per_compl\":{\n");
 	fprintf(json_file, "	\"-metric\":\"B\",\n");
 	fprintf(json_file, "	\"#text\":\"%.3f\"\n", 0.000);
