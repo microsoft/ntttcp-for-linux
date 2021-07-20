@@ -456,7 +456,7 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 
 	gethostname(str_temp1, 256);
 	fprintf(json_file,"{\n");
-	fprintf(json_file, " \"ntttcp%s\":{\n",tep->endpoint_role == ROLE_RECEIVER ? "r" :"s");
+	fprintf(json_file, " \"ntttcp%s\":{\n", tep->endpoint_role == ROLE_RECEIVER ? "r" :"s");
 	fprintf(json_file, "  \"-computername\":\"%s\",\n",str_temp1);
 	fprintf(json_file, "  \"-version\":\"5.33-linux\",\n");
 	fprintf(json_file, "  \"parameters\":{\n");
@@ -599,9 +599,7 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 
         count = execute_system_cmd_by_process("	uname -a", "r", str_temp1);
         fprintf(json_file,"	\"os\":\"%s\"\n", count == 0 ? "Unkown" : str_temp2);
-	fprintf(json_file," },\n");
-
-        fprintf(json_file,"	\"ntttcp\":\"%s\"\n",tep->endpoint_role ==ROLE_RECEIVER ? "r" : "s");
+	fprintf(json_file," }\n");
 	fprintf(json_file,"}\n");
 
         fclose(json_file);

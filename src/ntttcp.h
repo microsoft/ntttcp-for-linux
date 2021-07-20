@@ -58,8 +58,8 @@ struct ntttcp_test
 	char	*xml_log_filename;        /* the xml log file name */
 	bool	save_console_log;         /* '-O' to capture console log to plain text file */
 	char    *console_log_filename;    /* the console log file name */
-	bool    save_json_log;             /* '-J' to save output to json file*/
-	char    *json_log_filename;       /*the json log file name*/
+	bool    save_json_log;             /* '-J' to save output to json file */
+	char    *json_log_filename;       /* the json log file name */
 
 	bool	quiet;               /* '-Q' for quiet logging */
 	bool	verbose;             /* '-V' for verbose logging */
