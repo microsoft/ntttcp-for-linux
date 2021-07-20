@@ -539,7 +539,6 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 				if(optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
 					test->json_log_filename = argv[optind++];
 			}
-			printf("hello");
 			break;
 
 		case 'Q':
