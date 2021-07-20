@@ -57,7 +57,7 @@ struct ntttcp_test_endpoint_results{
 	uint64_t	init_interrupts;
 	uint64_t	final_interrupts;
 
-	/*point to per-thread result*/
+	/* point to per-thread result */
 	struct	ntttcp_test_endpoint_thread_result	**threads;
 
 	/* fields can be calculated with above raw data or read from system */
