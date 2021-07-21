@@ -556,7 +556,7 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 	fprintf(json_file, "    \"io\":\"%u\",\n", 0);
 
 	if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
-                fprintf(json_file, "	\"tcp_average_rtt metric\":\"%u us\",\n",tepr->average_rtt);
+                fprintf(json_file, "    \"tcp_average_rtt metric\":\"%u us\",\n",tepr->average_rtt);
         }
 
         count = execute_system_cmd_by_process("	uname -a", "r", str_temp1);
