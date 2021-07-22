@@ -560,7 +560,7 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
         }
 
         count = execute_system_cmd_by_process("	uname -a", "r", str_temp1);
-        fprintf(json_file,"    \"os\" : \"%s\"\n }\n}\n", count == 0 ? "Unkown" : str_temp2);
+        fprintf(json_file,"    \"os\" : \"%s \"\n }\n}\n", count == 0 ? "Unkown" : str_temp2);
 
         fclose(json_file);
         return 0;
