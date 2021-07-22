@@ -54,11 +54,13 @@ struct ntttcp_test
 	bool 	show_tcp_retransmit;      /* '-R' to display TCP retransmit counters in log from /proc */
 	char	*show_interface_packets;  /* '-K' to show number of packets tx/rx through the interface */
 	char	*show_dev_interrupts;     /* '-I' to show number of interrupts of devices */
-	bool	save_xml_log;             /* '-x' to save output to XML file */
-	char	*xml_log_filename;        /* the xml log file name */
 	bool	save_console_log;         /* '-O' to capture console log to plain text file */
-	char    *console_log_filename;    /* the console log file name */
-
+	char	*console_log_filename;    /* the console log file name */
+	bool    save_xml_log;             /* '-x' to save output to XML file */
+	char    *xml_log_filename;        /* the xml log file name */
+	bool	save_json_log;            /* '-j' to save output to json file */
+	char	*json_log_filename;       /* the json log file name */
+	
 	bool	quiet;               /* '-Q' for quiet logging */
 	bool	verbose;             /* '-V' for verbose logging */
 };
