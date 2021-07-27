@@ -89,9 +89,4 @@
 /* io_uring constants  */
 #define QUEUE_DEPTH 		256
 #define READ_SZ                 8192
-#define EVENT_TYPE_ACCEPT       0
-#define EVENT_TYPE_READ         1
-#define EVENT_TYPE_WRITE        2
-
-
 
