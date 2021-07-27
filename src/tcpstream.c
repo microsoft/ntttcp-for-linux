@@ -348,6 +348,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 			return -1;
 		}
 
+		/* can't set a nonblocking socket with io_uring */
 		if(!ss->use_iouring) {
 			if (set_socket_non_blocking(sockfd) == -1) {
 				ASPRINTF(&log, "cannot set socket as non-blocking: %d", sockfd);
