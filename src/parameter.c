@@ -428,7 +428,6 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			break;
 
 		case 'U':
-			printf("setting test->use_iouring=true;\n");
 			test->use_iouring = true;
 			break;
 

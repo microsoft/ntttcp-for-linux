@@ -197,17 +197,20 @@ static struct ntttcp_stream_server *create_server_stream(struct ntttcp_test_endp
 	uint* threads_created = counter->threads_created;
 
 	int err_code = NO_ERROR;
-	struct ntttcp_stream_server *ss;
+	struct ntttcp_stream_server *ss = malloc(sizeof(struct ntttcp_stream_server));
 	int rc;
 
 	ss = tep->server_streams[t];
 	ss->server_port = test->server_base_port + t;
 	ss->stream_server_num = t;
 	ss->first_work_queue_fd = first_work_queue_fd;
+
+	if(ss->stream_server_num > 0) {
+		ss->rings[0].ring_fd = first_work_queue_fd;
+	}
 	ss->init_barrier_pt = init_barrier;
 
 	if (test->protocol == TCP) {
-		printf("starting thread %d\n", t);
 		rc = pthread_create(&tep->threads[t],
 					NULL,
 					run_ntttcp_receiver_tcp_stream,
@@ -225,7 +228,6 @@ static struct ntttcp_stream_server *create_server_stream(struct ntttcp_test_endp
 		err_code = ERROR_PTHREAD_CREATE;
 		//continue;
 	}
-
 	(*threads_created)++;
 	return ss;
 }
@@ -249,33 +251,28 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 
 	/* create test threads */
 	int first_work_queue_fd = -1;
-	// t < test->server_ports
-	for (t = 0; t < test->server_ports; t++) { 
-		struct ntttcp_stream_server *ss = malloc(sizeof(struct ntttcp_stream_server));
-		ss->init_barrier_pt = &(ss->init_barrier);
 
-		if (t == 0) {
-			pthread_barrier_init(ss->init_barrier_pt, NULL, 2);
-		}
-		
-		counter.t = t;
-		ss = create_server_stream(tep, &counter, first_work_queue_fd, ss->init_barrier_pt);
+	/* pthread barrier meant for io_uring since we want the first thread to be created before the next ones to share a work queue  */
+	pthread_barrier_t init_barrier;
+        pthread_barrier_init(&init_barrier, NULL, 2);
 	
+	for (t = 0; t < test->server_ports; t++) { 
+		counter.t = t;
+		struct ntttcp_stream_server *ss = create_server_stream(tep, &counter, first_work_queue_fd, &init_barrier);
+
 		if (!ss) {
 			// print error, add more detail to the error message later
 			PRINT_ERR("something happened to creating ss" );
 		}
 
 		if (t == 0) {
-			pthread_barrier_wait(ss->init_barrier_pt);
+			pthread_barrier_wait(&init_barrier);
 			first_work_queue_fd = ss->rings[0].ring_fd;
-			printf("work queue fd %d\n", first_work_queue_fd);
  		}
 		else {
 			ss->first_work_queue_fd = first_work_queue_fd;
 		}
 	}
-	printf("threads created \n");
 
 	/* create synch thread; and put it to the end of the thread array */
 	if (test->no_synch == false) {

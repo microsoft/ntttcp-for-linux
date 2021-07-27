@@ -128,7 +128,7 @@ struct ntttcp_stream_server{
         
 	/* io_uring stuff here  */
 	uint	stream_server_num;
-	struct	io_uring rings[15];
+	struct	io_uring rings[100]; //hard coded value, where should I pull the real one from?
 	int	work_queue_fd, first_work_queue_fd;
 	bool    use_iouring;
 	
