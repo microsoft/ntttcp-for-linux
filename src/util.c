@@ -349,14 +349,14 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 {
 	struct ntttcp_test *test = tep->test;
 	struct ntttcp_test_endpoint_results *tepr = tep->results;
-	char str_temp1[256];
+	char hostname[256];
 	char *os_info = NULL;
-	char str_temp2[2048];
+	char os_info_escaped[2048];
 	size_t count = 0;
 	unsigned int i;
 
-	memset(str_temp1, '\0', sizeof(char) * 256);
-	memset(str_temp2, '\0', sizeof(char) * 2048);
+	memset(hostname, '\0', sizeof(char) * 256);
+	memset(os_info_escaped, '\0', sizeof(char) * 2048);
 
 	FILE *logfile = fopen(test->xml_log_filename, "w");
 	if (logfile == NULL) {
@@ -364,8 +364,8 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 		return -1;
 	}
 
-	gethostname(str_temp1, 256);
-	fprintf(logfile, "<ntttcp%s computername=\"%s\" version=\"5.33-linux\">\n", tep->endpoint_role == ROLE_RECEIVER ? "r" : "s", str_temp1);
+	gethostname(hostname, 256);
+	fprintf(logfile, "<ntttcp%s computername=\"%s\" version=\"5.33-linux\">\n", tep->endpoint_role == ROLE_RECEIVER ? "r" : "s", hostname);
 	fprintf(logfile, "	<parameters>\n");
 	fprintf(logfile, "		<send_socket_buff>%lu</send_socket_buff>\n", test->send_buf_size);
 	fprintf(logfile, "		<recv_socket_buff>%lu</recv_socket_buff>\n", test->recv_buf_size);
@@ -446,8 +446,8 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	os_info = malloc(256);
 	memset(os_info, '\0', sizeof(char) * 256);
 	count = execute_system_cmd_by_process("uname -a", "r", os_info);
-	escape_char_for_xml(os_info, str_temp2);
-	fprintf(logfile, "	<os>%s</os>\n", count == 0 ? "Unknown" : str_temp2);
+	escape_char_for_xml(os_info, os_info_escaped);
+	fprintf(logfile, "	<os>%s</os>\n", count == 0 ? "Unknown" : os_info_escaped);
 
 	fprintf(logfile, "</ntttcp%s>\n", tep->endpoint_role == ROLE_RECEIVER ? "r": "s");
 
@@ -459,14 +459,14 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 {
 	struct ntttcp_test *test = tep->test;
 	struct ntttcp_test_endpoint_results *tepr = tep->results;
-	char str_temp1[256];
+	char hostname[256];
 	char *os_info = NULL;
-	char str_temp2[2048];
+	char os_info_escaped[2048];
 	size_t count = 0;
 	unsigned int i;
 
-	memset(str_temp1, '\0', sizeof(char) * 256);
-	memset(str_temp2, '\0', sizeof(char) * 2048);
+	memset(hostname, '\0', sizeof(char) * 256);
+	memset(os_info_escaped, '\0', sizeof(char) * 2048);
 
 	FILE *json_file = fopen(test->json_log_filename, "w");
 	if (json_file == NULL) {
@@ -474,10 +474,10 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 		return -1;
 	}
 
-	gethostname(str_temp1, 256);
+	gethostname(hostname, 256);
 	fprintf(json_file, "{\n");
 	fprintf(json_file, "    \"ntttcp%s\" : {\n", tep->endpoint_role == ROLE_RECEIVER ? "r" : "s");
-	fprintf(json_file, "        \"computername\" : \"%s\",\n", str_temp1);
+	fprintf(json_file, "        \"computername\" : \"%s\",\n", hostname);
 	fprintf(json_file, "        \"version\" : \"5.33-linux\",\n");
 	fprintf(json_file, "        \"parameters\" : {\n");
 	fprintf(json_file, "            \"sendSocketBuff\" : \"%lu\",\n", test->send_buf_size);
@@ -629,8 +629,8 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 	os_info = malloc(256);
 	memset(os_info, '\0', sizeof(char) * 256);
 	count = execute_system_cmd_by_process("uname -a", "r", os_info);
-	escape_char_for_json(os_info, str_temp2);
-	fprintf(json_file, "        \"os\" : \"%s\"\n    }\n}\n", count == 0 ? "Unknown" : str_temp2);
+	escape_char_for_json(os_info, os_info_escaped);
+	fprintf(json_file, "        \"os\" : \"%s\"\n    }\n}\n", count == 0 ? "Unknown" : os_info_escaped);
 	
 	fclose(json_file);
 	return 0;
