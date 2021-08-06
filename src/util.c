@@ -350,6 +350,7 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 	struct ntttcp_test *test = tep->test;
 	struct ntttcp_test_endpoint_results *tepr = tep->results;
 	char str_temp1[256];
+	char *os_info = NULL;
 	char str_temp2[2048];
 	size_t count = 0;
 	unsigned int i;
@@ -442,8 +443,10 @@ int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
 		fprintf(logfile, "	<tcp_average_rtt metric=\"us\">%u</tcp_average_rtt>\n", tepr->average_rtt);
 	}
 
-	count = execute_system_cmd_by_process("uname -a", "r", str_temp1);
-	escape_char_for_xml(str_temp1, str_temp2);
+	os_info = malloc(256);
+	memset(os_info, '\0', sizeof(char) * 256);
+	count = execute_system_cmd_by_process("uname -a", "r", os_info);
+	escape_char_for_xml(os_info, str_temp2);
 	fprintf(logfile, "	<os>%s</os>\n", count == 0 ? "Unknown" : str_temp2);
 
 	fprintf(logfile, "</ntttcp%s>\n", tep->endpoint_role == ROLE_RECEIVER ? "r": "s");
@@ -457,6 +460,7 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 	struct ntttcp_test *test = tep->test;
 	struct ntttcp_test_endpoint_results *tepr = tep->results;
 	char str_temp1[256];
+	char *os_info = NULL;
 	char str_temp2[2048];
 	size_t count = 0;
 	unsigned int i;
@@ -622,9 +626,11 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 		fprintf(json_file, "        \"tcpAverageRtt metric\" : \"%u us\",\n", tepr->average_rtt);
 	}
 
-	count = execute_system_cmd_by_process("uname -a", "r", str_temp1);
-	escape_char_for_json(str_temp1, str_temp2);
-	fprintf(json_file, "        \"os\" : \"%s\"\n    }\n}\n", count == 0 ? "Unknown" :str_temp2 );
+	os_info = malloc(256);
+	memset(os_info, '\0', sizeof(char) * 256);
+	count = execute_system_cmd_by_process("uname -a", "r", os_info);
+	escape_char_for_json(os_info, str_temp2);
+	fprintf(json_file, "        \"os\" : \"%s\"\n    }\n}\n", count == 0 ? "Unknown" : str_temp2);
 	
 	fclose(json_file);
 	return 0;
