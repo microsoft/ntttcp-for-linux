@@ -264,7 +264,7 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 	printf("---------------------------------------------------------\n");
 
 	if (tep->test->save_xml_log)
-		if (write_result_into_log_file(tep) != 0)
+		if (write_result_into_xml_file(tep) != 0)
 			PRINT_ERR("Error writing log to xml file");
 }
 
@@ -324,7 +324,7 @@ unsigned int escape_char_for_xml(char *in, char *out)
 	return count;
 }
 
-int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
+int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 {
 	struct ntttcp_test *test = tep->test;
 	struct ntttcp_test_endpoint_results *tepr = tep->results;
