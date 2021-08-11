@@ -264,7 +264,7 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 	printf("---------------------------------------------------------\n");
 
 	if (tep->test->save_xml_log)
-		if (write_result_into_log_file(tep) != 0)
+		if (write_result_into_xml_file(tep) != 0)
 			PRINT_ERR("Error writing log to xml file");
 	if (tep->test->save_json_log)
                 if (write_result_into_json_file(tep) != 0)
@@ -327,7 +327,8 @@ unsigned int escape_char_for_xml(char *in, char *out)
 	return count;
 }
 
-unsigned int escape_char_for_json(char *in, char *out) {
+unsigned int escape_char_for_json(char *in, char *out)
+{
 	unsigned int count = 0;
 	size_t pos_in = 0, pos_out = 0;
 
@@ -345,7 +346,7 @@ unsigned int escape_char_for_json(char *in, char *out) {
 	return count;
 }
 
-int write_result_into_log_file(struct ntttcp_test_endpoint *tep)
+int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 {
 	struct ntttcp_test *test = tep->test;
 	struct ntttcp_test_endpoint_results *tepr = tep->results;
