@@ -99,6 +99,7 @@ double get_time_diff(struct timeval *t1, struct timeval *t2);
 int process_test_results(struct ntttcp_test_endpoint *tep);
 void print_test_results(struct ntttcp_test_endpoint *tep);
 int write_result_into_xml_file(struct ntttcp_test_endpoint *tep);
+int write_result_into_json_file(struct ntttcp_test_endpoint *tep);
 
 char *format_throughput(uint64_t bytes_transferred, double test_duration);
 char *retrive_ip_address_str(struct sockaddr_storage *ss, char *ip_str, size_t maxlen);

@@ -266,6 +266,9 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 	if (tep->test->save_xml_log)
 		if (write_result_into_xml_file(tep) != 0)
 			PRINT_ERR("Error writing log to xml file");
+	if (tep->test->save_json_log)
+                if (write_result_into_json_file(tep) != 0)
+                        PRINT_ERR("Error writing log to json file");
 }
 
 size_t execute_system_cmd_by_process(char *command, char *type, char *output)
@@ -324,17 +327,37 @@ unsigned int escape_char_for_xml(char *in, char *out)
 	return count;
 }
 
+unsigned int escape_char_for_json(char *in, char *out)
+{
+	unsigned int count = 0;
+	size_t pos_in = 0, pos_out = 0;
+
+	for(pos_in = 0; in[pos_in]; pos_in++) {
+		count++;
+		switch (in[pos_in]) {
+		case '\n':
+			break;
+		default:
+			count--;
+			memcpy(out+pos_out, in+pos_in, 1);
+			pos_out++;
+		}
+	}
+	return count;
+}
+
 int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 {
 	struct ntttcp_test *test = tep->test;
 	struct ntttcp_test_endpoint_results *tepr = tep->results;
-	char str_temp1[256];
-	char str_temp2[2048];
+	char hostname[256];
+	char *os_info = NULL;
+	char os_info_escaped[2048];
 	size_t count = 0;
 	unsigned int i;
 
-	memset(str_temp1, '\0', sizeof(char) * 256);
-	memset(str_temp2, '\0', sizeof(char) * 2048);
+	memset(hostname, '\0', sizeof(char) * 256);
+	memset(os_info_escaped, '\0', sizeof(char) * 2048);
 
 	FILE *logfile = fopen(test->xml_log_filename, "w");
 	if (logfile == NULL) {
@@ -342,8 +365,8 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 		return -1;
 	}
 
-	gethostname(str_temp1, 256);
-	fprintf(logfile, "<ntttcp%s computername=\"%s\" version=\"5.33-linux\">\n", tep->endpoint_role == ROLE_RECEIVER ? "r" : "s", str_temp1);
+	gethostname(hostname, 256);
+	fprintf(logfile, "<ntttcp%s computername=\"%s\" version=\"5.33-linux\">\n", tep->endpoint_role == ROLE_RECEIVER ? "r" : "s", hostname);
 	fprintf(logfile, "	<parameters>\n");
 	fprintf(logfile, "		<send_socket_buff>%lu</send_socket_buff>\n", test->send_buf_size);
 	fprintf(logfile, "		<recv_socket_buff>%lu</recv_socket_buff>\n", test->recv_buf_size);
@@ -421,13 +444,196 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 		fprintf(logfile, "	<tcp_average_rtt metric=\"us\">%u</tcp_average_rtt>\n", tepr->average_rtt);
 	}
 
-	count = execute_system_cmd_by_process("uname -a", "r", str_temp1);
-	escape_char_for_xml(str_temp1, str_temp2);
-	fprintf(logfile, "	<os>%s</os>\n", count == 0 ? "Unknown" : str_temp2);
+	os_info = malloc(256);
+	memset(os_info, '\0', sizeof(char) * 256);
+	count = execute_system_cmd_by_process("uname -a", "r", os_info);
+	escape_char_for_xml(os_info, os_info_escaped);
+	fprintf(logfile, "	<os>%s</os>\n", count == 0 ? "Unknown" : os_info_escaped);
 
 	fprintf(logfile, "</ntttcp%s>\n", tep->endpoint_role == ROLE_RECEIVER ? "r": "s");
 
 	fclose(logfile);
+	return 0;
+}
+
+int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
+{
+	struct ntttcp_test *test = tep->test;
+	struct ntttcp_test_endpoint_results *tepr = tep->results;
+	char hostname[256];
+	char *os_info = NULL;
+	char os_info_escaped[2048];
+	size_t count = 0;
+	unsigned int i;
+
+	memset(hostname, '\0', sizeof(char) * 256);
+	memset(os_info_escaped, '\0', sizeof(char) * 2048);
+
+	FILE *json_file = fopen(test->json_log_filename, "w");
+	if (json_file == NULL) {
+		PRINT_ERR("Error opening file to write log");
+		return -1;
+	}
+
+	gethostname(hostname, 256);
+	fprintf(json_file, "{\n");
+	fprintf(json_file, "    \"ntttcp%s\" : {\n", tep->endpoint_role == ROLE_RECEIVER ? "r" : "s");
+	fprintf(json_file, "        \"computername\" : \"%s\",\n", hostname);
+	fprintf(json_file, "        \"version\" : \"5.33-linux\",\n");
+	fprintf(json_file, "        \"parameters\" : {\n");
+	fprintf(json_file, "            \"sendSocketBuff\" : \"%lu\",\n", test->send_buf_size);
+	fprintf(json_file, "            \"recvSocketBuff\" : \"%lu\",\n", test->recv_buf_size);
+	fprintf(json_file, "            \"port\" : \"%d\",\n", test->server_base_port);
+	fprintf(json_file, "            \"syncPort\" : \"%d\",\n", test->server_base_port - 1);
+	fprintf(json_file, "            \"noSync\" : \"%s\",\n", test->no_synch == 0 ? "False" : "True");
+	fprintf(json_file, "            \"waitTimeoutMilliseconds\" : \"%d\",\n", 0);
+	fprintf(json_file, "            \"async\" : \"%s\",\n", "False");
+	fprintf(json_file, "            \"verbose\" : \"%s\",\n", test->verbose ? "True" : "False");
+	fprintf(json_file, "            \"wsa\" : \"%s\",\n", "False");
+	fprintf(json_file, "            \"useIpv6\" : \"%s\",\n", test->domain == AF_INET6 ? "True" : "False");
+	fprintf(json_file, "            \"udp\" : \"%s\",\n", test->protocol == UDP ? "True" : "False");
+	fprintf(json_file, "            \"verifyData\" : \"%s\",\n", "False");
+	fprintf(json_file, "            \"waitAll\" : \"%s\",\n", "False");
+	fprintf(json_file, "            \"runTime\" : \"%d\",\n", test->duration);
+	fprintf(json_file, "            \"warmupTime\" : \"%d\",\n", test->warmup);
+	fprintf(json_file, "            \"cooldownTime\" : \"%d\",\n", test->cooldown);
+	fprintf(json_file, "            \"dashNTimeout\" : \"%d\",\n", 0);
+	fprintf(json_file, "            \"bindSender\" : \"%s\",\n", "False");
+	fprintf(json_file, "            \"senderName\" : \"%s\",\n", "NA");
+	fprintf(json_file, "            \"maxActiveThreads\" : \"%d\",\n", 0);
+	fprintf(json_file, "            \"tp\" : \"%s\",\n", "False");
+	fprintf(json_file, "            \"noStdioBuffer\" : \"%s\",\n", "False");
+	fprintf(json_file, "            \"throughputBpms\" : \"%d\",\n", 0);
+	fprintf(json_file, "            \"cpuBurn\" : \"%d\",\n", 0);
+	fprintf(json_file, "            \"latencyMwasurement\" : \"%s\",\n", "False");
+	fprintf(json_file, "            \"useIOComplPorts\" : \"%s\",\n", "NA");
+	fprintf(json_file, "            \"cpuFromIdleFlag\" : \"%s\",\n", "False");
+	fprintf(json_file, "            \"getEstats\" : \"%s\",\n", "False");
+	fprintf(json_file, "            \"qosFlag\" : \"%s\",\n", "False");
+	fprintf(json_file, "            \"jitterMeasurement\" : \"%s\",\n", "False");
+	fprintf(json_file, "            \"packetSpacing\" : \"%d\"\n", 0);
+	fprintf(json_file, "        },\n");	
+
+	if (test->verbose) {
+		fprintf(json_file, "        \"threads\" : [\n");
+		for(i = 0; i < tep->total_threads; i++ ) {
+			if (tep->results->threads[i]->is_sync_thread == true) {
+				continue;
+			} else if (i != 0) {
+				/* Print the comma for the last result.	*/
+				fprintf(json_file, ",\n");
+			}
+			fprintf(json_file, "            {\n");
+			fprintf(json_file, "                \"index\" : \"%d\",\n", i);
+			fprintf(json_file, "                \"realTime\" : {\n");
+			fprintf(json_file, "                    \"metric\":\"s\",\n");
+			fprintf(json_file, "                    \"text\" : \"%.3f\"\n", tepr->threads[i]->actual_test_time);
+			fprintf(json_file, "                },\n");
+			fprintf(json_file, "                \"throughputs\" : [\n");
+			fprintf(json_file, "                    {\n");
+			fprintf(json_file, "                        \"metric\" : \"KB/s\",\n");
+			fprintf(json_file, "                        \"text\" : \"%.3f\"\n", tepr->threads[i]->KBps);
+			fprintf(json_file, "                    },\n");
+			fprintf(json_file, "                    {\n");
+			fprintf(json_file, "                        \"metric\" : \"MB/s\",\n");
+			fprintf(json_file, "                        \"text\" : \"%.3f bps\"\n", tepr->threads[i]->MBps);
+			fprintf(json_file, "                    },\n");
+			fprintf(json_file, "                    {\n");
+			fprintf(json_file, "                        \"metric\" : \"mbps\",\n");
+			fprintf(json_file, "                        \"text\" : \"%.3f\"\n", tepr->threads[i]->mbps);
+			fprintf(json_file, "                    }\n");
+			fprintf(json_file, "                ],\n");
+			fprintf(json_file, "                \"avgBytesPerCompl\" : {\n");
+			fprintf(json_file, "                    \"metric\":\"B\",\n");
+			fprintf(json_file, "                    \"text\" : \"%.3f\"\n", 0.000);
+			fprintf(json_file, "                }\n");
+			fprintf(json_file, "            }");
+		}
+		fprintf(json_file, "\n        ],\n");
+	}
+
+	fprintf(json_file, "        \"totalBytes\" : {\n");
+	fprintf(json_file, "            \"metric\" : \"MB\",\n");
+	fprintf(json_file, "            \"text\" : \"%.6f\"\n", tepr->total_bytes_MB);
+	fprintf(json_file, "        },\n");
+	fprintf(json_file, "        \"realTime\" : {\n");
+	fprintf(json_file, "            \"metric\" : \"s\",\n");
+	fprintf(json_file, "            \"text\" : \"%.6f\"\n", tepr->actual_test_time);
+	fprintf(json_file, "        },\n");
+	fprintf(json_file, "        \"avgBytesPerCompl\" : {\n");
+	fprintf(json_file, "            \"metric\" : \"B\",\n");
+	fprintf(json_file, "            \"text\" : \"%.3f\"\n", 0.000);
+	fprintf(json_file, "        },\n");
+	fprintf(json_file, "        \"threadsAvgBytesPerCompl\" : {\n");
+	fprintf(json_file, "            \"metric\" : \"B\",\n");
+	fprintf(json_file, "            \"text\" : \"%.3f\"\n", 0.000);
+	fprintf(json_file, "        },\n");
+	fprintf(json_file, "        \"avgFrameSize\" : {\n");
+	fprintf(json_file, "            \"metric\" : \"B\",\n");
+	fprintf(json_file, "            \"text\" : \"%.3f\"\n", 0.000);
+	fprintf(json_file, "        },\n");
+	fprintf(json_file, "        \"throughputs\" : [\n");
+	fprintf(json_file, "            {\n");
+	fprintf(json_file, "                \"metric\" : \"MB/s\",\n");
+	fprintf(json_file, "                \"text\" : \"%.3f\"\n", tepr->throughput_MBps);
+	fprintf(json_file, "            },\n");
+	fprintf(json_file, "            {\n");
+	fprintf(json_file, "                \"metric\" : \"mbps\",\n");
+	fprintf(json_file, "                \"text\" : \"%.3f\"\n", tepr->throughput_mbps);
+	fprintf(json_file, "            },\n");
+	fprintf(json_file, "            {\n");
+	fprintf(json_file, "                \"metric\" : \"Bps\",\n");
+	fprintf(json_file, "                \"text\" : \"%.3f\"\n", tepr->throughput_Bps);
+	fprintf(json_file, "            },\n");
+	fprintf(json_file, "            {\n");
+	fprintf(json_file, "                \"metric\" : \"buffer/s\",\n");
+	fprintf(json_file, "                \"text\" : \"%.3f\"\n", 0.000);
+	fprintf(json_file, "            }\n");
+	fprintf(json_file, "        ],\n");
+	fprintf(json_file, "        \"totalBuffers\" : \"%.3f\",\n", 0.000);
+	fprintf(json_file, "        \"avgPacketsPerInterrupt\" : {\n");
+	fprintf(json_file, "            \"metric\" : \"packets/interrupt\",\n");
+	fprintf(json_file, "            \"text\" : \"%.3f\"\n", tepr->packets_per_interrupt);
+	fprintf(json_file, "        },\n");
+	fprintf(json_file, "        \"interrupt\" : {\n");
+	fprintf(json_file, "            \"metric\" : \"count/sec\",\n");
+	fprintf(json_file, "            \"text\" : \"%.3f\"\n", 0.000);
+	fprintf(json_file, "        },\n");
+	fprintf(json_file, "        \"dpcs\" : {\n");
+	fprintf(json_file, "            \"metric\" : \"count/sec\",\n");
+	fprintf(json_file, "            \"text\" : \"%.3f\"\n", 0.000);
+	fprintf(json_file, "        },\n");
+	fprintf(json_file, "        \"avgPacketsPerDpc\" : {\n");
+	fprintf(json_file, "            \"metric\" : \"packets/dpc\",\n");
+	fprintf(json_file, "            \"text\" : \"%.3f\"\n", 0.000);
+	fprintf(json_file, "        },\n");
+	fprintf(json_file, "        \"cycles\" : {\n");
+	fprintf(json_file, "            \"metric\" : \"cycles/byte\",\n");
+	fprintf(json_file, "            \"text\" : \"%.3f\"\n", tepr->cycles_per_byte);
+	fprintf(json_file, "        },\n");
+	fprintf(json_file, "        \"packetsSent\" : \"%"PRIu64"\",\n", tepr->packets_sent);
+	fprintf(json_file, "        \"packetsReceived\" : \"%"PRIu64"\",\n", tepr->packets_received);
+	fprintf(json_file, "        \"packets_retransmitted\" : \"%"PRIu64"\",\n", tepr->packets_retransmitted);
+	fprintf(json_file, "        \"errors\" : \"%d\",\n", tepr->errors);
+	fprintf(json_file, "        \"cpu\" : {\n");
+	fprintf(json_file, "            \"metric\" : \"%%\",\n");
+	fprintf(json_file, "            \"text\" : \"%.3f\"\n", tepr->cpu_busy_percent * 100);
+	fprintf(json_file, "        },\n");
+	fprintf(json_file, "        \"bufferCount\" : \"%u\",\n", 0);
+	fprintf(json_file, "        \"bufferLen\" : \"%u\",\n",  0);
+	fprintf(json_file, "        \"io\" : \"%u\",\n", 0);
+
+	if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
+		fprintf(json_file, "        \"tcpAverageRtt metric\" : \"%u us\",\n", tepr->average_rtt);
+	}
+
+	os_info = malloc(256);
+	memset(os_info, '\0', sizeof(char) * 256);
+	count = execute_system_cmd_by_process("uname -a", "r", os_info);
+	escape_char_for_json(os_info, os_info_escaped);
+	fprintf(json_file, "        \"os\" : \"%s\"\n    }\n}\n", count == 0 ? "Unknown" : os_info_escaped);
+	
+	fclose(json_file);
 	return 0;
 }
 
