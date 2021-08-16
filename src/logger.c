@@ -22,9 +22,9 @@ void prepare_logging(bool verbose, bool save_console_log, char *log_file_name)
 			PRINT_ERR("the log file name is not specified");
 		}
 
-		if ( access(console_log_filename, F_OK) != -1) {
+		if (access(console_log_filename, F_OK) != -1) {
 			PRINT_INFO("log file exists. try to remove it before writing logs");
-			if (remove (console_log_filename) != 0)
+			if (remove(console_log_filename) != 0)
 				PRINT_ERR("removing the existing log file failed");
 		}
 	}
@@ -33,12 +33,12 @@ void prepare_logging(bool verbose, bool save_console_log, char *log_file_name)
 void PRINT_LOG(char *x, char *y)
 {
 	time_t rawtime;
-	struct tm * timeinfo;
-	char buffer [80];
+	struct tm *timeinfo;
+	char buffer[80];
 
 	time(&rawtime);
 	timeinfo = localtime(&rawtime);
-	strftime(buffer, 80, "%H:%M:%S",timeinfo);
+	strftime(buffer, 80, "%H:%M:%S", timeinfo);
 	printf("%s %s: %s\n", buffer, x, y);
 	fflush(stdout);
 
@@ -85,14 +85,14 @@ void PRINT_ERR_FREE(char *y)
 
 void PRINT_DBG(char *y)
 {
-	if(verbose_log) {
+	if (verbose_log) {
 		PRINT_LOG("DBG ", y);
 	}
 }
 
 void PRINT_DBG_FREE(char *y)
 {
-	if(verbose_log) {
+	if (verbose_log) {
 		PRINT_LOG_FREE("DBG ", y);
 	} else {
 		free(y);

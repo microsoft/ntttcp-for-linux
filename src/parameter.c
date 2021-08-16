@@ -9,7 +9,7 @@
 void print_flags(struct ntttcp_test *test)
 {
 	if (test->server_role)
- 		printf("%s\n", "*** receiver role");
+		printf("%s\n", "*** receiver role");
 	if (test->client_role)
 		printf("%s\n", "*** sender role");
 	if (test->daemon)
@@ -28,17 +28,19 @@ void print_flags(struct ntttcp_test *test)
 	if (test->no_synch)
 		printf("%s\n", "*** no sender/receiver synch");
 
-	//printf("%s:\t\t\t %s\n", "mapping", test->mapping);
+	/* printf("%s:\t\t\t %s\n", "mapping", test->mapping); */
 
 	if (test->client_role)
-		printf("%s:\t\t\t %d X %d X %d\n", "connections", test->server_ports, test->threads_per_server_port, test->conns_per_thread);
+		printf("%s:\t\t\t %d X %d X %d\n",
+			"connections",
+			test->server_ports, test->threads_per_server_port, test->conns_per_thread);
 	else
 		printf("%s:\t\t\t\t %d\n", "ports", test->server_ports);
 
 	if (test->cpu_affinity == -1)
-		printf("%s:\t\t\t %s\n", "cpu affinity", "*" );
+		printf("%s:\t\t\t %s\n", "cpu affinity", "*");
 	else
-		printf("%s:\t\t\t %d\n", "cpu affinity", test->cpu_affinity );
+		printf("%s:\t\t\t %d\n", "cpu affinity", test->cpu_affinity);
 
 	printf("%s:\t\t\t %s\n", "server address", test->bind_address);
 
@@ -145,8 +147,11 @@ void print_usage()
 	printf("\t     NumberOfReceiverPorts:    [default: %d]  [max: %d]\n", DEFAULT_NUM_SERVER_PORTS, MAX_NUM_SERVER_PORTS);
 	printf("\t     Processor:\t\t*, or cpuid such as 0, 1, etc \n");
 	printf("\t     e.g. -m 8,*,192.168.1.1\n");
-	printf("\t\t    If for receiver role: 8 threads listening on 8 ports (one port per thread) on the network 192.168.1.1;\n\t\t\tand those threads will run on all processors.\n");
-	printf("\t\t    If for sender role: receiver has 8 ports listening on the network 192.168.1.1;\n\t\t\tsender will create 8 threads to talk to all of those receiver ports\n\t\t\t(1 sender thread to one receiver port; this can be overridden by '-n');\n\t\t\tand all sender threads will run on all processors.\n");
+	printf("\t\t    If for receiver role: 8 threads listening on 8 ports (one port per thread) on the network "
+			"192.168.1.1;\n\t\t\tand those threads will run on all processors.\n");
+	printf("\t\t    If for sender role: receiver has 8 ports listening on the network 192.168.1.1;\n\t\t\tsender will "
+			"create 8 threads to talk to all of those receiver ports\n\t\t\t(1 sender thread to one receiver port; this "
+			"can be overridden by '-n');\n\t\t\tand all sender threads will run on all processors.\n");
 	printf("\n");
 
 	printf("\t--show-tcp-retrans\tShow system TCP retransmit counters in log from /proc\n ");
@@ -183,14 +188,14 @@ void print_version()
 int process_mappings(struct ntttcp_test *test)
 {
 	int state = S_THREADS, threads = 0;
-	char* token = NULL;
+	char *token = NULL;
 	int cpu = -1, total_cpus = 0;
 
 	state = S_THREADS;
-	char * element = strdup(test->mapping);
+	char *element = strdup(test->mapping);
 
-	while ((token = strsep(&element, ",")) != NULL)	{
-		if (S_THREADS == state)		{
+	while ((token = strsep(&element, ",")) != NULL) {
+		if (S_THREADS == state) {
 			threads = atoi(token);
 
 			if (1 > threads) {
@@ -199,12 +204,10 @@ int process_mappings(struct ntttcp_test *test)
 			test->server_ports = threads;
 			test->threads_per_server_port = 1;
 			++state;
-		}
-		else if (S_PROCESSOR == state) {
-			if (0 == strcmp(token, "*")){
-				//do nothing
-			}
-			else{
+		} else if (S_PROCESSOR == state) {
+			if (0 == strcmp(token, "*")) {
+				/* do nothing */
+			} else {
 				cpu = atoi(token);
 				total_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 				if (total_cpus < 1) {
@@ -219,13 +222,10 @@ int process_mappings(struct ntttcp_test *test)
 				test->cpu_affinity = cpu;
 			}
 			++state;
-		}
-		else if (S_HOST == state) {
+		} else if (S_HOST == state) {
 			test->bind_address = token;
 			++state;
-		}
-		else
-		{
+		} else {
 			PRINT_ERR("process_mappings: unexpected parameters in mapping");
 			return ERROR_ARGS;
 		}
@@ -249,12 +249,12 @@ int verify_args(struct ntttcp_test *test)
 	if (test->domain == AF_INET6 && strcmp(test->bind_address, "0.0.0.0") == 0)
 		test->bind_address = "::";
 
-	if (test->domain == AF_INET6 && !strstr( test->bind_address, ":") ) {
+	if (test->domain == AF_INET6 && !strstr(test->bind_address, ":")) {
 		PRINT_ERR("invalid ipv6 address provided");
 		return ERROR_ARGS;
 	}
 
-	if (test->domain == AF_INET && !strstr( test->bind_address, ".") ) {
+	if (test->domain == AF_INET && !strstr(test->bind_address, ".")) {
 		PRINT_ERR("invalid ipv4 address provided");
 		return ERROR_ARGS;
 	}
@@ -324,8 +324,8 @@ int verify_args(struct ntttcp_test *test)
 			PRINT_DBG("source port is too small. use the default value");
 		}
 
-		if ((int)(MAX_LOCAL_IP_PORT - test->client_base_port)
-		    < (int)(test->server_ports * test->threads_per_server_port * test->conns_per_thread)) {
+		if ((int)(MAX_LOCAL_IP_PORT - test->client_base_port) <
+			(int)(test->server_ports * test->threads_per_server_port * test->conns_per_thread)) {
 			PRINT_ERR("source port is too high to provide a sufficient range of ports for your test");
 		}
 
@@ -369,7 +369,7 @@ int verify_args(struct ntttcp_test *test)
 		PRINT_INFO("invalid test warm-up seconds provided. use the default value");
 	}
 
-	if (test->cooldown <0) {
+	if (test->cooldown < 0) {
 		test->cooldown = DEFAULT_COOLDOWN_SEC;
 		PRINT_INFO("invalid test cool-down seconds provided. use the default value");
 	}
@@ -380,15 +380,13 @@ int verify_args(struct ntttcp_test *test)
 int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 {
 	/* long options, for uncommon usage */
-	static struct option longopts[] =
-	{
+	static struct option longopts[] = {
 		{"show-tcp-retrans", no_argument, NULL, LO_SHOW_TCP_RETRANS},
 		{"show-nic-packets", required_argument, NULL, LO_SHOW_NIC_PACKETS},
 		{"show-dev-interrupts", required_argument, NULL, LO_SHOW_DEV_INTERRUPTS},
 		{"fq-rate-limit", required_argument, NULL, LO_FQ_RATE_LIMIT},
 		{0, 0, 0, 0}
 	};
-
 	int opt;
 
 	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:NO::x::j::QVh", longopts, NULL)) != -1) {
@@ -404,7 +402,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			if (optarg) {
 				test->bind_address = optarg;
 			} else {
-				if(optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
+				if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
 					test->bind_address = argv[optind++];
 			}
 			break;
@@ -463,9 +461,9 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 				test->client_base_port = atoi(optarg);
 			} else {
 				if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0]) {
-				        test->client_base_port = atoi(argv[optind++]);
+					test->client_base_port = atoi(argv[optind++]);
 				} else {
-				        test->client_base_port = DEFAULT_BASE_SRC_PORT;
+					test->client_base_port = DEFAULT_BASE_SRC_PORT;
 				}
 			}
 			break;
@@ -516,7 +514,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			if (optarg) {
 				test->console_log_filename = optarg;
 			} else {
-				if(optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
+				if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
 					test->console_log_filename = argv[optind++];
 			}
 			break;
@@ -526,7 +524,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			if (optarg) {
 				test->xml_log_filename = optarg;
 			} else {
-				if(optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
+				if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
 					test->xml_log_filename = argv[optind++];
 			}
 			break;
@@ -536,7 +534,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			if (optarg) {
 				test->json_log_filename = optarg;
 			} else {
-				if(optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
+				if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
 					test->json_log_filename = argv[optind++];
 			}
 			break;

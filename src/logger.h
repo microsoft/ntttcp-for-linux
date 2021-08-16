@@ -4,12 +4,11 @@
 // Author: Shihua (Simon) Xiao, sixiao@microsoft.com
 // ----------------------------------------------------------------------------------
 
-#include <time.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <unistd.h>
-#include <time.h>
 #include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
 
 void prepare_logging(bool verbose, bool save_console_log, char *log_file_name);
 void PRINT_LOG(char *x, char *y);

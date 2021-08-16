@@ -9,11 +9,11 @@
 void check_bandwidth_limit(struct ntttcp_test_endpoint *tep)
 {
 	/*
-	   Return immediately in the case of:
-	    a) this is receiver (we don't limit receiver);
-	    b) this is sender, but user did not specify the bandwidth limit.
-	*/
-	if ( (tep->endpoint_role == ROLE_RECEIVER) || (tep->test->bandwidth_limit == 0) )
+	 * Return immediately in the case of:
+	 * a) this is receiver (we don't limit receiver);
+	 * b) this is sender, but user did not specify the bandwidth limit.
+	 */
+	if ((tep->endpoint_role == ROLE_RECEIVER) || (tep->test->bandwidth_limit == 0))
 		return;
 
 	struct timeval this_check_time;
@@ -26,7 +26,8 @@ void check_bandwidth_limit(struct ntttcp_test_endpoint *tep)
 
 	for (n = 0; n < tep->total_threads; n++) {
 		/* No need to check the current sc is the sync_thread or not,
-		   because sender does not have a delegated thread for sync */
+		 * because sender does not have a delegated thread for sync
+		 */
 
 		current_throughput = (tep->client_streams[n]->total_bytes_transferred) / test_time_elapsed;
 		if (current_throughput > tep->client_streams[n]->sc_bandwidth_limit_bytes)
@@ -37,8 +38,8 @@ void check_bandwidth_limit(struct ntttcp_test_endpoint *tep)
 }
 
 struct report_segment report_real_time_throughput(struct ntttcp_test_endpoint *tep,
-						  struct report_segment last_checkpoint,
-						  uint total_test_threads)
+						   struct report_segment last_checkpoint,
+						   uint total_test_threads)
 {
 	struct report_segment this_checkpoint;
 
@@ -52,7 +53,7 @@ struct report_segment report_real_time_throughput(struct ntttcp_test_endpoint *t
 	uint n = 0;
 
 	for (n = 0; n < total_test_threads; n++) {
-		if (tep->test->client_role == true )
+		if (tep->test->client_role == true)
 			this_total_bytes += tep->client_streams[n]->total_bytes_transferred;
 		else
 			this_total_bytes += tep->server_streams[n]->total_bytes_transferred;
@@ -74,7 +75,7 @@ struct report_segment report_real_time_throughput(struct ntttcp_test_endpoint *t
 	}
 
 	this_checkpoint.interval_sec = test_time;
-	this_checkpoint.time  = this_check_time;
+	this_checkpoint.time = this_check_time;
 	this_checkpoint.bytes = this_total_bytes;
 
 	return this_checkpoint;
@@ -105,18 +106,18 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 	run_test_timer(tep->negotiated_test_cycle_time);
 
 	/* 1) run test warm-up, if it is specified */
-	if (tep->test->warmup > 0 ) {
+	if (tep->test->warmup > 0) {
 		gettimeofday(&last_checkpoint.time, NULL);
 		last_checkpoint.bytes = 0;
 		elapsed_sec = 0;
 		while (elapsed_sec < (double)tep->test->warmup) {
-			/* wait 0.5 second, or 1000 test status poll cycles.
+			/*
+			 * wait 0.5 second, or 1000 test status poll cycles.
 			 * we don't roll up the warmup bytes into final throughput report,
-			 * so we don't care the time accuracy */
-			usleep(THROUGHPUT_INTERVAL_U_SEC);	/* 500000 micro-seconds */	
-			last_checkpoint = report_real_time_throughput(tep,
-					                               last_checkpoint,
-								       total_test_threads);
+			 * so we don't care the time accuracy
+			 */
+			usleep(THROUGHPUT_INTERVAL_U_SEC); /* 500000 micro-seconds */
+			last_checkpoint = report_real_time_throughput(tep, last_checkpoint, total_test_threads);
 
 			elapsed_sec += last_checkpoint.interval_sec;
 
@@ -145,22 +146,23 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 	}
 
 	/* 2) now, let's run the real test duration */
-	elapsed_sec = 0;		/* reset the counter */
-	last_checkpoint.bytes = 0;	/* the counters in streams have been reset to 0 above */
-	gettimeofday(&now, NULL);	/* reset the timestamp to now */
+	elapsed_sec = 0; /* reset the counter */
+	last_checkpoint.bytes = 0; /* the counters in streams have been reset to 0 above */
+	gettimeofday(&now, NULL); /* reset the timestamp to now */
 	last_checkpoint.time = now;
 	tep->start_time = now;
 
 	/* calculate the initial resource usage */
-	get_cpu_usage( tep->results->init_cpu_usage );
-	get_cpu_usage_from_proc_stat( tep->results->init_cpu_ps );
-	get_tcp_retrans( tep->results->init_tcp_retrans );
+	get_cpu_usage(tep->results->init_cpu_usage);
+	get_cpu_usage_from_proc_stat(tep->results->init_cpu_ps);
+	get_tcp_retrans(tep->results->init_tcp_retrans);
 	tep->results->init_tx_packets = get_single_value_from_os_file(tep->test->show_interface_packets, "tx");
 	tep->results->init_rx_packets = get_single_value_from_os_file(tep->test->show_interface_packets, "rx");
 	tep->results->init_interrupts = get_interrupts_from_proc_by_dev(tep->test->show_dev_interrupts);
 
-	while(is_light_turned_on()) {
-		/* Wait 500 micro-seconds. We don't want to pull the status too often.
+	while (is_light_turned_on()) {
+		/*
+		 * Wait 500 micro-seconds. We don't want to pull the status too often.
 		 * But, we also don't want to wait too long time;
 		 * otherwise, in the case of CTRL+C, the test streams have been stopped by CTRL+C (then light is turned off), but we are still waiting here
 		 * which will make the "actual_test_time" longer than actual stream run time,
@@ -173,10 +175,8 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 		/* if we have already waited 1000 poll times (0.5 second), then let's report the throughput */
 		i++;
 		if (i == THROUGHPUT_INTERVAL_POLLS) {
-			last_checkpoint = report_real_time_throughput(tep,
-								      last_checkpoint,
-								      total_test_threads);
-			i = 0; //reset the counter
+			last_checkpoint = report_real_time_throughput(tep, last_checkpoint, total_test_threads);
+			i = 0; /* reset the counter */
 			elapsed_sec += last_checkpoint.interval_sec;
 		}
 
@@ -186,9 +186,9 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 	}
 
 	/* calculate the end resource usage */
-	get_cpu_usage( tep->results->final_cpu_usage );
-	get_cpu_usage_from_proc_stat( tep->results->final_cpu_ps );
-	get_tcp_retrans( tep->results->final_tcp_retrans );
+	get_cpu_usage(tep->results->final_cpu_usage);
+	get_cpu_usage_from_proc_stat(tep->results->final_cpu_ps);
+	get_tcp_retrans(tep->results->final_tcp_retrans);
 	tep->results->final_tx_packets = get_single_value_from_os_file(tep->test->show_interface_packets, "tx");
 	tep->results->final_rx_packets = get_single_value_from_os_file(tep->test->show_interface_packets, "rx");
 	tep->results->final_interrupts = get_interrupts_from_proc_by_dev(tep->test->show_dev_interrupts);
@@ -220,7 +220,8 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 	tep->results->total_bytes = total_bytes_duration;
 	tep->results->actual_test_time = actual_test_time;
 
-	/* 3) wait, if cool-down specified. there are some possibilities:
+	/*
+	 * 3) wait, if cool-down specified. there are some possibilities:
 	 *    a) "-C" is specified by user, then Cooldown here.
 	 *    b) "-C" is not specified (Cooldown time is 0), but the total test cycle time negotiated with remote peer,
 	 *    is longer than the local one, then the excess time will be treated as Cooldown.
@@ -228,7 +229,8 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 	 *    This endpoint   is running with: warmup:  5, duration: 60, cooldown:  0
 	 *    Remote endpoint is running with: warmup: 10, duration: 90, cooldown: 10
 	 *    Then, this endpoint will have 110 secs of test cycle time (total time), which is negotiated with remote endpoint (use the max one);
-	 *    Then, this endpoint will have 45 seconds of cooldown time (= 110 - 5 - 60) */
+	 *    Then, this endpoint will have 45 seconds of cooldown time (= 110 - 5 - 60)
+	 */
 	if (tep->negotiated_test_cycle_time - tep->test->warmup - tep->test->duration > 0)
 		PRINT_INFO("Test cooldown is in progress...");
 

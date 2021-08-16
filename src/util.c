@@ -12,9 +12,7 @@ void enable_fq_rate_limit(struct ntttcp_stream_client *sc, int sockfd)
 	if (fqrate_bytes > 0) {
 		if (setsockopt(sockfd, SOL_SOCKET, SO_MAX_PACING_RATE, &fqrate_bytes, sizeof(fqrate_bytes)) < 0) {
 			char *log = NULL;
-			ASPRINTF(&log,
-				 "failed to set fq bit rate for socket[%d]",
-				 sockfd);
+			ASPRINTF(&log, "failed to set fq bit rate for socket[%d]", sockfd);
 			PRINT_INFO_FREE(log);
 		}
 	}
@@ -25,14 +23,14 @@ void run_ntttcp_rtt_calculation_for_sender(struct ntttcp_test_endpoint *tep)
 	uint i = 0;
 	uint total_rtt = 0;
 	uint num_average_rtt = 0;
-	struct	ntttcp_stream_client *sc;
+	struct ntttcp_stream_client *sc;
 
 	/* Calculate average RTT across all connections */
 	for (i = 0; i < tep->total_threads; i++) {
 		sc = tep->client_streams[i];
 		/* all sender threads are data threads; no sync thread on sender side */
 
-		if (sc->average_rtt != (uint) -1) {
+		if (sc->average_rtt != (uint)-1) {
 			total_rtt += sc->average_rtt;
 			num_average_rtt++;
 		}
@@ -44,7 +42,7 @@ void run_ntttcp_rtt_calculation_for_sender(struct ntttcp_test_endpoint *tep)
 
 double get_time_diff(struct timeval *t1, struct timeval *t2)
 {
-	return fabs( (t1->tv_sec + (t1->tv_usec / 1000000.0)) - (t2->tv_sec + (t2->tv_usec / 1000000.0)) );
+	return fabs((t1->tv_sec + (t1->tv_usec / 1000000.0)) - (t2->tv_sec + (t2->tv_usec / 1000000.0)));
 }
 
 double unit_atod(const char *s, int unit_k)
@@ -54,13 +52,16 @@ double unit_atod(const char *s, int unit_k)
 
 	sscanf(s, "%lf%c", &n, &suffix);
 	switch (suffix) {
-	case 'g': case 'G':
+	case 'g':
+	case 'G':
 		n *= (unit_k * unit_k * unit_k);
 		break;
-	case 'm': case 'M':
+	case 'm':
+	case 'M':
 		n *= (unit_k * unit_k);
 		break;
-	case 'k': case 'K':
+	case 'k':
+	case 'K':
 		n *= unit_k;
 		break;
 	default:
@@ -69,8 +70,7 @@ double unit_atod(const char *s, int unit_k)
 	return n;
 }
 
-const char *unit_bps[] =
-{
+const char *unit_bps[] = {
 	"bps",
 	"Kbps",
 	"Mbps",
@@ -89,9 +89,11 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	if (test_duration == 0)
 		return -1;
 
-	/* calculate for per-thread counters, even for receiver's sync thread
-	   we will ignore that sync thread when printing in "print_test_results()" */
-	for (i=0; i<tep->total_threads; i++){
+	/*
+	 * calculate for per-thread counters, even for receiver's sync thread
+	 * we will ignore that sync thread when printing in "print_test_results()"
+	 */
+	for (i = 0; i < tep->total_threads; i++) {
 		if (tep->results->threads[i]->is_sync_thread == true)
 			continue;
 
@@ -130,7 +132,7 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	tepr->throughput_MBps = tepr->total_bytes_MB / test_duration;
 	tepr->throughput_mbps = tepr->throughput_MBps * BYTE_TO_BITS;
 	tepr->cycles_per_byte = total_bytes == 0 ? 0 :
-			cpu_speed_mhz * 1000 * 1000 * test_duration * (tepr->final_cpu_ps->nproc) * (1 - tepr->cpu_ps_idle_usage) / total_bytes;
+				cpu_speed_mhz * 1000 * 1000 * test_duration * (tepr->final_cpu_ps->nproc) * (1 - tepr->cpu_ps_idle_usage) / total_bytes;
 	tepr->packets_retransmitted = tepr->final_tcp_retrans->retrans_segs - tepr->init_tcp_retrans->retrans_segs;
 	tepr->cpu_busy_percent = ((tepr->final_cpu_usage->clock - tepr->init_cpu_usage->clock) * 1000000.0 / CLOCKS_PER_SEC)
 				 / (tepr->final_cpu_usage->time - tepr->init_cpu_usage->time);
@@ -159,7 +161,7 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 	if (tep->test->verbose) {
 		PRINT_INFO("\tThread\tTime(s)\tThroughput");
 		PRINT_INFO("\t======\t=======\t==========");
-		for (i=0; i<tep->total_threads; i++) {
+		for (i = 0; i < tep->total_threads; i++) {
 			if (tep->results->threads[i]->is_sync_thread == true)
 				continue;
 
@@ -173,7 +175,7 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 
 	/* only sender/client report the total connections established */
 	if (tep->test->client_role == true) {
-		for (i=0; i<tep->total_threads; i++)
+		for (i = 0; i < tep->total_threads; i++)
 			total_conns_created += tep->client_streams[i]->num_conns_created;
 		ASPRINTF(&log, "%d connections tested", total_conns_created);
 		PRINT_INFO_FREE(log);
@@ -215,9 +217,9 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 
 	if (strcmp(tep->test->show_interface_packets, "")) {
 		PRINT_INFO("total packets:");
-		ASPRINTF(&log, "\t tx_packets\t:%" PRIu64, tepr->packets_sent);
+		ASPRINTF(&log, "\t tx_packets\t:%"PRIu64, tepr->packets_sent);
 		PRINT_INFO_FREE(log);
-		ASPRINTF(&log, "\t rx_packets\t:%" PRIu64, tepr->packets_received);
+		ASPRINTF(&log, "\t rx_packets\t:%"PRIu64, tepr->packets_received);
 		PRINT_INFO_FREE(log);
 	}
 	if (strcmp(tep->test->show_dev_interrupts, "")) {
@@ -234,7 +236,9 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 		ASPRINTF(&log, "cpu cores\t:%d", tepr->final_cpu_ps->nproc);
 		PRINT_INFO_FREE(log);
 	} else {
-		ASPRINTF(&log, "number of CPUs does not match: initial: %d; final: %d", tepr->init_cpu_ps->nproc, tepr->final_cpu_ps->nproc);
+		ASPRINTF(&log,
+			"number of CPUs does not match: initial: %d; final: %d",
+			tepr->init_cpu_ps->nproc, tepr->final_cpu_ps->nproc);
 		PRINT_ERR_FREE(log);
 	}
 
@@ -293,34 +297,34 @@ unsigned int escape_char_for_xml(char *in, char *out)
 	unsigned int count = 0;
 	size_t pos_in = 0, pos_out = 0;
 
-	for(pos_in = 0; in[pos_in]; pos_in++) {
+	for (pos_in = 0; in[pos_in]; pos_in++) {
 		count++;
 		switch (in[pos_in]) {
 		case '>':
-			memcpy(out+pos_out, "&gt;", 4);
+			memcpy(out + pos_out, "&gt;", 4);
 			pos_out = pos_out + 4;
 			break;
 		case '<':
-			memcpy(out+pos_out, "&lt;", 4);
+			memcpy(out + pos_out, "&lt;", 4);
 			pos_out = pos_out + 4;
 			break;
 		case '&':
-			memcpy(out+pos_out, "&amp;", 5);
+			memcpy(out + pos_out, "&amp;", 5);
 			pos_out = pos_out + 5;
 			break;
 		case '\'':
-			memcpy(out+pos_out, "&apos;", 6);
+			memcpy(out + pos_out, "&apos;", 6);
 			pos_out = pos_out + 6;
 			break;
 		case '\"':
-			memcpy(out+pos_out, "&quot;", 6);
+			memcpy(out + pos_out, "&quot;", 6);
 			pos_out = pos_out + 6;
 			break;
 		case '\n':
 			break;
 		default:
 			count--;
-			memcpy(out+pos_out, in+pos_in, 1);
+			memcpy(out + pos_out, in + pos_in, 1);
 			pos_out++;
 		}
 	}
@@ -332,14 +336,14 @@ unsigned int escape_char_for_json(char *in, char *out)
 	unsigned int count = 0;
 	size_t pos_in = 0, pos_out = 0;
 
-	for(pos_in = 0; in[pos_in]; pos_in++) {
+	for (pos_in = 0; in[pos_in]; pos_in++) {
 		count++;
 		switch (in[pos_in]) {
 		case '\n':
 			break;
 		default:
 			count--;
-			memcpy(out+pos_out, in+pos_in, 1);
+			memcpy(out + pos_out, in + pos_in, 1);
 			pos_out++;
 		}
 	}
@@ -372,13 +376,13 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "		<recv_socket_buff>%lu</recv_socket_buff>\n", test->recv_buf_size);
 	fprintf(logfile, "		<port>%d</port>\n", test->server_base_port);
 	fprintf(logfile, "		<sync_port>%d</sync_port>\n", test->server_base_port - 1);
-	fprintf(logfile, "		<no_sync>%s</no_sync>\n", test->no_synch == 0 ? "False": "True");
+	fprintf(logfile, "		<no_sync>%s</no_sync>\n", test->no_synch == 0 ? "False" : "True");
 	fprintf(logfile, "		<wait_timeout_milliseconds>%d</wait_timeout_milliseconds>\n", 0);
 	fprintf(logfile, "		<async>%s</async>\n", "False");
-	fprintf(logfile, "		<verbose>%s</verbose>\n", test->verbose ? "True":"False");
+	fprintf(logfile, "		<verbose>%s</verbose>\n", test->verbose ? "True" : "False");
 	fprintf(logfile, "		<wsa>%s</wsa>\n", "False");
-	fprintf(logfile, "		<use_ipv6>%s</use_ipv6>\n", test->domain == AF_INET6 ? "True":"False");
-	fprintf(logfile, "		<udp>%s</udp>\n", test->protocol == UDP? "True":"False");
+	fprintf(logfile, "		<use_ipv6>%s</use_ipv6>\n", test->domain == AF_INET6 ? "True" : "False");
+	fprintf(logfile, "		<udp>%s</udp>\n", test->protocol == UDP ? "True" : "False");
 	fprintf(logfile, "		<verify_data>%s</verify_data>\n", "False");
 	fprintf(logfile, "		<wait_all>%s</wait_all>\n", "False");
 	fprintf(logfile, "		<run_time>%d</run_time>\n", test->duration);
@@ -402,7 +406,7 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	</parameters>\n");
 
 	if (test->verbose) {
-		for(i = 0; i < tep->total_threads; i++) {
+		for (i = 0; i < tep->total_threads; i++) {
 			if (tep->results->threads[i]->is_sync_thread == true)
 				continue;
 
@@ -431,9 +435,9 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<dpcs metric=\"count/sec\">%.3f</dpcs>\n", 0.000);
 	fprintf(logfile, "	<avg_packets_per_dpc metric=\"packets/dpc\">%.3f</avg_packets_per_dpc>\n", 0.000);
 	fprintf(logfile, "	<cycles metric=\"cycles/byte\">%.3f</cycles>\n", tepr->cycles_per_byte);
-	fprintf(logfile, "	<packets_sent>%" PRIu64"</packets_sent>\n", tepr->packets_sent);
-	fprintf(logfile, "	<packets_received>%" PRIu64"</packets_received>\n", tepr->packets_received);
-	fprintf(logfile, "	<packets_retransmitted>%" PRIu64"</packets_retransmitted>\n", tepr->packets_retransmitted);
+	fprintf(logfile, "	<packets_sent>%" PRIu64 "</packets_sent>\n", tepr->packets_sent);
+	fprintf(logfile, "	<packets_received>%" PRIu64 "</packets_received>\n", tepr->packets_received);
+	fprintf(logfile, "	<packets_retransmitted>%" PRIu64 "</packets_retransmitted>\n", tepr->packets_retransmitted);
 	fprintf(logfile, "	<errors>%d</errors>\n", tepr->errors);
 	fprintf(logfile, "	<cpu metric=\"%%\">%.3f</cpu>\n", tepr->cpu_busy_percent * 100);
 	fprintf(logfile, "	<bufferCount>%u</bufferCount>\n", 0);
@@ -512,11 +516,11 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 	fprintf(json_file, "            \"qosFlag\" : \"%s\",\n", "False");
 	fprintf(json_file, "            \"jitterMeasurement\" : \"%s\",\n", "False");
 	fprintf(json_file, "            \"packetSpacing\" : \"%d\"\n", 0);
-	fprintf(json_file, "        },\n");	
+	fprintf(json_file, "        },\n");
 
 	if (test->verbose) {
 		fprintf(json_file, "        \"threads\" : [\n");
-		for(i = 0; i < tep->total_threads; i++ ) {
+		for (i = 0; i < tep->total_threads; i++) {
 			if (tep->results->threads[i]->is_sync_thread == true) {
 				/* Skip the sync thread */
 				continue;
@@ -621,7 +625,7 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 	fprintf(json_file, "            \"value\" : \"%.3f\"\n", tepr->cpu_busy_percent * 100);
 	fprintf(json_file, "        },\n");
 	fprintf(json_file, "        \"bufferCount\" : \"%u\",\n", 0);
-	fprintf(json_file, "        \"bufferLen\" : \"%u\",\n",  0);
+	fprintf(json_file, "        \"bufferLen\" : \"%u\",\n", 0);
 	fprintf(json_file, "        \"io\" : \"%u\",\n", 0);
 
 	if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
@@ -657,7 +661,7 @@ char *format_throughput(uint64_t bytes_transferred, double test_duration)
 
 char *retrive_ip_address_str(struct sockaddr_storage *ss, char *ip_str, size_t maxlen)
 {
-	switch(ss->ss_family) {
+	switch (ss->ss_family) {
 	case AF_INET:
 		inet_ntop(AF_INET, &(((struct sockaddr_in *)ss)->sin_addr), ip_str, maxlen);
 		break;
@@ -707,15 +711,15 @@ bool check_resource_limit(struct ntttcp_test *test)
 	uint total_connections = 0;
 
 	struct rlimit limitstruct;
-	if(-1 == getrlimit(RLIMIT_NOFILE, &limitstruct))
+	if (-1 == getrlimit(RLIMIT_NOFILE, &limitstruct))
 		PRINT_ERR("Failed to load resource limits");
 
 	soft_limit = (unsigned long)limitstruct.rlim_cur;
 	hard_limit = (unsigned long)limitstruct.rlim_max;
 
-	ASPRINTF(&log, "user limits for maximum number of open files: soft: %ld; hard: %ld",
-			soft_limit,
-			hard_limit);
+	ASPRINTF(&log,
+		"user limits for maximum number of open files: soft: %ld; hard: %ld",
+		soft_limit, hard_limit);
 	PRINT_DBG_FREE(log);
 
 	if (test->client_role == true) {
@@ -729,9 +733,9 @@ bool check_resource_limit(struct ntttcp_test *test)
 	}
 
 	if (total_connections > soft_limit) {
-		ASPRINTF(&log, "soft limit is too small: limit is %ld; but total connections will be %d (or more on receiver)",
-				soft_limit,
-				total_connections);
+		ASPRINTF(&log,
+			"soft limit is too small: limit is %ld; but total connections will be %d (or more on receiver)",
+			 soft_limit, total_connections);
 		PRINT_ERR_FREE(log);
 
 		return false;
@@ -748,19 +752,19 @@ bool check_is_ip_addr_valid_local(int ss_family, char *ip_to_check)
 	size_t ip_addr_len;
 	char *log;
 
-	if ((ss_family == AF_INET) && strcmp(ip_to_check, "0.0.0.0")== 0)
+	if ((ss_family == AF_INET) && strcmp(ip_to_check, "0.0.0.0") == 0)
 		return true;
 
-	if ((ss_family == AF_INET6) && strcmp(ip_to_check, "::")== 0)
+	if ((ss_family == AF_INET6) && strcmp(ip_to_check, "::") == 0)
 		return true;
 
-	ip_addr_len = (ss_family == AF_INET? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
-	if ( (ip_addr_str = (char *)malloc(ip_addr_len)) == (char *)NULL) {
+	ip_addr_len = (ss_family == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
+	if ((ip_addr_str = (char *)malloc(ip_addr_len)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for ip address string");
 		return false;
 	}
 
-	getifaddrs (&ifaddrp);
+	getifaddrs(&ifaddrp);
 
 	for (ifap = ifaddrp; ifap; ifap = ifap->ifa_next) {
 		if (ifap->ifa_addr && ifap->ifa_addr->sa_family == ss_family) {
@@ -774,7 +778,7 @@ bool check_is_ip_addr_valid_local(int ss_family, char *ip_to_check)
 
 			if (strcmp(ip_to_check, ip_addr_str) == 0) {
 				is_valid = true;
-				// do not break here; just want to loop all of the interfaces, for DBG log
+				/* do not break here; just want to loop all of the interfaces, for DBG log */
 			}
 		}
 	}

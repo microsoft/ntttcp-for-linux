@@ -44,12 +44,12 @@ struct ntttcp_test_endpoint_results{
 	/* raw data of counters collected before and after test run */
 	uint64_t	total_bytes;
 	double	actual_test_time;
-	struct 	cpu_usage *init_cpu_usage;
-	struct 	cpu_usage *final_cpu_usage;
-	struct 	cpu_usage_from_proc_stat *init_cpu_ps;
-	struct 	cpu_usage_from_proc_stat *final_cpu_ps;
-	struct 	tcp_retrans *init_tcp_retrans;
-	struct 	tcp_retrans *final_tcp_retrans;
+	struct	cpu_usage *init_cpu_usage;
+	struct	cpu_usage *final_cpu_usage;
+	struct	cpu_usage_from_proc_stat *init_cpu_ps;
+	struct	cpu_usage_from_proc_stat *final_cpu_ps;
+	struct	tcp_retrans *init_tcp_retrans;
+	struct	tcp_retrans *final_tcp_retrans;
 	uint64_t	init_tx_packets;
 	uint64_t	init_rx_packets;
 	uint64_t	final_tx_packets;
@@ -57,7 +57,7 @@ struct ntttcp_test_endpoint_results{
 	uint64_t	init_interrupts;
 	uint64_t	final_interrupts;
 
-	/*point to per-thread result*/
+	/* point to per-thread result*/
 	struct	ntttcp_test_endpoint_thread_result	**threads;
 
 	/* fields can be calculated with above raw data or read from system */
@@ -81,7 +81,7 @@ struct ntttcp_test_endpoint_results{
 	/* fields for xml log (compatible with Windows ntttcp.exe) */
 	double	total_bytes_MB;
 	double	throughput_MBps;
-	double  throughput_Bps;
+	double	throughput_Bps;
 	double	throughput_mbps;
 	double	cycles_per_byte;
 	uint64_t	packets_sent;

@@ -5,21 +5,21 @@
 // ----------------------------------------------------------------------------------
 
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <sys/epoll.h>
-#include <netinet/tcp.h>
 #include <arpa/inet.h>
-#include "util.h"
+#include <netdb.h>
+#include <netinet/tcp.h>
+#include <stdio.h>
+#include <sys/epoll.h>
+#include <unistd.h>
 #include "multithreading.h"
+#include "util.h"
 
 int n_recv(int fd, char *buffer, size_t total);
 int n_send(int fd, const char *buffer, size_t total);
 
-void *run_ntttcp_sender_tcp_stream( void *ptr );
+void *run_ntttcp_sender_tcp_stream(void *ptr);
 
 int ntttcp_server_listen(struct ntttcp_stream_server *ss);
 int ntttcp_server_epoll(struct ntttcp_stream_server *ss);
 int ntttcp_server_select(struct ntttcp_stream_server *ss);
-void *run_ntttcp_receiver_tcp_stream( void *ptr );
+void *run_ntttcp_receiver_tcp_stream(void *ptr);
