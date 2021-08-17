@@ -51,7 +51,7 @@
 #define DEFAULT_THREADS_PER_SERVER_PORT	4
 #define DEFAULT_CLIENT_CONNS_PER_THREAD	1
 #define DEFAULT_BASE_DST_PORT		5001
-#define DEFAULT_BASE_SRC_PORT 		25001
+#define DEFAULT_BASE_SRC_PORT		25001
 #define DEFAULT_RECV_BUFFER_SIZE	(64 * 1024)
 #define DEFAULT_SEND_BUFFER_SIZE	(128 * 1024)
 #define DEFAULT_WARMUP_SEC		0
@@ -73,10 +73,10 @@
 #define ERROR_NETWORK_WRITE		-1109
 #define ERROR_RECEIVER_NOT_READY	-1110
 
-/* /proc file for re-transmit counters */
+/* proc file for re-transmit counters */
 #define TCP_SECTION			"Tcp"
-#define PROC_FILE_SNMP			"/proc/net/snmp"
-#define PROC_FILE_NETSTAT 		"/proc/net/netstat"
+#define PROC_FILE_SNMP		"/proc/net/snmp"
+#define PROC_FILE_NETSTAT		"/proc/net/netstat"
 #define PROC_FILE_INTERRUPTS		"/proc/interrupts"
 #define CPU_SPEED_MHZ			"cpu MHz"
 #define PROC_FILE_CPUINFO		"/proc/cpuinfo"
@@ -86,4 +86,3 @@
 #define DEFAULT_CONSOLE_LOG_FILE_NAME	"ntttcp-for-linux-log.log"
 #define DEFAULT_XML_LOG_FILE_NAME	"ntttcp-for-linux-log.xml"
 #define DEFAULT_JSON_LOG_FILE_NAME	"ntttcp-for-linux-log.json"
-

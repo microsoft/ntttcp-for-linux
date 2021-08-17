@@ -15,7 +15,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	struct ntttcp_test *test = tep->test;
 	char *log = NULL;
 
-	pthread_attr_t  pth_attrs;
+	pthread_attr_t pth_attrs;
 	uint n, t, threads_created = 0;
 	uint conns_created = 0, conns_total = 0;
 	struct ntttcp_stream_client *cs;
@@ -24,12 +24,13 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	struct timeval start_time, now;
 	long int conns_creation_time_usec = 0;
 
-	if (test->no_synch == false ) {
-		/* Negotiate with receiver on:
-		* 1) receiver state: is receiver busy with another test?
-		* 2) submit sender's test duration time to receiver to negotiate
-		*/
-		reply_received = create_sender_sync_socket( tep );
+	if (test->no_synch == false) {
+		/*
+		 * Negotiate with receiver on:
+		 * 1) receiver state: is receiver busy with another test?
+		 * 2) submit sender's test duration time to receiver to negotiate
+		 */
+		reply_received = create_sender_sync_socket(tep);
 		if (reply_received == 0) {
 			PRINT_ERR("sender: failed to create sync socket");
 			return ERROR_GENERAL;
@@ -61,8 +62,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			}
 		}
 		tep->negotiated_test_cycle_time = reply_received;
-	}
-	else {
+	} else {
 		PRINT_INFO("Starting sender activity (no sync) ...");
 	}
 
@@ -72,9 +72,10 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	gettimeofday(&start_time, NULL);
 	/* create test threads */
 	for (t = 0; t < test->server_ports; t++) {
-		for (n = 0; n < test->threads_per_server_port; n++ ) {
+		for (n = 0; n < test->threads_per_server_port; n++) {
 			cs = tep->client_streams[t * test->threads_per_server_port + n];
-			/* in client side, multiple connections will (one thread for one connection)
+			/*
+			 * in client side, multiple connections will (one thread for one connection)
 			 * connect to same port on server
 			 */
 			cs->server_port = test->server_base_port + t;
@@ -82,19 +83,18 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 			/* If sender side is being asked to pin the client source port */
 			if (test->client_base_port > 0)
 				cs->client_port = test->client_base_port
-					          + (t * test->threads_per_server_port + n) * test->conns_per_thread;
+						  + (t * test->threads_per_server_port + n) * test->conns_per_thread;
 
 			if (test->protocol == TCP) {
 				rc = pthread_create(&tep->threads[threads_created],
 							&pth_attrs,
 							run_ntttcp_sender_tcp_stream,
-							(void*)cs);
-			}
-			else {
+							(void *)cs);
+			} else {
 				rc = pthread_create(&tep->threads[threads_created],
 							&pth_attrs,
 							run_ntttcp_sender_udp_stream,
-							(void*)cs);
+							(void *)cs);
 			}
 
 			if (rc) {
@@ -102,8 +102,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 				PRINT_ERR_FREE(log);
 				err_code = ERROR_PTHREAD_CREATE;
 				continue;
-			}
-			else{
+			} else {
 				threads_created++;
 			}
 		}
@@ -113,7 +112,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	ASPRINTF(&log, "%d threads created", threads_created);
 	PRINT_INFO_FREE(log);
 
-	// wait for all connections created (timeout: CONNS_ESTAB_TIMEOUT seconds)
+	/* wait for all connections created (timeout: CONNS_ESTAB_TIMEOUT seconds) */
 	conns_total = test->server_ports * test->threads_per_server_port * test->conns_per_thread;
 	while (conns_creation_time_usec < CONNS_ESTAB_TIMEOUT * SEC_TO_USEC) {
 		conns_created = 0;
@@ -122,7 +121,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		gettimeofday(&now, NULL);
 		conns_creation_time_usec = (now.tv_sec - start_time.tv_sec) * SEC_TO_USEC + now.tv_usec - start_time.tv_usec;
 		for (t = 0; t < test->server_ports; t++) {
-			for (n = 0; n < test->threads_per_server_port; n++ ) {
+			for (n = 0; n < test->threads_per_server_port; n++) {
 				cs = tep->client_streams[t * test->threads_per_server_port + n];
 				conns_created += cs->num_conns_created;
 			}
@@ -134,14 +133,16 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		}
 	}
 	if (conns_created != conns_total) {
-		ASPRINTF(&log, "in %ld microseconds, only %d connections created (expected: %d)", conns_creation_time_usec, conns_created, conns_total);
+		ASPRINTF(&log,
+			"in %ld microseconds, only %d connections created (expected: %d)",
+			conns_creation_time_usec, conns_created, conns_total);
 		PRINT_ERR_FREE(log);
 	}
 
-	if (test->no_synch == false ) {
-		// request receiver to start the test
+	if (test->no_synch == false) {
+		/* request receiver to start the test */
 		reply_received = request_to_start(tep->synch_socket,
-						  tep->test->last_client ? (int)'L' : (int)'R' );
+						  tep->test->last_client ? (int)'L' : (int)'R');
 		if (reply_received == -1) {
 			PRINT_ERR("sender: failed to sync with receiver to start test");
 			return ERROR_GENERAL;
@@ -159,19 +160,20 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 
 	/* in the case of running in continuous_mode */
 	if (tep->negotiated_test_cycle_time == 0) {
-		sleep (UINT_MAX);
+		sleep(UINT_MAX);
 		/* either sleep has elapsed, or sleep was interrupted by a signal */
 		return err_code;
 	}
 
-	/* manage the test cycle
+	/*
+	 * manage the test cycle
 	 * will return after light is turned off
 	 * (calling wait_light_off() inside of below
 	 */
 	run_ntttcp_throughput_management(tep);
 
 	for (n = 0; n < threads_created; n++) {
-		if (pthread_join(tep->threads[n], &p_retval) !=0 ) {
+		if (pthread_join(tep->threads[n], &p_retval) != 0) {
 			PRINT_ERR("sender: error when pthread_join");
 			continue;
 		}
@@ -204,16 +206,9 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		ss->server_port = test->server_base_port + t;
 
 		if (test->protocol == TCP) {
-			rc = pthread_create(&tep->threads[t],
-						NULL,
-						run_ntttcp_receiver_tcp_stream,
-						(void*)ss);
-		}
-		else {
-			rc = pthread_create(&tep->threads[t],
-						NULL,
-						run_ntttcp_receiver_udp_stream,
-						(void*)ss);
+			rc = pthread_create(&tep->threads[t], NULL, run_ntttcp_receiver_tcp_stream, (void *)ss);
+		} else {
+			rc = pthread_create(&tep->threads[t], NULL, run_ntttcp_receiver_udp_stream, (void *)ss);
 		}
 
 		if (rc) {
@@ -226,7 +221,8 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 
 	/* create synch thread; and put it to the end of the thread array */
 	if (test->no_synch == false) {
-		/* ss struct is not used in sync thread, because:
+		/*
+		 * ss struct is not used in sync thread, because:
 		 * we are only allowed to pass one param to the thread in pthread_create();
 		 * but the information stored in ss, is not enough to be used for synch;
 		 * so we pass *tep to the pthread_create().
@@ -236,19 +232,15 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		 * 2) we will assign the protocol for synch stream to TCP, always, in create_receiver_sync_socket()
 		 */
 		ss = tep->server_streams[test->server_ports];
-		ss->server_port = test->server_base_port - 1; //just for bookkeeping
-		ss->protocol = TCP; //just for bookkeeping
+		ss->server_port = test->server_base_port - 1;	 /* just for bookkeeping */
+		ss->protocol = TCP;	 /* just for bookkeeping */
 		ss->is_sync_thread = true;
 
-		rc = pthread_create(&tep->threads[t],
-				NULL,
-				create_receiver_sync_socket,
-				(void*)tep);
+		rc = pthread_create(&tep->threads[t], NULL, create_receiver_sync_socket, (void *)tep);
 		if (rc) {
 			PRINT_ERR("pthread_create() create thread failed");
 			err_code = ERROR_PTHREAD_CREATE;
-		}
-		else {
+		} else {
 			threads_created++;
 		}
 	}
@@ -256,8 +248,9 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	ASPRINTF(&log, "%d threads created", threads_created);
 	PRINT_INFO_FREE(log);
 
-	while ( 1 ) {
-		/* for receiver, there are two ways to trigger test start:
+	while (1) {
+		/*
+		 * for receiver, there are two ways to trigger test start:
 		 * a) if synch enabled, then sync thread will trigger turn_on_light() after sync completed;
 		 *	see create_receiver_sync_socket()
 		 * b) if no synch enabled, then any tcp server accept client connections, the turn_on_light() will be triggered;
@@ -265,7 +258,8 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		 */
 		wait_light_on();
 
-		/* reset the counter?
+		/*
+		 * reset the counter?
 		 * yes. we need to reset server side perf counters at the beginning, after light-is-on;
 		 * this is to handle these cases when:
 		 * a) receiver in sync mode, but sender connected as no_sync mode;
@@ -278,16 +272,17 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 		 */
 		for (t = 0; t < threads_created; t++)
 			/* discard the bytes received before test starting */
-			(uint64_t)__sync_lock_test_and_set(&(tep->server_streams[t]->total_bytes_transferred), 0);
+			(uint64_t) __sync_lock_test_and_set(&(tep->server_streams[t]->total_bytes_transferred), 0);
 
 		/* in the case of running in continuous_mode */
 		if (tep->negotiated_test_cycle_time == 0) {
-			sleep (UINT_MAX);
+			sleep(UINT_MAX);
 			/* either sleep has elapsed, or sleep was interrupted by a signal */
 			return err_code;
 		}
 
-		/* manage the test cycle
+		/*
+		 * manage the test cycle
 		 * will return after light is turned off
 		 * (calling wait_light_off() inside of below function)
 		 */
@@ -297,15 +292,15 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 
 		/* reset this variable, in case receiver is running as '-H' (receiver is running in loop) */
 		tep->num_remote_endpoints = 0;
-		for (t=0; t<MAX_REMOTE_ENDPOINTS; t++)
+		for (t = 0; t < MAX_REMOTE_ENDPOINTS; t++)
 			tep->remote_endpoints[t] = -1;
 
 		if (tep->receiver_exit_after_done)
 			break;
 	}
 
-	for (t=0; t < threads_created; t++) {
-		if (pthread_join(tep->threads[t], NULL) != 0 ) {
+	for (t = 0; t < threads_created; t++) {
+		if (pthread_join(tep->threads[t], NULL) != 0) {
 			PRINT_ERR("receiver: error when pthread_join");
 			continue;
 		}
@@ -335,7 +330,7 @@ int main(int argc, char **argv)
 	test = new_ntttcp_test();
 	if (!test) {
 		PRINT_ERR("main: error when creating new test");
-		exit (-1);
+		exit(-1);
 	}
 
 	default_ntttcp_test(test);
@@ -344,7 +339,7 @@ int main(int argc, char **argv)
 		PRINT_ERR("main: error when parsing args");
 		print_flags(test);
 		free(test);
-		exit (-1);
+		exit(-1);
 	}
 
 	err_code = verify_args(test);
@@ -352,7 +347,7 @@ int main(int argc, char **argv)
 		PRINT_ERR("main: error when verifying the args");
 		print_flags(test);
 		free(test);
-		exit (-1);
+		exit(-1);
 	}
 
 	prepare_logging(test->verbose, test->save_console_log, test->console_log_filename);
@@ -363,7 +358,7 @@ int main(int argc, char **argv)
 	if (!check_resource_limit(test)) {
 		PRINT_ERR("main: error when checking resource limits");
 		free(test);
-		exit (-1);
+		exit(-1);
 	}
 
 	turn_off_light();
@@ -372,21 +367,20 @@ int main(int argc, char **argv)
 		CPU_ZERO(&cpuset);
 		CPU_SET(test->cpu_affinity, &cpuset);
 		PRINT_INFO("main: set cpu affinity");
-		if ( pthread_setaffinity_np( pthread_self(), sizeof(cpu_set_t ), &cpuset) != 0 )
+		if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset) != 0)
 			PRINT_ERR("main: cannot set cpu affinity");
 	}
 
 	if (test->daemon) {
 		PRINT_INFO("main: run this tool in the background");
-		if ( daemon(0, 0) != 0 )
+		if (daemon(0, 0) != 0)
 			PRINT_ERR("main: cannot run this tool in the background");
 	}
 
 	if (test->client_role == true) {
 		tep = new_ntttcp_test_endpoint(test, ROLE_SENDER);
 		err_code = run_ntttcp_sender(tep);
-	}
-	else {
+	} else {
 		tep = new_ntttcp_test_endpoint(test, ROLE_RECEIVER);
 		err_code = run_ntttcp_receiver(tep);
 	}

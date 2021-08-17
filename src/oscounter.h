@@ -6,26 +6,26 @@
 
 #define _GNU_SOURCE
 #include <ctype.h>
-#include <stdio.h>
-#include <time.h>
+#include <errno.h>
 #include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <stdbool.h>
-#include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/time.h>
+#include <time.h>
 #include "const.h"
 #include "logger.h"
 
-struct cpu_usage{
-	clock_t   clock;
-	double    time;
-	double    user_time;
-	double    system_time;
+struct cpu_usage {
+	clock_t clock;
+	double time;
+	double user_time;
+	double system_time;
 };
 
-struct cpu_usage_from_proc_stat{
+struct cpu_usage_from_proc_stat {
 	unsigned int nproc;
 	long long unsigned total_time;
 	long long unsigned user_time;
@@ -35,14 +35,14 @@ struct cpu_usage_from_proc_stat{
 	long long unsigned softirq_time;
 };
 
-struct tcp_retrans{
-	uint64_t  retrans_segs;
-	uint64_t  tcp_lost_retransmit;
-	uint64_t  tcp_syn_retrans;
-	uint64_t  tcp_fast_retrans;
-	uint64_t  tcp_forward_retrans;
-	uint64_t  tcp_slowStart_retrans;
-	uint64_t  tcp_retrans_fail;
+struct tcp_retrans {
+	uint64_t retrans_segs;
+	uint64_t tcp_lost_retransmit;
+	uint64_t tcp_syn_retrans;
+	uint64_t tcp_fast_retrans;
+	uint64_t tcp_forward_retrans;
+	uint64_t tcp_slowStart_retrans;
+	uint64_t tcp_retrans_fail;
 };
 
 void get_cpu_usage(struct cpu_usage *cu);

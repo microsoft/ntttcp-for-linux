@@ -24,7 +24,7 @@ void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
 	unsigned long long int user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice;
 	user = nice = system = idle = iowait = irq = softirq = steal = guest = guest_nice = 0;
 
-	FILE* file = fopen(PROC_FILE_STAT, "r");
+	FILE *file = fopen(PROC_FILE_STAT, "r");
 	if (file == NULL) {
 		PRINT_ERR("Cannot open /proc/stat");
 		return;
@@ -49,7 +49,7 @@ void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
 			      &user, &nice, &system, &idle, &iowait,
 			      &irq, &softirq, &steal, &guest, &guest_nice);
 		}
-	} while(buffer[0] == 'c' && buffer[1] == 'p' && buffer[2] == 'u');
+	} while (buffer[0] == 'c' && buffer[1] == 'p' && buffer[2] == 'u');
 
 	fclose(file);
 
@@ -82,12 +82,12 @@ bool is_str_number(char *str)
 
 uint64_t get_interrupts_from_proc_by_dev(char *dev_name)
 {
-	FILE* file = fopen(PROC_FILE_INTERRUPTS, "r");
+	FILE *file = fopen(PROC_FILE_INTERRUPTS, "r");
 	if (file == NULL) {
 		PRINT_ERR("Cannot open /proc/interrupts");
 		return 0;
 	}
-	if(!strcmp(dev_name, ""))
+	if (!strcmp(dev_name, ""))
 		return 0;
 
 	/* the max number of chars in each line = 64 + 12 chars/cpu * 1024 cpus + 128 = 12,480 */
@@ -97,7 +97,7 @@ uint64_t get_interrupts_from_proc_by_dev(char *dev_name)
 	uint64_t interrupts = 0;
 	uint64_t total_interrupts = 0;
 	while ((line = fgets(buffer, 12480, file)) != NULL) {
-		if(strstr(line, dev_name) == NULL) {
+		if (strstr(line, dev_name) == NULL) {
 			continue;
 		}
 
@@ -132,7 +132,7 @@ uint64_t get_single_value_from_os_file(char *if_name, char *tx_or_rx)
 		return 0;
 
 	ASPRINTF(&filename, SYS_CLASS_NIC_STAT_PKT, if_name, tx_or_rx);
-	FILE* file = fopen(filename, "r");
+	FILE *file = fopen(filename, "r");
 	if (file == NULL) {
 		ASPRINTF(&log, "Cannot open %s", filename);
 		PRINT_ERR_FREE(log);
@@ -192,7 +192,7 @@ uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 	 */
 	while ((read = getline(&line, &len, stream)) != -1) {
 		/* key is found, then read the value here */
-		if (key_found >0) {
+		if (key_found > 0) {
 			pch = line;
 			while ((pch = strtok(pch, " "))) {
 				key_found--;
