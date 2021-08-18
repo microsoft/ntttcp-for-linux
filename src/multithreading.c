@@ -34,6 +34,7 @@ void wait_light_on(void)
 	pthread_mutex_lock(&light_mutex);
 	while (run_light == 0)
 		pthread_cond_wait(&wait_light, &light_mutex);
+
 	pthread_mutex_unlock(&light_mutex);
 }
 
@@ -42,6 +43,7 @@ void wait_light_off(void)
 	pthread_mutex_lock(&light_mutex);
 	while (run_light != 0)
 		pthread_cond_wait(&wait_light, &light_mutex);
+
 	pthread_mutex_unlock(&light_mutex);
 }
 
