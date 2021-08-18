@@ -27,29 +27,29 @@
 #include "oscounter.h"
 
 struct ntttcp_test_endpoint_thread_result{
-	bool	is_sync_thread;
+	bool		is_sync_thread;
 	/* raw data of counters collected before and after test run */
 	uint64_t	total_bytes;
-	double	actual_test_time;
+	double		actual_test_time;
 
 	/* fields can be calculated with above raw data */
-	double	KBps;
-	double	MBps;
-	double	mbps;
+	double		KBps;
+	double		MBps;
+	double		mbps;
 };
 
 struct ntttcp_test_endpoint_results{
-	struct  ntttcp_test_endpoint *endpoint;
+	struct  	ntttcp_test_endpoint *endpoint;
 
 	/* raw data of counters collected before and after test run */
 	uint64_t	total_bytes;
-	double	actual_test_time;
-	struct	cpu_usage *init_cpu_usage;
-	struct	cpu_usage *final_cpu_usage;
-	struct	cpu_usage_from_proc_stat *init_cpu_ps;
-	struct	cpu_usage_from_proc_stat *final_cpu_ps;
-	struct	tcp_retrans *init_tcp_retrans;
-	struct	tcp_retrans *final_tcp_retrans;
+	double		actual_test_time;
+	struct		cpu_usage *init_cpu_usage;
+	struct		cpu_usage *final_cpu_usage;
+	struct		cpu_usage_from_proc_stat *init_cpu_ps;
+	struct		cpu_usage_from_proc_stat *final_cpu_ps;
+	struct		tcp_retrans *init_tcp_retrans;
+	struct		tcp_retrans *final_tcp_retrans;
 	uint64_t	init_tx_packets;
 	uint64_t	init_rx_packets;
 	uint64_t	final_tx_packets;
@@ -58,32 +58,32 @@ struct ntttcp_test_endpoint_results{
 	uint64_t	final_interrupts;
 
 	/* point to per-thread result*/
-	struct	ntttcp_test_endpoint_thread_result	**threads;
+	struct		ntttcp_test_endpoint_thread_result **threads;
 
 	/* fields can be calculated with above raw data or read from system */
-	double	cpu_speed_mhz;
-	double	time_diff;
-	double	retrans_segments_per_sec;
-	double	tcp_lost_retransmit_per_sec;
-	double	tcp_syn_retrans_per_sec;
-	double	tcp_fast_retrans_per_sec;
-	double	tcp_forward_retrans_per_sec;
-	double	tcp_slowStart_retrans_per_sec;
-	double	tcp_retrans_fail_per_sec;
-	double	cpu_ps_user_usage;
-	double	cpu_ps_system_usage;
-	double	cpu_ps_idle_usage;
-	double	cpu_ps_iowait_usage;
-	double	cpu_ps_softirq_usage;
+	double		cpu_speed_mhz;
+	double		time_diff;
+	double		retrans_segments_per_sec;
+	double		tcp_lost_retransmit_per_sec;
+	double		tcp_syn_retrans_per_sec;
+	double		tcp_fast_retrans_per_sec;
+	double		tcp_forward_retrans_per_sec;
+	double		tcp_slowStart_retrans_per_sec;
+	double		tcp_retrans_fail_per_sec;
+	double		cpu_ps_user_usage;
+	double		cpu_ps_system_usage;
+	double		cpu_ps_idle_usage;
+	double		cpu_ps_iowait_usage;
+	double		cpu_ps_softirq_usage;
 	uint64_t	total_interrupts;
-	double	packets_per_interrupt;
+	double		packets_per_interrupt;
 
 	/* fields for xml log (compatible with Windows ntttcp.exe) */
-	double	total_bytes_MB;
-	double	throughput_MBps;
-	double	throughput_Bps;
-	double	throughput_mbps;
-	double	cycles_per_byte;
+	double		total_bytes_MB;
+	double		throughput_MBps;
+	double		throughput_Bps;
+	double		throughput_mbps;
+	double		cycles_per_byte;
 	uint64_t	packets_sent;
 	uint64_t	packets_received;
 	uint64_t	packets_retransmitted;

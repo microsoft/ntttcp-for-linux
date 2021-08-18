@@ -28,7 +28,7 @@ void print_flags(struct ntttcp_test *test)
 	if (test->no_synch)
 		printf("%s\n", "*** no sender/receiver synch");
 
-	/* printf("%s:\t\t\t %s\n", "mapping", test->mapping); */
+	// printf("%s:\t\t\t %s\n", "mapping", test->mapping);
 
 	if (test->client_role)
 		printf("%s:\t\t\t %d X %d X %d\n",

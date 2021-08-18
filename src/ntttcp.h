@@ -8,10 +8,10 @@
 #pragma once
 
 #define _GNU_SOURCE
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -60,7 +60,7 @@ struct ntttcp_test
 	char	*xml_log_filename; /* the xml log file name */
 	bool	save_json_log; /* '-j' to save output to json file */
 	char	*json_log_filename; /* the json log file name */
-	
+
 	bool	quiet; /* '-Q' for quiet logging */
 	bool	verbose; /* '-V' for verbose logging */
 };

@@ -20,42 +20,42 @@ struct ntttcp_test *new_ntttcp_test()
 
 void default_ntttcp_test(struct ntttcp_test *test)
 {
-	test->server_role			  = false;
-	test->client_role			  = false;
-	test->daemon				  = false;
-	test->multi_clients_mode		  = false;
-	test->last_client			  = false;
-	test->use_epoll				  = false;
-	test->exit_after_done			  = true;
-	test->mapping				  = "16,*,*";
-	test->bind_address			  = "0.0.0.0";
-	test->cpu_affinity			  = -1; /* no hard cpu affinity */
-	test->server_ports			  = DEFAULT_NUM_SERVER_PORTS;	 //default:16 */
-	test->threads_per_server_port		  = DEFAULT_THREADS_PER_SERVER_PORT; /* default: 4, sender only */
-	test->conns_per_thread			  = DEFAULT_CLIENT_CONNS_PER_THREAD; /* default: 1, sender only */
-	test->domain				  = AF_INET; /* IPV4 */
-	test->protocol				  = TCP;
-	test->server_base_port			  = DEFAULT_BASE_DST_PORT;
-	test->client_base_port			  = 0; /* random/ephemeral port */
-	test->recv_buf_size			  = DEFAULT_RECV_BUFFER_SIZE; /* 64K */
-	test->send_buf_size			  = DEFAULT_SEND_BUFFER_SIZE; /* 128K */
-	test->bandwidth_limit			  = 0; /* no bandwidth limit */
-	test->fq_rate_limit			  = 0; /* o fq rate limit */
-	test->warmup				  = DEFAULT_WARMUP_SEC; /* 0 sec */
-	test->duration				  = DEFAULT_TEST_DURATION; /* 60 sec */
-	test->cooldown				  = DEFAULT_COOLDOWN_SEC; /* 0 sec */
-	test->no_synch				  = false;
-	test->show_tcp_retransmit		  = false;
-	test->show_interface_packets		  = "";
-	test->show_dev_interrupts		  = "";
-	test->save_console_log			  = false;
-	test->console_log_filename		  = DEFAULT_CONSOLE_LOG_FILE_NAME; /* "ntttcp-for-linux-log.log" */
-	test->save_xml_log			  = false;
-	test->xml_log_filename			  = DEFAULT_XML_LOG_FILE_NAME; /* "ntttcp-for-linux-log.xml" */
-	test->save_json_log			  = false;
-	test->json_log_filename			  = DEFAULT_JSON_LOG_FILE_NAME; /* "ntttcp-for-linux-log.json" */
-	test->quiet				  = false;
-	test->verbose				  = false;
+	test->server_role		= false;
+	test->client_role		= false;
+	test->daemon			= false;
+	test->multi_clients_mode	= false;
+	test->last_client		= false;
+	test->use_epoll			= false;
+	test->exit_after_done		= true;
+	test->mapping			= "16,*,*";
+	test->bind_address		= "0.0.0.0";
+	test->cpu_affinity		= -1; /* no hard cpu affinity */
+	test->server_ports		= DEFAULT_NUM_SERVER_PORTS;	 //default:16 */
+	test->threads_per_server_port	= DEFAULT_THREADS_PER_SERVER_PORT; /* default: 4, sender only */
+	test->conns_per_thread		= DEFAULT_CLIENT_CONNS_PER_THREAD; /* default: 1, sender only */
+	test->domain			= AF_INET; /* IPV4 */
+	test->protocol			= TCP;
+	test->server_base_port		= DEFAULT_BASE_DST_PORT;
+	test->client_base_port		= 0; /* random/ephemeral port */
+	test->recv_buf_size		= DEFAULT_RECV_BUFFER_SIZE; /* 64K */
+	test->send_buf_size		= DEFAULT_SEND_BUFFER_SIZE; /* 128K */
+	test->bandwidth_limit		= 0; /* no bandwidth limit */
+	test->fq_rate_limit		= 0; /* o fq rate limit */
+	test->warmup			= DEFAULT_WARMUP_SEC; /* 0 sec */
+	test->duration			= DEFAULT_TEST_DURATION; /* 60 sec */
+	test->cooldown			= DEFAULT_COOLDOWN_SEC; /* 0 sec */
+	test->no_synch			= false;
+	test->show_tcp_retransmit	= false;
+	test->show_interface_packets	= "";
+	test->show_dev_interrupts	= "";
+	test->save_console_log		= false;
+	test->console_log_filename	= DEFAULT_CONSOLE_LOG_FILE_NAME; /* "ntttcp-for-linux-log.log" */
+	test->save_xml_log		= false;
+	test->xml_log_filename		= DEFAULT_XML_LOG_FILE_NAME; /* "ntttcp-for-linux-log.xml" */
+	test->save_json_log		= false;
+	test->json_log_filename		= DEFAULT_JSON_LOG_FILE_NAME; /* "ntttcp-for-linux-log.json" */
+	test->quiet			= false;
+	test->verbose			= false;
 }
 
 bool is_running_tty(void)
@@ -79,16 +79,16 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 	gettimeofday(&now, NULL);
 
 	memset(e, 0, sizeof(struct ntttcp_test_endpoint));
-	e->endpoint_role				  = endpoint_role;
-	e->test						  = test;
-	e->state					  = TEST_NOT_STARTED;
-	e->receiver_exit_after_done			  = test->exit_after_done;
-	e->negotiated_test_cycle_time			  = test->warmup + test->duration + test->cooldown;
-	e->start_time					  = now;
-	e->end_time					  = now;
-	e->running_tty					  = is_running_tty();
-	e->synch_socket					  = 0;
-	e->num_remote_endpoints				  = 0;
+	e->endpoint_role		= endpoint_role;
+	e->test				= test;
+	e->state			= TEST_NOT_STARTED;
+	e->receiver_exit_after_done	= test->exit_after_done;
+	e->negotiated_test_cycle_time	= test->warmup + test->duration + test->cooldown;
+	e->start_time			= now;
+	e->end_time			= now;
+	e->running_tty			= is_running_tty();
+	e->synch_socket			= 0;
+	e->num_remote_endpoints		= 0;
 	for (i = 0; i < MAX_REMOTE_ENDPOINTS; i++)
 		e->remote_endpoints[i] = -1;
 
@@ -247,23 +247,23 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoin
 		return NULL;
 
 	memset(s, 0, sizeof(struct ntttcp_stream_client));
-	s->endpoint		= ept;
-	s->domain		= test->domain;
-	s->protocol		= test->protocol;
-	s->bind_address = test->bind_address;
-	s->num_connections			= test->conns_per_thread;
-	s->send_buf_size			= test->send_buf_size;
-	s->sc_bandwidth_limit_bytes = test->bandwidth_limit / (test->server_ports * test->threads_per_server_port) / 8;
-	s->socket_fq_rate_limit_bytes = test->fq_rate_limit / (test->server_ports * test->threads_per_server_port * test->conns_per_thread) / 8;
-	s->hold_on		   = false;
-	s->verbose		   = test->verbose;
-	s->is_sync_thread	   = false;
-	s->no_synch		   = test->no_synch;
-	s->continuous_mode	   = (test->duration == 0);
+	s->endpoint			= ept;
+	s->domain			= test->domain;
+	s->protocol			= test->protocol;
+	s->bind_address 		= test->bind_address;
+	s->num_connections		= test->conns_per_thread;
+	s->send_buf_size		= test->send_buf_size;
+	s->sc_bandwidth_limit_bytes	= test->bandwidth_limit / (test->server_ports * test->threads_per_server_port) / 8;
+	s->socket_fq_rate_limit_bytes	= test->fq_rate_limit / (test->server_ports * test->threads_per_server_port * test->conns_per_thread) / 8;
+	s->hold_on			= false;
+	s->verbose			= test->verbose;
+	s->is_sync_thread		= false;
+	s->no_synch			= test->no_synch;
+	s->continuous_mode		= (test->duration == 0);
 
-	s->num_conns_created	   = 0;
-	s->total_bytes_transferred = 0;
-	s->average_rtt		   = (uint)-1;
+	s->num_conns_created		= 0;
+	s->total_bytes_transferred	= 0;
+	s->average_rtt			= (uint)-1;
 	return s;
 }
 
@@ -280,14 +280,14 @@ struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test_endpoin
 	s->endpoint		= ept;
 	s->domain		= test->domain;
 	s->protocol		= test->protocol;
-	s->bind_address = test->bind_address;
+	s->bind_address 	= test->bind_address;
 	/* s->server_port, should be specified by caller */
-	s->recv_buf_size			   = test->recv_buf_size;
-	s->verbose				   = test->verbose;
-	s->is_sync_thread		   = false;
-	s->no_synch				   = test->no_synch;
-	s->continuous_mode		   = (test->duration == 0);
-	s->use_epoll			   = test->use_epoll;
+	s->recv_buf_size	= test->recv_buf_size;
+	s->verbose		= test->verbose;
+	s->is_sync_thread	= false;
+	s->no_synch		= test->no_synch;
+	s->continuous_mode	= (test->duration == 0);
+	s->use_epoll		= test->use_epoll;
 	s->total_bytes_transferred = 0;
 	/* other fields will be assigned at run time */
 	return s;
