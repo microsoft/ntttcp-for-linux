@@ -2,7 +2,7 @@ ifndef CC
 CC=gcc
 endif
 ifeq ($(DEBUG), 1)
-CFLAGS=-Wall -W -O0 -ggdb3 -fno-omit-frame-pointer
+CFLAGS=-Wall -W -O0 -ggdb3 -fno-omit-frame-pointer -fsanitize=address
 else
 CFLAGS=-Wall -W -O2 -fno-strict-aliasing
 endif

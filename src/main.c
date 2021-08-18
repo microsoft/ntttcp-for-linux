@@ -217,6 +217,7 @@ static struct ntttcp_stream_server *create_server_stream(struct ntttcp_test_endp
 					(void*)ss);
 	}
 	else {
+		pthread_barrier_wait(&ss->init_barrier);
 		rc = pthread_create(&tep->threads[t],
 					NULL,
 					run_ntttcp_receiver_udp_stream,

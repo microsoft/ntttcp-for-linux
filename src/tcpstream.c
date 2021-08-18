@@ -718,9 +718,10 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 int add_accept_request(struct ntttcp_stream_server *ss, struct sockaddr_in *client_addr, socklen_t *client_addr_len) {
 	struct io_uring_sqe *sqe = io_uring_get_sqe(&ss->rings[ss->stream_server_num]);
 	io_uring_prep_accept(sqe, ss->listener, (struct sockaddr *) client_addr, client_addr_len, 0);
-	
-	io_uring_sqe_set_data(sqe, &ss->listener);
-	return io_uring_submit(&ss->rings[ss->stream_server_num]);
+	sqe->flags |= IOSQE_FIXED_FILE;	// registerfiles flag
+
+	io_uring_sqe_set_data(sqe, (void*)(intptr_t)ss->listener);
+	return 1;
 }
 
 int add_read_request(struct ntttcp_stream_server *ss, int client_socket, const struct iovec *buffer_iov) {
@@ -728,20 +729,63 @@ int add_read_request(struct ntttcp_stream_server *ss, int client_socket, const s
 	
 	/* Linux kernel 5.5 has support for readv, but not for recv() or read() */
 	io_uring_prep_recv(sqe, client_socket, buffer_iov->iov_base, buffer_iov->iov_len, 0);
-	
-	int *client_socket_ptr = malloc(sizeof(int));
-	*client_socket_ptr = client_socket;
-	io_uring_sqe_set_data(sqe, client_socket_ptr);
+	sqe->flags |= IOSQE_FIXED_FILE; // registerfiles flag
+
+	io_uring_sqe_set_data(sqe, (void*)(intptr_t)client_socket);
+	printf("client_socket: %d, ss->listener: %d\n", client_socket, ss->listener);
 	return io_uring_submit(&ss->rings[ss->stream_server_num]);
 }
+
+static int* init_registerfiles(struct ntttcp_stream_server *ss)
+{
+        struct rlimit r;
+        int i, ret;
+	static int *files;
+	static int *registered_files;
+
+        ret = getrlimit(RLIMIT_NOFILE, &r);
+        if (ret < 0) {
+                fprintf(stderr, "getrlimit: %s\n", strerror(errno));
+                exit(1);
+        }
+
+        if (r.rlim_max > 32768)
+                r.rlim_max = 32768;
+        
+	files = malloc(r.rlim_max * sizeof(int));
+        if (!files) {
+                fprintf(stderr, "calloc for registered files failed\n");
+                exit(1);
+        }
+
+        for (i = 0; i < (int)r.rlim_max; i++)
+                files[i] = -1;
+
+        registered_files = malloc(r.rlim_max * sizeof(int));
+        if (!registered_files) {
+                fprintf(stderr, "calloc failed\n");
+                exit(1);
+        }
+
+        for (i = 0; i < (int)r.rlim_max; i++)
+                registered_files[i] = -1;
+
+        ret = io_uring_register_files(&ss->rings[ss->stream_server_num], files, r.rlim_max);
+        if (ret < 0) {
+                fprintf(stderr, "%s: register %d\n", __FUNCTION__, ret);
+		exit(1);
+        }
+        return registered_files;
+}
+
 
 int ntttcp_server_iouring(struct ntttcp_stream_server *ss)
 {	
 	int err_code = NO_ERROR;
-
 	char *buffer;  //receive buffer
 	char *ip_address_str;
 	int ip_addr_max_size;
+	int ret;
 
 	/* io uring params */
 	struct io_uring_cqe *cqe;
@@ -763,8 +807,8 @@ int ntttcp_server_iouring(struct ntttcp_stream_server *ss)
 
 	/* can customize params based on flags later  */
 	struct io_uring_params p = {};
-	int ret;
-		
+
+	//p.flags |= IORING_SETUP_SQPOLL;	
 	if(ss->stream_server_num > 0) {
 		p.wq_fd = ss->rings[0].ring_fd; //ss->first_work_queue_fd;
 		p.flags |= IORING_SETUP_ATTACH_WQ;
@@ -788,32 +832,54 @@ int ntttcp_server_iouring(struct ntttcp_stream_server *ss)
 		exit(1);
 	}
 	
+	int *registered_files = init_registerfiles(ss);
+
+	ret = io_uring_register_files_update(&ss->rings[ss->stream_server_num], ss->listener, &ss->listener, 1);
+	if (ret < 0) {
+		fprintf(stderr, "lege io_uring_register_files_update failed: %d %d\n", ss->listener, ret);
+		exit(1);
+	}
+	registered_files[ss->listener] = ss->listener;
+
 	/* accept new client, receive data from client */
 	ret = add_accept_request(ss, &client_addr, &client_addr_len);
+	io_uring_submit(&ss->rings[ss->stream_server_num]);	
 	
 	while (1) {
 		if (ss->endpoint->receiver_exit_after_done &&
 		    ss->endpoint->state == TEST_FINISHED)
 			break;
 		
-		/* wait on next request to finish before continuring  */	
+		/* wait on next request to finish before continuring */	
 		ret = io_uring_wait_cqe(&ss->rings[ss->stream_server_num], &cqe);
-		int cqe_fd = *(int *)cqe->user_data;
 
+		int cqe_fd = (int) cqe->user_data;
+		printf("cqe_fd: %d, ss->listener: %d\n", cqe_fd, ss->listener);
 		if (ret < 0)
             		printf("io_uring wait cqe failed...\n");
         	if (cqe->res < 0) {
-			printf("cqe_fd: %d, stream server num: %d, cqe->res: %d\n", cqe_fd, ss->stream_server_num, cqe->res);
+			printf("cqe_fd: %d, ss->listener: %d, stream server num: %d, cqe->res: %d\n", cqe_fd, ss->listener, ss->stream_server_num, cqe->res);
 			fprintf(stderr, "Async request failed: %s for event: %d\n",
-                    		strerror(-cqe->res), cqe_fd);
-            			exit(1);
+                    	strerror(-cqe->res), cqe_fd);
+            		exit(1);
         	}
+		
+		/* check if the cqe was from a listen or from a read sqe */
+		if (cqe_fd == ss->listener) {
+			int sock_conn_fd = cqe->res;
 
-		/* check if the cqe was from a listen or from a read sqe */	
-       		if (cqe_fd == ss->listener) {
+			if(registered_files[sock_conn_fd] == -1) {
+				ret = io_uring_register_files_update(&ss->rings[ss->stream_server_num], sock_conn_fd, &sock_conn_fd, 1);
+				if (ret < 0) {
+					fprintf(stderr, "io_uring_register_files_update failed: %d %d\n", sock_conn_fd, ret);
+					exit(1);
+				}
+				registered_files[sock_conn_fd] = sock_conn_fd;
+			}
+
 			add_accept_request(ss, &client_addr, &client_addr_len);
-			add_read_request(ss, cqe->res, &buffer_iov);
-                       
+			add_read_request(ss, sock_conn_fd, &buffer_iov);
+			
 			//if there is no synch thread, if any new connection coming, indicates ss started
                         if ( ss->no_synch )
                         	turn_on_light();
@@ -825,13 +891,13 @@ int ntttcp_server_iouring(struct ntttcp_stream_server *ss)
                     		fprintf(stderr, "Empty request!\n");
                     		break;
                 	}
-			/* add to the byte count atomically and queue the next request  */	
+			/* add to the byte count atomically and queue the next request */
 			__sync_fetch_and_add(&(ss->total_bytes_transferred), bytes_received);
 			add_read_request(ss, cqe_fd, &buffer_iov);
-		}
 
-        	/* Mark this request as processed */
-        	io_uring_cqe_seen(&ss->rings[ss->stream_server_num], cqe);
+        		/* Mark this request as processed */
+			io_uring_cqe_seen(&ss->rings[ss->stream_server_num], cqe);
+		}
 	}
 
 	free(buffer);
