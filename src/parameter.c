@@ -16,6 +16,8 @@ void print_flags(struct ntttcp_test *test)
 		printf("%s\n", "*** run as daemon");
 	if (test->server_role && test->use_epoll)
 		printf("%s\n", "*** use epoll()");
+	if (test->server_role && test->use_iouring)
+		printf("%s\n", "*** use io_uring()");
 	if (test->server_role && !test->exit_after_done)
 		printf("%s\n", "*** hold receiver always running");
 
@@ -107,7 +109,7 @@ void print_flags(struct ntttcp_test *test)
 void print_usage()
 {
 	printf("Author: %s\n", AUTHOR_NAME);
-	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-B|-W|-t|-C|-N|-O|-x|-j|-Q|-V|-h|-m <mapping>]\n");
+	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-U|-H|-P|-n|-l|-6|-u|-p|-f|-b|-B|-W|-t|-C|-N|-x|-O|-Q|-V|-h|-m <mapping>]\n");
 	printf("        [--show-tcp-retrans|--show-nic-packets|--show-dev-interrupts|--fq-rate-limit]\n\n");
 	printf("\t-r   Run as a receiver\n");
 	printf("\t-s   Run as a sender\n");
@@ -117,6 +119,7 @@ void print_usage()
 	printf("\t-L   [sender only] indicates this is the last client when receiver is running with multi-clients mode\n");
 
 	printf("\t-e   [receiver only] use epoll() instead of select()\n");
+	printf("\t-U   [receiver only] use io_uring() instead of select()\n");
 	printf("\t-H   [receiver only] hold receiver always running even after one test finished\n");
 
 	printf("\t-P   Number of ports listening on receiver side	[default: %d] [max: %d]\n", DEFAULT_NUM_SERVER_PORTS, MAX_NUM_SERVER_PORTS);
@@ -307,6 +310,8 @@ int verify_args(struct ntttcp_test *test)
 	if (test->client_role) {
 		if (test->use_epoll)
 			PRINT_DBG("ignore '-e' on sender role");
+		if (test->use_iouring)
+			PRINT_DBG("ignore '-U' on sender role");
 		if (!test->exit_after_done)
 			PRINT_DBG("ignore '-H' on sender role");
 	}
@@ -389,7 +394,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 	};
 	int opt;
 
-	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:NO::x::j::QVh", longopts, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "r::s::DMLeUHm:P:n:l:6up:f::b:B:W:t:C:Nx::O::QVh", longopts, NULL)) != -1) {
 		switch (opt) {
 		case 'r':
 		case 's':
@@ -422,7 +427,9 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		case 'e':
 			test->use_epoll = true;
 			break;
-
+		case 'U':
+			test->use_iouring = true;
+			break;
 		case 'H':
 			test->exit_after_done = false;
 			break;

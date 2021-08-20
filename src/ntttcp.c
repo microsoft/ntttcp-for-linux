@@ -26,6 +26,7 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->multi_clients_mode	= false;
 	test->last_client		= false;
 	test->use_epoll			= false;
+	test->use_iouring      = false;
 	test->exit_after_done		= true;
 	test->mapping			= "16,*,*";
 	test->bind_address		= "0.0.0.0";
@@ -288,6 +289,7 @@ struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test_endpoin
 	s->no_synch		= test->no_synch;
 	s->continuous_mode	= (test->duration == 0);
 	s->use_epoll		= test->use_epoll;
+	s->use_iouring 		= test->use_iouring;
 	s->total_bytes_transferred = 0;
 	/* other fields will be assigned at run time */
 	return s;
