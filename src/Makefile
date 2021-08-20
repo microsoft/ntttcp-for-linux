@@ -9,12 +9,12 @@ endif
 ifeq ($(PREFIX),)
 PREFIX=/usr/local/bin
 endif
-CLIBS=-pthread
+CLIBS=-pthread -luring
 OUT=ntttcp
 OBJS=ntttcp.o logger.o oscounter.o util.o throughputmanagement.o tcpstream.o udpstream.o endpointsync.o multithreading.o parameter.o main.o
 
 $(OUT): ntttcp.o logger.o oscounter.o util.o throughputmanagement.o tcpstream.o udpstream.o endpointsync.o multithreading.o parameter.o main.o
-	$(CC) $(CFLAGS) $(CLIBS) -o $(OUT) $(OBJS)
+	$(CC) $(CFLAGS) -o $(OUT) $(OBJS) $(CLIBS)
 ntttcp.o: ntttcp.c
 	$(CC) $(CFLAGS) -c ntttcp.c -o ntttcp.o
 logger.o: logger.c
