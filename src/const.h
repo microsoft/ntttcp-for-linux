@@ -89,4 +89,4 @@
 /* io_uring constants  */
 #define QUEUE_DEPTH 		256
 #define READ_SZ                 8192
-
+#define MAX_THREADS             512
