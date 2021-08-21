@@ -86,3 +86,8 @@
 #define DEFAULT_CONSOLE_LOG_FILE_NAME	"ntttcp-for-linux-log.log"
 #define DEFAULT_XML_LOG_FILE_NAME	"ntttcp-for-linux-log.xml"
 #define DEFAULT_JSON_LOG_FILE_NAME	"ntttcp-for-linux-log.json"
+
+/* io_uring constants  */
+#define QUEUE_DEPTH 		256
+#define READ_SZ                 8192
+#define MAX_THREADS             512

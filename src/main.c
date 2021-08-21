@@ -185,6 +185,55 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	return err_code;
 }
 
+struct thread_count {
+	struct ntttcp_test *test;
+	uint t; // thread currently on
+	uint *threads_created;
+};
+
+static struct ntttcp_stream_server *create_server_stream(struct ntttcp_test_endpoint *tep, struct thread_count *counter, int first_work_queue_fd, pthread_barrier_t *init_barrier)
+{
+	struct ntttcp_test *test = counter->test;
+	uint t = counter->t;
+	uint* threads_created = counter->threads_created;
+
+	int err_code = NO_ERROR;
+	struct ntttcp_stream_server *ss = malloc(sizeof(struct ntttcp_stream_server));
+	int rc;
+
+	ss = tep->server_streams[t];
+	ss->server_port = test->server_base_port + t;
+	ss->stream_server_num = t;
+	ss->first_work_queue_fd = first_work_queue_fd;
+
+	if(ss->stream_server_num > 0) {
+		ss->rings[0].ring_fd = first_work_queue_fd;
+	}
+	ss->init_barrier_pt = init_barrier;
+
+	if (test->protocol == TCP) {
+		rc = pthread_create(&tep->threads[t],
+					NULL,
+					run_ntttcp_receiver_tcp_stream,
+					(void*)ss);
+	}
+	else {
+		pthread_barrier_wait(&ss->init_barrier);
+		rc = pthread_create(&tep->threads[t],
+					NULL,
+					run_ntttcp_receiver_udp_stream,
+					(void*)ss);
+	}
+	
+	if (rc) {
+		PRINT_ERR("pthread_create() create thread failed");
+		err_code = ERROR_PTHREAD_CREATE;
+		//continue;
+	}
+	(*threads_created)++;
+	return ss;
+}
+
 int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 {
 	int err_code = NO_ERROR;
@@ -195,28 +244,37 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 	struct ntttcp_stream_server *ss;
 	int rc;
 
+        struct thread_count counter = { .test = tep->test, .threads_created = &threads_created }; // initialize params for method call
+
 	if (!check_is_ip_addr_valid_local(test->domain, test->bind_address)) {
 		PRINT_ERR("cannot listen on the IP address specified");
 		return ERROR_ARGS;
 	}
 
 	/* create test threads */
+	int first_work_queue_fd = -1;
+
+	/* pthread barrier meant for io_uring since we want the first thread to be created before the next ones to share a work queue  */
+	pthread_barrier_t init_barrier;
+        pthread_barrier_init(&init_barrier, NULL, 2);
+
+	/* create test threads */
 	for (t = 0; t < test->server_ports; t++) {
-		ss = tep->server_streams[t];
-		ss->server_port = test->server_base_port + t;
-
-		if (test->protocol == TCP) {
-			rc = pthread_create(&tep->threads[t], NULL, run_ntttcp_receiver_tcp_stream, (void *)ss);
-		} else {
-			rc = pthread_create(&tep->threads[t], NULL, run_ntttcp_receiver_udp_stream, (void *)ss);
+		counter.t = t;
+		struct ntttcp_stream_server *ss = create_server_stream(tep, &counter, first_work_queue_fd, &init_barrier);
+		
+		if (!ss) {
+			PRINT_ERR("ntttcp_stream server creation failed..." );
 		}
 
-		if (rc) {
-			PRINT_ERR("pthread_create() create thread failed");
-			err_code = ERROR_PTHREAD_CREATE;
-			continue;
+		if (t == 0) {
+			pthread_barrier_wait(&init_barrier);
+			first_work_queue_fd = ss->rings[0].ring_fd;
+ 		}
+		else {
+			ss->first_work_queue_fd = first_work_queue_fd;
 		}
-		threads_created++;
+
 	}
 
 	/* create synch thread; and put it to the end of the thread array */

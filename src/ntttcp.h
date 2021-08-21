@@ -15,6 +15,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <liburing.h> /* io_uring library */
 #include "const.h"
 #include "logger.h"
 
@@ -127,8 +128,15 @@ struct ntttcp_stream_server{
 	bool	verbose;
 	bool	use_epoll;
 
-	/* io_uring parameters  */
+	/* io_uring stuff here  */
+	uint	stream_server_num;
+	struct	io_uring rings[MAX_THREADS];
+	int	work_queue_fd, first_work_queue_fd;
 	bool    use_iouring;
+	
+	/* blocking barrier so that all subsequent threads are mad after the first one  */
+	pthread_barrier_t init_barrier;	
+	pthread_barrier_t *init_barrier_pt;
 
 	int	listener; /* this is the socket to listen on port to accept new connections */
 	int	max_fd; /* track the max socket fd */
