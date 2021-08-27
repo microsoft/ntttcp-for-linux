@@ -30,9 +30,11 @@ A multiple-threaded Linux network throughput benchmark tool.
 
 * Support bandwidth limit ('-B' or '--fq-rate-limit').
 
+* Support capturing console log to file ('-O').
+
 * Support writing log into XML file ('-x').
 
-* Support capturing console log to file ('-O').
+* Support writing log into JSON file ('-j').
 
 
 ## Getting Started
