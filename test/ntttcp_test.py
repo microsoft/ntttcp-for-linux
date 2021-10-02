@@ -42,8 +42,8 @@ class TestNtttcp:
         receiver_option: Optional[str] = "",
         sender_option: Optional[str] = "",
     ) -> Tuple[str, str]:
-        receiver_cmd = f"ulimit -n 40960 && ntttcp -r{self.loopback_interface} -t {self.set_duration_time_sec} -Q -D"
-        sender_cmd = f"ulimit -n 40960 && ntttcp -s{self.loopback_interface} -t {self.set_duration_time_sec} -Q"
+        receiver_cmd = f"ulimit -n 40960 && ./src/ntttcp -r{self.loopback_interface} -t {self.set_duration_time_sec} -Q -D"
+        sender_cmd = f"ulimit -n 40960 && ./src/ntttcp -s{self.loopback_interface} -t {self.set_duration_time_sec} -Q"
         if common_option:
             receiver_cmd = f"{receiver_cmd} {common_option}"
             sender_cmd = f"{sender_cmd} {common_option}"
