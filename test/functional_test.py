@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 class TestNtttcp:
 
     log = logger.Logger()
-    expected_throughput = 25  # need evaluate
+    expected_throughput = 15  # need evaluate
     loopback_interface = "127.0.0.1"
     set_duration_time_sec = 5
     n_server_ports = 4
