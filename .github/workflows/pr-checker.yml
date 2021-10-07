@@ -22,4 +22,4 @@ jobs:
     - name: Display Python version
       run: python -c "import sys; print(sys.version)"
     - name: Run Python test script
-      run: pip install pytest && pytest test/ntttcp_test.py -s
+      run: pip install pytest && pytest test/functional_test.py -s
