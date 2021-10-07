@@ -7,9 +7,13 @@ from datetime import datetime
 from typing import Optional, Tuple
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
+import logger
 
-class NtttcpResult:
+
+class NtttcpOutput:
+
     DECIMAL_BASED_UNIT_K = 1000
+
     def __init__(self, receiver_out: str, sender_out: str) -> None:
         self.receiver_stdout = receiver_out
         self.sender_stdout = sender_out
@@ -30,6 +34,8 @@ class NtttcpResult:
                 throughput_Gbps = float(matched[0][0]) / 1024 / 1024
             elif matched[0][1] == "bps":
                 throughput_Gbps = float(matched[0][0]) / 1024 / 1024 / 1024
+        log = logger.Logger()
+        log.write_info('Throughtput: {0}Gbps'.format(throughput_Gbps))
         return throughput_Gbps
 
     def is_daemon_running(self) -> bool:
@@ -116,14 +122,14 @@ class NtttcpResult:
         if cmd_typle == "-O mylog.log":
             throughput_in_logfile_pattern = re.compile(r"INFO:\s+throughput\s+:(\d+\.\d+)(\w+)")
             throughput_in_logfile = throughput_in_logfile_pattern.findall(value_filename_out)
-            if subprocess.run(f"ls {filename}", shell=True) and throughput_in_logfile:
+            if subprocess.run(f"ls {filename}", shell=True, check=True) and throughput_in_logfile:
                 return True
             else:
                 return False
         elif cmd_typle == "-x myxml.xml":
             throughput_in_xmlfile_pattern = re.compile(r"<throughput metric=\"MB\/s\">(\d+)\.(\d+)")
             throughput_in_xmlfile = throughput_in_xmlfile_pattern.findall(value_filename_out)
-            if subprocess.run(f"ls {filename}", shell=True) and throughput_in_xmlfile:
+            if subprocess.run(f"ls {filename}", shell=True, check=True) and throughput_in_xmlfile:
                 try:
                     self.parse_xml_file(filename)
                     return True
@@ -132,7 +138,7 @@ class NtttcpResult:
         elif cmd_typle == "-j myjson.json":
             throughput_in_jsonfile_pattern = re.compile(r"\"throughputs\" : \[[\s\S]*\{[\s\S]*\"metric\" : \"MB\/s\"\,[\s\S]*\"value\" : \"(\d+\.\d+)\"")
             throughput_in_jsonfile = throughput_in_jsonfile_pattern.findall(value_filename_out)
-            if subprocess.run(f"ls {filename}", shell=True) and throughput_in_jsonfile:
+            if subprocess.run(f"ls {filename}", shell=True, check=True) and throughput_in_jsonfile:
                 return True
             else:
                 return False
