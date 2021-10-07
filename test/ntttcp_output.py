@@ -35,7 +35,7 @@ class NtttcpOutput:
             elif matched[0][1] == "bps":
                 throughput_Gbps = float(matched[0][0]) / 1024 / 1024 / 1024
         log = logger.Logger()
-        log.write_info('Throughtput: {0}Gbps'.format(throughput_Gbps))
+        log.write_info('Throughput: {0}Gbps'.format(throughput_Gbps))
         return throughput_Gbps
 
     def is_daemon_running(self) -> bool:
