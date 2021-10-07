@@ -1,10 +1,14 @@
 import time
 import pytest
 import subprocess
-import ParseNtttcpResult
+import logger
+import ntttcp_output
 from typing import Optional, Tuple
 
+
 class TestNtttcp:
+
+    log = logger.Logger()
     expected_throughput = 25  # need evaluate
     loopback_interface = "127.0.0.1"
     set_duration_time_sec = 5
@@ -14,24 +18,24 @@ class TestNtttcp:
     total_sender_connections = n_server_ports * n_threads_per_server_port * n_connections_per_thread
 
     # todo need add setup and teardown
-    def run_test(self, receiver_cmd: str, sender_cmd: str) -> ParseNtttcpResult.NtttcpResult:
-        print(f"Receiver command: {receiver_cmd}")
-        print(f"Sender command: {sender_cmd}")
+    def run_test(self, receiver_cmd: str, sender_cmd: str) -> ntttcp_output.NtttcpOutput:
+        self.log.write_info(f"Receiver command: {receiver_cmd}")
+        self.log.write_info(f"Sender   command: {sender_cmd}")
         # every receiver command is with "-D", so the receiver command can return
         # at once. Otherwise, we need to use "subprocess.Popen"
         with open("receiver_log.txt", "wb") as receiver_out:
-            subprocess.run([receiver_cmd], shell=True, stdout=receiver_out)
+            subprocess.run([receiver_cmd], shell=True, stdout=receiver_out, check=True)
         receiver_open = open("receiver_log.txt", "r")
         receiver_out = receiver_open.read()
         receiver_open.close()
         time.sleep(1)
         with open("sender_log.txt", "wb") as sender_out:
-            subprocess.run([sender_cmd], shell=True, stdout=sender_out)
+            subprocess.run([sender_cmd], shell=True, stdout=sender_out, check=True)
         sender_open = open("sender_log.txt", "r")
         sender_out = sender_open.read()
         sender_open.close()
 
-        return ParseNtttcpResult.NtttcpResult(
+        return ntttcp_output.NtttcpOutput(
                 receiver_out,
                 sender_out
                 )
@@ -55,16 +59,15 @@ class TestNtttcp:
 
     def setup(self):
         time.sleep(1)
-        print("set 1 second before every test.")
+        print("\n")
 
     def teardown(self):
-        subprocess.run("killall ntttcp", shell=True)
-        print("kill all ntttcp process to clean up")
+        subprocess.run("killall ntttcp", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def test_daemon(self) -> None:
         receiver_cmd, sender_cmd = self.combine_command()
         result = self.run_test(receiver_cmd, sender_cmd)
-        parse_result = ParseNtttcpResult.NtttcpResult(result.receiver_stdout, result.sender_stdout)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
         assert parse_result.is_daemon_running() is True
         throughput = parse_result.get_throughput_Gbps()
         assert throughput >= self.expected_throughput
@@ -76,7 +79,7 @@ class TestNtttcp:
             receiver_option=receiver_option, sender_option=sender_option
         )
         result = self.run_test(receiver_cmd, sender_cmd)
-        parse_result = ParseNtttcpResult.NtttcpResult(result.receiver_stdout, result.sender_stdout)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
         assert parse_result.is_multi_clients_mode() is True
         throughput = parse_result.get_throughput_Gbps()
         assert throughput >= self.expected_throughput
@@ -89,7 +92,7 @@ class TestNtttcp:
                 common_option=common_option, sender_option=sender_option
             )
             result = self.run_test(receiver_cmd, sender_cmd)
-            parse_result = ParseNtttcpResult.NtttcpResult(result.receiver_stdout, result.sender_stdout)
+            parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
             assert parse_result.get_multi_threads_info() == self.total_sender_connections
             throughput = parse_result.get_throughput_Gbps()
             assert throughput >= self.expected_throughput
@@ -102,7 +105,7 @@ class TestNtttcp:
                 common_option=common_option
         )
         result = self.run_test(receiver_cmd, sender_cmd)
-        parse_result = ParseNtttcpResult.NtttcpResult(result.receiver_stdout, result.sender_stdout)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
         (
             actual_warmup_time,
             actual_duration_time,
@@ -120,7 +123,7 @@ class TestNtttcp:
                 receiver_option=receiver_option
         )
         result = self.run_test(receiver_cmd, sender_cmd)
-        parse_result = ParseNtttcpResult.NtttcpResult(result.receiver_stdout, result.sender_stdout)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
         assert parse_result.is_epoll() is True
         throughput = parse_result.get_throughput_Gbps()
         assert throughput >= self.expected_throughput
@@ -133,7 +136,7 @@ class TestNtttcp:
                     common_option=common_option
             )
             result = self.run_test(receiver_cmd, sender_cmd)
-            parse_result = ParseNtttcpResult.NtttcpResult(result.receiver_stdout, result.sender_stdout)
+            parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
             (
                 actual_buffer_size_tcp
             ) = parse_result.get_buffer_size()
@@ -146,7 +149,7 @@ class TestNtttcp:
                 common_option=common_option
         )
         result = self.run_test(receiver_cmd, sender_cmd)
-        parse_result = ParseNtttcpResult.NtttcpResult(result.receiver_stdout, result.sender_stdout)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
         throughput = parse_result.get_throughput_Gbps()
         assert int(throughput) in range(throughput_limit_gbps - 1, throughput_limit_gbps + 1)
 
@@ -158,7 +161,7 @@ class TestNtttcp:
                 sender_option=sender_option
             )
             result = self.run_test(receiver_cmd, sender_cmd)
-            parse_result = ParseNtttcpResult.NtttcpResult(result.receiver_stdout, result.sender_stdout)
+            parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
             assert parse_result.is_throughput_found_in_log_file(filenames[filename], filename)
 
     def test_starting_port_number(self) -> None:
@@ -170,7 +173,7 @@ class TestNtttcp:
                 sender_option=sender_option
         )
         result = self.run_test(receiver_cmd, sender_cmd)
-        parse_result = ParseNtttcpResult.NtttcpResult(result.receiver_stdout, result.sender_stdout)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
         assert parse_result.get_starting_port_number() == starting_port
         throughput = parse_result.get_throughput_Gbps()
         assert throughput >= self.expected_throughput
@@ -178,10 +181,10 @@ class TestNtttcp:
     def test_mapping_option(self) -> None:
         ports = 200
         defualt_threads = 4
-        receiver_cmd = f"ulimit -n 10240 && ntttcp -D -r -m {ports},*,{self.loopback_interface} -D -t 5"
-        sender_cmd = f"ulimit -n 10240 && ntttcp -s{self.loopback_interface} -P {ports} -t 5"
+        receiver_cmd = f"ulimit -n 10240 && ./src/ntttcp -D -r -m {ports},*,{self.loopback_interface} -D -t 5"
+        sender_cmd = f"ulimit -n 10240 && ./src/ntttcp -s{self.loopback_interface} -P {ports} -t 5"
         result = self.run_test(receiver_cmd, sender_cmd)
-        parse_result = ParseNtttcpResult.NtttcpResult(result.receiver_stdout, result.sender_stdout)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
         assert parse_result.get_ports_numbers() == ports * defualt_threads
         throughput = parse_result.get_throughput_Gbps()
         assert throughput >= self.expected_throughput
@@ -192,7 +195,7 @@ class TestNtttcp:
                 common_option=common_option
         )
         result = self.run_test(receiver_cmd, sender_cmd)
-        parse_result = ParseNtttcpResult.NtttcpResult(result.receiver_stdout, result.sender_stdout)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
         assert parse_result.is_having_system_tcp_retransmit() is True
         throughput = parse_result.get_throughput_Gbps()
         assert throughput >= self.expected_throughput
@@ -203,7 +206,7 @@ class TestNtttcp:
                 common_option=common_option,
         )
         result = self.run_test(receiver_cmd, sender_cmd)
-        parse_result = ParseNtttcpResult.NtttcpResult(result.receiver_stdout, result.sender_stdout)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
         assert parse_result.is_show_nic_packets() is True
         throughput = parse_result.get_throughput_Gbps()
         assert throughput >= self.expected_throughput
@@ -214,7 +217,7 @@ class TestNtttcp:
                 common_option=common_option
         )
         result = self.run_test(receiver_cmd, sender_cmd)
-        parse_result = ParseNtttcpResult.NtttcpResult(result.receiver_stdout, result.sender_stdout)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
         assert parse_result.is_show_dev_interrupts() is True
         throughput = parse_result.get_throughput_Gbps()
         assert throughput >= self.expected_throughput
@@ -226,7 +229,7 @@ class TestNtttcp:
                 common_option=common_option
         )
         result = self.run_test(receiver_cmd, sender_cmd)
-        parse_result = ParseNtttcpResult.NtttcpResult(result.receiver_stdout, result.sender_stdout)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
         throughput = parse_result.get_throughput_Gbps()
         assert int(throughput) in range(throughput_limit_gbps - 1, throughput_limit_gbps + 1)
 
