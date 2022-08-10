@@ -359,6 +359,7 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 	char os_info_escaped[2048];
 	size_t count = 0;
 	unsigned int i;
+	int total_conns_created = 0;
 
 	memset(hostname, '\0', sizeof(char) * 256);
 	memset(os_info_escaped, '\0', sizeof(char) * 2048);
@@ -419,7 +420,11 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 			fprintf(logfile, "	</thread>\n");
 		}
 	}
-
+	if (tep->test->client_role == true) {
+		for (i = 0; i < tep->total_threads; i++)
+			total_conns_created += tep->client_streams[i]->num_conns_created;
+		fprintf(logfile, "	<conns_tested>%d</conns_tested>\n", total_conns_created);
+	}
 	fprintf(logfile, "	<total_bytes metric=\"MB\">%.6f</total_bytes>\n", tepr->total_bytes_MB);
 	fprintf(logfile, "	<realtime metric=\"s\">%.6f</realtime>\n", tepr->actual_test_time);
 	fprintf(logfile, "	<avg_bytes_per_compl metric=\"B\">%.3f</avg_bytes_per_compl>\n", 0.000);
@@ -439,9 +444,23 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<packets_received>%" PRIu64 "</packets_received>\n", tepr->packets_received);
 	fprintf(logfile, "	<packets_retransmitted>%" PRIu64 "</packets_retransmitted>\n", tepr->packets_retransmitted);
 	fprintf(logfile, "	<errors>%d</errors>\n", tepr->errors);
-	fprintf(logfile, "	<cpu metric=\"%%\">%.3f</cpu>\n", tepr->cpu_busy_percent * 100);
 	fprintf(logfile, "	<bufferCount>%u</bufferCount>\n", 0);
 	fprintf(logfile, "	<bufferLen>%u</bufferLen>\n", 0);
+	
+	if (tepr->final_cpu_ps->nproc == tepr->init_cpu_ps->nproc){
+		fprintf(logfile, "	<cpu_cores metric=\"cpu cores\">%d</cpu_cores>\n", tepr->final_cpu_ps->nproc);
+	} else {
+		fprintf(logfile, "	<cpu_cores>number of CPUs does not match: initial: %d; final: %d</cpu_cores>\n",
+		tepr->init_cpu_ps->nproc, tepr->final_cpu_ps->nproc);
+	}
+	fprintf(logfile, "	<cpu_speed metric=\"MHz\">%.3f</cpu_speed>\n", tepr->cpu_speed_mhz);
+	fprintf(logfile, "	<user metric=\"%%\">%.2f</user>\n", tepr->cpu_ps_user_usage * 100);
+	fprintf(logfile, "	<system metric=\"%%\">%.2f</system>\n", tepr->cpu_ps_system_usage * 100);
+	fprintf(logfile, "	<idle metric=\"%%\">%.2f</idle>\n", tepr->cpu_ps_idle_usage * 100);
+	fprintf(logfile, "	<iowait metric=\"%%\">%.2f</iowait>\n", tepr->cpu_ps_iowait_usage * 100);
+	fprintf(logfile, "	<softirq metric=\"%%\">%.2f</softirq>\n", tepr->cpu_ps_softirq_usage * 100);
+	fprintf(logfile, "	<cycles_per_byte metric=\"cycles/byte\">%.2f</cycles_per_byte>\n", tepr->cycles_per_byte);
+	fprintf(logfile, "	<cpu_busy_all metric=\"%%\">%.2f</cpu_busy_all>\n", tepr->cpu_busy_percent * 100);
 	fprintf(logfile, "	<io>%u</io>\n", 0);
 
 	if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
