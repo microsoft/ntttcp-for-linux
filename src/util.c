@@ -420,11 +420,13 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 			fprintf(logfile, "	</thread>\n");
 		}
 	}
+
 	if (tep->test->client_role == true) {
 		for (i = 0; i < tep->total_threads; i++)
 			total_conns_created += tep->client_streams[i]->num_conns_created;
 		fprintf(logfile, "	<conns_tested>%d</conns_tested>\n", total_conns_created);
 	}
+
 	fprintf(logfile, "	<total_bytes metric=\"MB\">%.6f</total_bytes>\n", tepr->total_bytes_MB);
 	fprintf(logfile, "	<realtime metric=\"s\">%.6f</realtime>\n", tepr->actual_test_time);
 	fprintf(logfile, "	<avg_bytes_per_compl metric=\"B\">%.3f</avg_bytes_per_compl>\n", 0.000);
@@ -439,7 +441,6 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<interrupts metric=\"count/sec\">%.3f</interrupts>\n", 0.000);
 	fprintf(logfile, "	<dpcs metric=\"count/sec\">%.3f</dpcs>\n", 0.000);
 	fprintf(logfile, "	<avg_packets_per_dpc metric=\"packets/dpc\">%.3f</avg_packets_per_dpc>\n", 0.000);
-	fprintf(logfile, "	<cycles metric=\"cycles/byte\">%.3f</cycles>\n", tepr->cycles_per_byte);
 	fprintf(logfile, "	<packets_sent>%" PRIu64 "</packets_sent>\n", tepr->packets_sent);
 	fprintf(logfile, "	<packets_received>%" PRIu64 "</packets_received>\n", tepr->packets_received);
 	fprintf(logfile, "	<packets_retransmitted>%" PRIu64 "</packets_retransmitted>\n", tepr->packets_retransmitted);
@@ -467,6 +468,7 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 			fprintf(logfile, "	<tcp_average_rtt metric=\"us\">%u</tcp_average_rtt>\n", tepr->average_rtt);
 		}
 	}
+	
 	count = execute_system_cmd_by_process("uname -a", "r", &os_info);
 	if (os_info) {
 		escape_char_for_xml(os_info, os_info_escaped);
@@ -647,10 +649,11 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 	fprintf(json_file, "        \"bufferLen\" : \"%u\",\n", 0);
 	fprintf(json_file, "        \"io\" : \"%u\",\n", 0);
 
-	if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
-		fprintf(json_file, "        \"tcpAverageRtt metric\" : \"%u us\",\n", tepr->average_rtt);
+	if(test->verbose){
+		if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
+			fprintf(json_file, "        \"tcpAverageRtt metric\" : \"%u us\",\n", tepr->average_rtt);
+		}
 	}
-
 	count = execute_system_cmd_by_process("uname -a", "r", &os_info);
 	if (os_info) {
 		escape_char_for_json(os_info, os_info_escaped);
