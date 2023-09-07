@@ -9,7 +9,7 @@
 #include <netdb.h>
 #include <netinet/tcp.h>
 #include <stdio.h>
-#include <sys/epoll.h>
+#include "epoll.h"
 #include <unistd.h>
 #include "multithreading.h"
 #include "util.h"

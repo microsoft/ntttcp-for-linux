@@ -23,6 +23,8 @@
 #include <ifaddrs.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "ntttcp.h"
 #include "oscounter.h"
 

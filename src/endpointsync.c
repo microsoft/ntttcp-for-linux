@@ -107,7 +107,7 @@ void tell_receiver_test_exit(int sockfd)
 		PRINT_ERR("cannot write data to the socket for sender/receiver sync");
 	}
 	if (read(sockfd, &response, sizeof(response)) <= 0) {
-		PRINT_ERR("cannot read data from the socket for sender/receiver sync");
+		PRINT_ERR("1 cannot read data from the socket for sender/receiver sync");
 	}
 
 	if (ntohl(response) == TEST_FINISHED) {
@@ -134,7 +134,7 @@ int query_receiver_busy_state(int sockfd)
 		return -1;
 	}
 	if (read(sockfd, &response, sizeof(response)) <= 0) {
-		PRINT_ERR("cannot read data from the socket for sender/receiver sync");
+		PRINT_ERR("2 cannot read data from the socket for sender/receiver sync");
 		return -1;
 	}
 
@@ -161,7 +161,7 @@ int negotiate_test_cycle_time(int sockfd, int proposed_time)
 		return -1;
 	}
 	if (read(sockfd, &response, sizeof(response)) <= 0) {
-		PRINT_ERR("cannot read data from the socket for sender/receiver sync");
+		PRINT_ERR("3 cannot read data from the socket for sender/receiver sync");
 		return -1;
 	}
 
@@ -189,13 +189,13 @@ int request_to_start(int sockfd, int request)
 		return -1;
 	}
 	if (read(sockfd, &response, sizeof(response)) <= 0) {
-		PRINT_ERR("cannot read data from the socket for sender/receiver sync");
+		PRINT_ERR("4 cannot read data from the socket for sender/receiver sync");
 		return -1;
 	}
 	if (ntohl(response) == (int)'W') {
 		PRINT_INFO("waiting for the last client to join the test");
 		if (read(sockfd, &response, sizeof(response)) <= 0) {
-			PRINT_ERR("cannot read data from the socket for sender/receiver sync");
+			PRINT_ERR("5 cannot read data from the socket for sender/receiver sync");
 			return -1;
 		}
 	}
@@ -290,7 +290,7 @@ void *create_receiver_sync_socket(void *ptr)
 		return NULL;
 	}
 
-	event.data.fd = ss->listener;
+	event.data = ss->listener;
 	event.events = EPOLLIN;
 	if (epoll_ctl(efd, EPOLL_CTL_ADD, ss->listener, &event) != 0) {
 		PRINT_ERR("epoll_ctl failed");
@@ -317,7 +317,7 @@ void *create_receiver_sync_socket(void *ptr)
 
 		/*run through the existing connections looking for data to be read*/
 		for (j = 0; j < n_fds; j++) {
-			current_fd = events[j].data.fd;
+			current_fd = events[j].data;
 
 			if ((events[j].events & EPOLLERR) || (events[j].events & EPOLLHUP) || (!(events[j].events & EPOLLIN))) {
 				/* An error has occurred on this fd, or the socket is not ready for reading */
@@ -341,7 +341,7 @@ void *create_receiver_sync_socket(void *ptr)
 					PRINT_DBG_FREE(log);
 				}
 
-				event.data.fd = newfd;
+				event.data = newfd;
 				event.events = EPOLLIN;
 				if (epoll_ctl(efd, EPOLL_CTL_ADD, newfd, &event) != 0) {
 					PRINT_ERR("epoll_ctl failed");

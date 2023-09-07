@@ -7,7 +7,7 @@
 #include "tcpstream.h"
 
 #define MAX_IO_PER_POLL 32
-
+typedef unsigned long uint64_t;
 /************************************************************/
 //		ntttcp socket functions
 /************************************************************/
@@ -249,7 +249,7 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 
 	for (i = 0; i < sc->num_connections; i++) {
 		if (sockfds[i] >= 0) {
-			if (getsockopt(sockfds[i], SOL_TCP, TCP_INFO, (void *)&tcpinfo, &bytes) != 0) {
+			if (getsockopt(sockfds[i], IPPROTO_TCP, TCP_INFO, (void *)&tcpinfo, &bytes) != 0) {
 				PRINT_INFO("getsockopt (TCP_INFO) failed");
 			} else {
 				total_rtt += tcpinfo.tcpi_rtt;
@@ -407,7 +407,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 		return ERROR_EPOLL;
 	}
 
-	event.data.fd = ss->listener;
+	event.data = ss->listener;
 	event.events = EPOLLIN;
 	if (epoll_ctl(efd, EPOLL_CTL_ADD, ss->listener, &event) != 0) {
 		PRINT_ERR("epoll_ctl failed");
@@ -427,7 +427,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 
 		n_fds = epoll_wait(efd, events, MAX_EPOLL_EVENTS, -1);
 		for (i = 0; i < n_fds; i++) {
-			current_fd = events[i].data.fd;
+			current_fd = events[i].data;
 
 			if ((events[i].events & EPOLLERR) ||
 			    (events[i].events & EPOLLHUP) ||
@@ -479,7 +479,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 						PRINT_DBG_FREE(log);
 					}
 
-					event.data.fd = newfd;
+					event.data = newfd;
 					event.events = EPOLLIN;
 					if (epoll_ctl(efd, EPOLL_CTL_ADD, newfd, &event) != 0)
 						PRINT_ERR("epoll_ctl failed");

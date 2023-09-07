@@ -17,7 +17,7 @@
 #include <sys/types.h>
 #include "const.h"
 #include "logger.h"
-
+typedef unsigned long ulong;
 /* maintain the test parameters accepted from user */
 struct ntttcp_test
 {

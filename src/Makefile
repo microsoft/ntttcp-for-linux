@@ -1,49 +1,45 @@
-ifndef CC
-CC=gcc
-endif
-ifeq ($(DEBUG), 1)
-CFLAGS=-Wall -W -O0 -ggdb3 -fno-omit-frame-pointer
-else
-CFLAGS=-Wall -W -O2 -fno-strict-aliasing
-endif
-ifeq ($(PREFIX),)
-PREFIX=/usr/local/bin
-endif
-CLIBS=-pthread
-OUT=ntttcp
-OBJS=ntttcp.o logger.o oscounter.o util.o throughputmanagement.o tcpstream.o udpstream.o endpointsync.o multithreading.o parameter.o main.o
+# Makefile for your project
 
-$(OUT): ntttcp.o logger.o oscounter.o util.o throughputmanagement.o tcpstream.o udpstream.o endpointsync.o multithreading.o parameter.o main.o
+# Compiler and flags
+CC ?= gcc
+CFLAGS ?= -Wall -W -O2 -fno-strict-aliasing
+
+# Debug flag
+DEBUG ?= 0
+.if ${DEBUG} == 1
+	CFLAGS += -O0 -ggdb3 -fno-omit-frame-pointer
+.endif
+# Installation prefix
+PREFIX ?= /usr/local/bin
+
+# Libraries
+CLIBS = -pthread
+
+# Output executable
+OUT = ntttcp
+
+# Source files
+SRCS = ntttcp.c logger.c oscounter.c util.c throughputmanagement.c tcpstream.c udpstream.c endpointsync.c multithreading.c parameter.c main.c epoll.c
+
+# Object files
+OBJS = $(SRCS:.c=.o)
+
+# Default target
+all: $(OUT)
+
+# Rule to build the executable
+$(OUT): $(OBJS)
 	$(CC) $(CFLAGS) $(CLIBS) -o $(OUT) $(OBJS)
-ntttcp.o: ntttcp.c
-	$(CC) $(CFLAGS) -c ntttcp.c -o ntttcp.o
-logger.o: logger.c
-	$(CC) $(CFLAGS) -c logger.c -o logger.o
-oscounter.o: oscounter.c
-	$(CC) $(CFLAGS) -c oscounter.c -o oscounter.o
-util.o: util.c
-	$(CC) $(CFLAGS) -c util.c -o util.o
-throughputmanagement.o: throughputmanagement.c
-	$(CC) $(CFLAGS) -c throughputmanagement.c -o throughputmanagement.o
-tcpstream.o: tcpstream.c
-	$(CC) $(CFLAGS) -c tcpstream.c -o tcpstream.o
-udpstream.o:udpstream.c
-	$(CC) $(CFLAGS) -c udpstream.c -o udpstream.o
-endpointsync.o: endpointsync.c
-	$(CC) $(CFLAGS) -c endpointsync.c -o endpointsync.o
-multithreading.o: multithreading.c
-	$(CC) $(CFLAGS) -c multithreading.c -o multithreading.o
-parameter.o: parameter.c
-	$(CC) $(CFLAGS) -c parameter.c -o parameter.o
-main.o: main.c
-	$(CC) $(CFLAGS) -c main.c -o main.o
 
-.PHONY: clean
+# Rule to compile source files
+.c.o:
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Clean rule
 clean:
-	rm -rf *.o $(OUT)
-	rm -rf $(PREFIX)/$(OUT)
+	rm -f $(OBJS) $(OUT)
 
-.PHONY: install
+# Install rule
 install:
 	cp $(OUT) $(PREFIX)/
 
