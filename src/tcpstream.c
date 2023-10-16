@@ -407,7 +407,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 		return ERROR_EPOLL;
 	}
 
-	event.data = ss->listener;
+	event.data.fd = ss->listener;
 	event.events = EPOLLIN;
 	if (epoll_ctl(efd, EPOLL_CTL_ADD, ss->listener, &event) != 0) {
 		PRINT_ERR("epoll_ctl failed");
@@ -427,7 +427,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 
 		n_fds = epoll_wait(efd, events, MAX_EPOLL_EVENTS, -1);
 		for (i = 0; i < n_fds; i++) {
-			current_fd = events[i].data;
+			current_fd = events[i].data.fd;
 
 			if ((events[i].events & EPOLLERR) ||
 			    (events[i].events & EPOLLHUP) ||
@@ -479,7 +479,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 						PRINT_DBG_FREE(log);
 					}
 
-					event.data = newfd;
+					event.data.fd = newfd;
 					event.events = EPOLLIN;
 					if (epoll_ctl(efd, EPOLL_CTL_ADD, newfd, &event) != 0)
 						PRINT_ERR("epoll_ctl failed");

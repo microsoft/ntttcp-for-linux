@@ -290,10 +290,10 @@ void *create_receiver_sync_socket(void *ptr)
 		return NULL;
 	}
 
-	event.data = ss->listener;
+	event.data.fd = ss->listener;
 	event.events = EPOLLIN;
 	if (epoll_ctl(efd, EPOLL_CTL_ADD, ss->listener, &event) != 0) {
-		PRINT_ERR("epoll_ctl failed");
+		PRINT_ERR("1 epoll_ctl failed");
 		close(efd);
 		return NULL;
 	}
@@ -317,7 +317,7 @@ void *create_receiver_sync_socket(void *ptr)
 
 		/*run through the existing connections looking for data to be read*/
 		for (j = 0; j < n_fds; j++) {
-			current_fd = events[j].data;
+			current_fd = events[j].data.fd;
 
 			if ((events[j].events & EPOLLERR) || (events[j].events & EPOLLHUP) || (!(events[j].events & EPOLLIN))) {
 				/* An error has occurred on this fd, or the socket is not ready for reading */
@@ -341,10 +341,10 @@ void *create_receiver_sync_socket(void *ptr)
 					PRINT_DBG_FREE(log);
 				}
 
-				event.data = newfd;
+				event.data.fd = newfd;
 				event.events = EPOLLIN;
 				if (epoll_ctl(efd, EPOLL_CTL_ADD, newfd, &event) != 0) {
-					PRINT_ERR("epoll_ctl failed");
+					PRINT_ERR("2 epoll_ctl failed");
 				}
 				if (newfd > ss->max_fd) {
 					/* update the maximum */

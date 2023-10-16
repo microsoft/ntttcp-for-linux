@@ -37,8 +37,6 @@ void PRINT_LOG(char *x, char *y)
 	char buffer[80];
 
 	time(&rawtime);
-	timeinfo = localtime(&rawtime);
-	strftime(buffer, 80, "%H:%M:%S", timeinfo);
 	printf("%s %s: %s\n", buffer, x, y);
 	fflush(stdout);
 
