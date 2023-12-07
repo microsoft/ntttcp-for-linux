@@ -123,7 +123,6 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	tepr->cpu_ps_user_usage = (tepr->final_cpu_ps->user_time - tepr->init_cpu_ps->user_time) / cpu_ps_total_diff;
 	tepr->cpu_ps_system_usage = (tepr->final_cpu_ps->system_time - tepr->init_cpu_ps->system_time) / cpu_ps_total_diff;
 	tepr->cpu_ps_idle_usage = (tepr->final_cpu_ps->idle_time - tepr->init_cpu_ps->idle_time) / cpu_ps_total_diff;
-	tepr->cpu_ps_iowait_usage = (tepr->final_cpu_ps->iowait_time - tepr->init_cpu_ps->iowait_time) / cpu_ps_total_diff;
 	tepr->cpu_ps_softirq_usage = (tepr->final_cpu_ps->softirq_time - tepr->init_cpu_ps->softirq_time) / cpu_ps_total_diff;
 
 	/* calculate for counters for xml log (compatible with Windows ntttcp.exe) */
@@ -249,8 +248,6 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 	ASPRINTF(&log, "\t system\t\t:%.2f%%", tepr->cpu_ps_system_usage * 100);
 	PRINT_INFO_FREE(log);
 	ASPRINTF(&log, "\t idle\t\t:%.2f%%", tepr->cpu_ps_idle_usage * 100);
-	PRINT_INFO_FREE(log);
-	ASPRINTF(&log, "\t iowait\t\t:%.2f%%", tepr->cpu_ps_iowait_usage * 100);
 	PRINT_INFO_FREE(log);
 	ASPRINTF(&log, "\t softirq\t:%.2f%%", tepr->cpu_ps_softirq_usage * 100);
 	PRINT_INFO_FREE(log);
@@ -458,7 +455,6 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<user metric=\"%%\">%.2f</user>\n", tepr->cpu_ps_user_usage * 100);
 	fprintf(logfile, "	<system metric=\"%%\">%.2f</system>\n", tepr->cpu_ps_system_usage * 100);
 	fprintf(logfile, "	<idle metric=\"%%\">%.2f</idle>\n", tepr->cpu_ps_idle_usage * 100);
-	fprintf(logfile, "	<iowait metric=\"%%\">%.2f</iowait>\n", tepr->cpu_ps_iowait_usage * 100);
 	fprintf(logfile, "	<softirq metric=\"%%\">%.2f</softirq>\n", tepr->cpu_ps_softirq_usage * 100);
 	fprintf(logfile, "	<cycles_per_byte metric=\"cycles/byte\">%.2f</cycles_per_byte>\n", tepr->cycles_per_byte);
 	fprintf(logfile, "	<cpu_busy_all metric=\"%%\">%.2f</cpu_busy_all>\n", tepr->cpu_busy_percent * 100);

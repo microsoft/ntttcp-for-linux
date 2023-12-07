@@ -31,7 +31,6 @@ struct cpu_usage_from_proc_stat {
 	long long unsigned user_time;
 	long long unsigned system_time;
 	long long unsigned idle_time;
-	long long unsigned iowait_time;
 	long long unsigned softirq_time;
 };
 

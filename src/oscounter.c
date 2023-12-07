@@ -5,7 +5,9 @@
 // ----------------------------------------------------------------------------------
 
 #include "oscounter.h"
-
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#define CPUSTATES 5
 void get_cpu_usage(struct cpu_usage *cu)
 {
 	struct timeval time;
@@ -21,46 +23,60 @@ void get_cpu_usage(struct cpu_usage *cu)
 
 void get_cpu_usage_from_proc_stat(struct cpu_usage_from_proc_stat *cups)
 {
-	unsigned long long int user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice;
-	user = nice = system = idle = iowait = irq = softirq = steal = guest = guest_nice = 0;
+//	unsigned long long int user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice;
+//	user = nice = system = idle = iowait = irq = softirq = steal = guest = guest_nice = 0;
 
-	FILE *file = fopen(PROC_FILE_STAT, "r");
-	if (file == NULL) {
-		PRINT_ERR("Cannot open /proc/stat");
-		return;
+//	FILE *file = fopen(PROC_FILE_STAT, "r");
+//	if (file == NULL) {
+//		PRINT_ERR("Cannot open /proc/stat");
+//		return;
+//	}
+
+//	char buffer[256];
+//	int cpus = -1;
+//	do {
+//		cpus++;
+//		char *s = fgets(buffer, 255, file);
+//		/* We should not reach to the file end, because we only read lines starting with 'cpu' */
+//		if (s == NULL) {
+//			PRINT_ERR("Error when reading /proc/stat");
+//			fclose(file);
+//			return;
+//		}
+//
+//		/* Assume the first line is stat for all CPUs. */
+//		if (cpus == 0) {
+//			sscanf(buffer,
+//			      "cpu  %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu",
+//			      &user, &nice, &system, &idle, &iowait,
+//			      &irq, &softirq, &steal, &guest, &guest_nice);
+//		}
+//	} while (buffer[0] == 'c' && buffer[1] == 'p' && buffer[2] == 'u');
+//
+//	fclose(file);
+//
+	size_t len, len1;
+	uint64_t cp_time[CPUSTATES];
+	uint64_t cpu_num[1];
+	unsigned long long nice;
+	len = sizeof(cp_time);
+	if (sysctlbyname("kern.cp_time", cp_time, &len, NULL, 0) == -1) {
+		perror("sysctl");
+		exit(EXIT_FAILURE);
 	}
+	len1 = sizeof(cpu_num);
+	if (sysctlbyname("hw.ncpu", cpu_num, &len, NULL, 0) == -1) {
+		perror("sysctl1");
+		exit(EXIT_FAILURE);
+	}
+	cups->nproc = cpu_num[0];
+	cups->user_time = cp_time[0];
+	nice = cp_time[1];
+	cups->system_time = cp_time[2];
+	cups->idle_time = cp_time[4];
+	cups->softirq_time = cp_time[3];
 
-	char buffer[256];
-	int cpus = -1;
-	do {
-		cpus++;
-		char *s = fgets(buffer, 255, file);
-		/* We should not reach to the file end, because we only read lines starting with 'cpu' */
-		if (s == NULL) {
-			PRINT_ERR("Error when reading /proc/stat");
-			fclose(file);
-			return;
-		}
-
-		/* Assume the first line is stat for all CPUs. */
-		if (cpus == 0) {
-			sscanf(buffer,
-			      "cpu  %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu",
-			      &user, &nice, &system, &idle, &iowait,
-			      &irq, &softirq, &steal, &guest, &guest_nice);
-		}
-	} while (buffer[0] == 'c' && buffer[1] == 'p' && buffer[2] == 'u');
-
-	fclose(file);
-
-	cups->nproc = MAX(cpus - 1, 1);
-	cups->user_time = user;
-	cups->system_time = system;
-	cups->idle_time = idle;
-	cups->iowait_time = iowait;
-	cups->softirq_time = softirq;
-
-	cups->total_time = user + nice + system + idle + iowait + irq + softirq + steal;
+	cups->total_time = cp_time[0] + cp_time[1] + cp_time[2] + cp_time[3] + cp_time[4];
 }
 
 bool is_str_number(char *str)
