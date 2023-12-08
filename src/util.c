@@ -85,6 +85,8 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	double test_duration = tepr->actual_test_time;
 	uint64_t total_bytes = tepr->total_bytes;
 	long double cpu_ps_total_diff;
+	uint64_t freq;
+	size_t len = sizeof(freq);
 
 	if (test_duration == 0)
 		return -1;
@@ -103,7 +105,12 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	}
 
 	/* calculate for overall counters */
-	cpu_speed_mhz = read_value_from_proc(PROC_FILE_CPUINFO, CPU_SPEED_MHZ);
+	//cpu_speed_mhz = read_value_from_proc(PROC_FILE_CPUINFO, CPU_SPEED_MHZ);
+	if (sysctlbyname("machdep.tsc_freq", &freq, &len, NULL, 0) == -1) {
+		perror("sysctl");
+		exit(EXIT_FAILURE);
+	}
+	cpu_speed_mhz = (double)freq / 1e6;
 	tepr->cpu_speed_mhz = cpu_speed_mhz;
 
 	tepr->retrans_segments_per_sec = (tepr->final_tcp_retrans->retrans_segs - tepr->init_tcp_retrans->retrans_segs) / test_duration;
