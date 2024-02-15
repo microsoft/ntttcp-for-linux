@@ -288,7 +288,11 @@ size_t execute_system_cmd_by_process(char *command, char *type, char **output)
 
 	count = getline(output, &len, pfp);
 
-	fclose(pfp);
+	if (pclose(pfp) == -1) {
+		PRINT_ERR("Error closing process");
+		return 0;
+	}
+
 	return count;
 }
 
