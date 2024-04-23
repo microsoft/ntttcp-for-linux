@@ -38,6 +38,9 @@ parameter.o: parameter.c
 main.o: main.c
 	$(CC) $(CFLAGS) -c main.c -o main.o
 
+.PHONY: all
+all: $(OUT)
+
 .PHONY: clean
 clean:
 	rm -rf *.o $(OUT)
