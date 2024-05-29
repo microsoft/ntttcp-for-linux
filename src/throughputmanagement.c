@@ -57,7 +57,15 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 
 	/* 1) run test warm-up, if it is specified */
 	if (tep->test->warmup > 0) {
-		sleep(tep->test->warmup);
+
+		/*Sleep for warm-up duration*/
+		struct timespec req, rem;
+		req.tv_sec = tep->test->warmup;
+		
+		while(nanosleep(&req, &rem) == -1){
+			req = rem;
+		}		
+		
 		PRINT_INFO("Test warmup completed.");
 		/*
 		 * 1) reset each stream's total_bytes_transferred counter to 0 (discard warmup bytes)
@@ -88,7 +96,13 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 	tep->results->init_rx_packets = get_single_value_from_os_file(tep->test->show_interface_packets, "rx");
 	tep->results->init_interrupts = get_interrupts_from_proc_by_dev(tep->test->show_dev_interrupts);
 
-	sleep(tep->test->duration);
+	/*Sleep for the test duration*/
+	struct timespec req, rem;
+	req.tv_sec = tep->test->duration;
+	
+	while(nanosleep(&req, &rem) == -1){
+		req = rem;
+	}
 
 	/* calculate the end resource usage */
 	get_cpu_usage(tep->results->final_cpu_usage);
