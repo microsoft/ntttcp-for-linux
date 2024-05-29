@@ -155,4 +155,19 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 
 	wait_light_off();
 	PRINT_INFO("Test cycle finished.");
+
+		if (tep->test->client_role == true && tep->test->no_synch == false) {
+		/*
+		 * if actual_test_time < tep->negotiated_test_cycle_time;
+		 * then this indicates that in the sender side, test is being interrupted.
+		 * hence, tell receiver about this.
+		 */
+		if (actual_test_time < tep->negotiated_test_cycle_time) {
+			tell_receiver_test_exit(tep->synch_socket);
+		}
+		close(tep->synch_socket);
+	}
+
+	tep->state = TEST_FINISHED;
+	return;
 }
