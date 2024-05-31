@@ -63,7 +63,15 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 		req.tv_sec = tep->test->warmup;
 		
 		while(nanosleep(&req, &rem) == -1){
-			req = rem;
+			if (errno == EINTR) {
+				req = rem;
+			} else if (errno == EFAULT) {
+				PRINT_ERR("EFAULT: Problem with copying information from user space.");
+				break;
+			} else if (errno == EINVAL) {
+				PRINT_ERR("EINVAL: The time specified to sleep was not in the range [0,999999999]");
+				break;
+			}
 		}		
 		
 		PRINT_INFO("Test warmup completed.");
@@ -100,8 +108,16 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 	struct timespec req, rem;
 	req.tv_sec = tep->test->duration;
 	
-	while(nanosleep(&req, &rem) == -1){
-		req = rem;
+	while (nanosleep(&req, &rem) == -1){
+		if (errno == EINTR) {
+			req = rem;
+		} else if (errno == EFAULT) {
+			PRINT_ERR("EFAULT: Problem with copying information from user space.");
+			break;
+		} else if (errno == EINVAL) {
+			PRINT_ERR("EINVAL: The time specified to sleep was not in the range [0,999999999]");
+			break;
+		}		
 	}
 
 	/* calculate the end resource usage */
