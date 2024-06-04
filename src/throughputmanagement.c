@@ -114,15 +114,9 @@ void run_ntttcp_throughput_management(struct ntttcp_test_endpoint *tep)
 	while (nanosleep(&req, &rem) == -1){
 		if (errno == EINTR) {
 			req = rem;
-		} else if (errno == EFAULT) {
-			PRINT_ERR("EFAULT: Problem with copying information from user space.");
-			break;
-		} else if (errno == EINVAL) {
-			PRINT_ERR("EINVAL: The time specified to sleep was not in the range [0,999999999]");
-			break;
 		} else {
 			fprintf(stderr, "Unexpected error (errno %d): %s\n", errno, strerror(errno));
-			break;
+			exit(EXIT_FAILURE);
 		}			
 	}
 
