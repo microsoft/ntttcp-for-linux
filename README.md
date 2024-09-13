@@ -38,22 +38,16 @@ A multiple-threaded Linux network throughput benchmark tool.
 
 
 ## Getting Started
+sudo pkg install libepoll-shim (this gives epoll implementation using kqueue)
 
-
-### Building NTTTCP-for-Linux ###
+### Building NTTTCP-for-FreeBSD ###
 
 - Using `make`:
 ```
 	make; make install
 ```
 
-- Using `CMake`:
-```
-	cd src
-	mkdir build && cd build
-	cmake ..
-	make && make install
-```
+
 
 ### Usage
 	
