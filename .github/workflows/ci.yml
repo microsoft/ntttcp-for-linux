@@ -21,8 +21,8 @@ jobs:
         name: Build artifact
         id: build
         with:
-          arch: ${{ matrix.arch }}
-          distro: ${{ matrix.distro }}
+          arch: aarch64
+          distro: ubuntu22.04
           run: |
             apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake file
             cd src/ && cmake . && make
