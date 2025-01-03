@@ -17,7 +17,7 @@ jobs:
         id: binary_filename
 
       - name: Uploads binary file for x86-64
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.binary_filename.outputs.version }}-x86_64
           path: src/ntttcp
@@ -43,7 +43,7 @@ jobs:
         id: binary_filename
 
       - name: Uploads binary file for aarch64
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.binary_filename.outputs.version }}-aarch64
           path: src/ntttcp
