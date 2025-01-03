@@ -10,18 +10,11 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - run: make
+      - run: cd src/ && cmake . && make && ls -lh ntttcp && file ntttcp
 
   build_aarch64:
     name: build aarch64
     runs-on: ubuntu-22.04
-      matrix:
-        toolchain:
-          - stable
-          - beta
-        include:
-          - arch: aarch64
-            distro: ubuntu22.04
     steps:
       - uses: actions/checkout@v4
       - uses: uraimo/run-on-arch-action@v2
