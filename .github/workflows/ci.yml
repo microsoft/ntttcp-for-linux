@@ -48,3 +48,18 @@ jobs:
           name: ${{ steps.binary_filename.outputs.version }}-aarch64
           path: src/ntttcp
           retention-days: 5
+
+
+  release_artifacts:
+    name: release artifacts
+    runs-on: ubuntu-22.04
+    needs: [build_x86-64, build_aarch64]
+    steps:
+      - name: releases the artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ntttcp-x86_64
+            ntttcp-aarch64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
