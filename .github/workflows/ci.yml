@@ -7,7 +7,7 @@ on:
 jobs:
   build_x86-64:
     name: build x86-64
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
       - run: cd src/ && cmake . && make && ls -lh ntttcp && file ntttcp
@@ -21,7 +21,7 @@ jobs:
 
   build_aarch64:
     name: build aarch64
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
       - uses: uraimo/run-on-arch-action@v2
@@ -29,7 +29,7 @@ jobs:
         id: build
         with:
           arch: aarch64
-          distro: ubuntu18.04
+          distro: ubuntu20.04
           run: |
             apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake file
             cd src/ && cmake . && make && ls -lh ntttcp && file ntttcp
