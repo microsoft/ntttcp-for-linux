@@ -1,0 +1,58 @@
+name: Build using CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build_x86-64:
+    name: build x86-64
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: cd src/ && cmake . && make && ls -lh ntttcp && file ntttcp
+
+      - name: Uploads binary file for x86-64
+        uses: actions/upload-artifact@v4
+        with:
+          name: ntttcp-x86_64
+          path: src/ntttcp
+          retention-days: 5
+
+  build_aarch64:
+    name: build aarch64
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: uraimo/run-on-arch-action@v2
+        name: Build artifact
+        id: build
+        with:
+          arch: aarch64
+          distro: ubuntu20.04
+          run: |
+            apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake file
+            cd src/ && cmake . && make && ls -lh ntttcp && file ntttcp
+
+      - name: Uploads binary file for aarch64
+        uses: actions/upload-artifact@v4
+        with:
+          name: ntttcp-aarch64
+          path: src/ntttcp
+          retention-days: 5
+
+
+  release_artifacts:
+    name: release artifacts
+    runs-on: ubuntu-22.04
+    needs: [build_x86-64, build_aarch64]
+    steps:
+      - name: releases the artifacts
+        if: startsWith(github.ref, 'refs/heads/release/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ntttcp-x86_64
+            ntttcp-aarch64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
