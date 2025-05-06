@@ -1,7 +1,7 @@
 ifndef CC
 CC=gcc
 endif
-ifeq ($(DEBUG), 0)
+ifeq ($(DEBUG), 1)
 CFLAGS=-Wall -W -O0 -ggdb3 -fno-omit-frame-pointer
 else
 CFLAGS=-Wall -W -O2 -fno-strict-aliasing
