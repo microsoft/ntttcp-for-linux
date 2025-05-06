@@ -44,6 +44,12 @@ void print_flags(struct ntttcp_test *test)
 
 	printf("%s:\t\t\t %s\n", "server address", test->bind_address);
 
+	if (test->client_role)
+	{
+		printf("%s:\t %s\n", "source interface address", test->source_address);
+		printf("%s:\t\t %s\n", "-S option setting = %s", test->source_addr_bind?"true":"false");
+	}
+
 	if (test->domain == AF_INET)
 		printf("%s:\t\t\t\t %s\n", "domain", "IPv4");
 	if (test->domain == AF_INET6)
@@ -232,6 +238,17 @@ int process_mappings(struct ntttcp_test *test)
 	}
 	return NO_ERROR;
 }
+int validate_ip(const char *ip_str) {
+	struct sockaddr_in sa4;
+	struct sockaddr_in6 sa6;
+
+	if (inet_pton(AF_INET, ip_str, &(sa4.sin_addr)) == 1) {
+		return 0;
+	} else if (inet_pton(AF_INET6, ip_str, &(sa6.sin6_addr)) == 1) {
+		return 0;
+	}
+	return 1;
+}
 
 /* Check flag or role compatibility; set default value for some params */
 int verify_args(struct ntttcp_test *test)
@@ -256,6 +273,29 @@ int verify_args(struct ntttcp_test *test)
 
 	if (test->domain == AF_INET && !strstr(test->bind_address, ".")) {
 		PRINT_ERR("invalid ipv4 address provided");
+		return ERROR_ARGS;
+	}
+
+	if (test->domain == AF_INET6 && strcmp(test->source_address, "0.0.0.0") == 0)
+		test->source_address = "::";
+
+	if (test->domain == AF_INET6 && !strstr(test->source_address, ":")) {
+		PRINT_ERR("invalid ipv6 source interface address provided");
+		return ERROR_ARGS;
+	}
+
+	/* validate ip address */
+	if(test->source_addr_bind)
+	{
+		if (validate_ip(test->source_address) != 0)
+		{
+			PRINT_ERR("invalid source interface address");
+			return ERROR_ARGS;
+		}
+	}
+
+	if (test->domain == AF_INET && !strstr(test->source_address, ".")) {
+		PRINT_ERR("invalid ipv4 source interface address provided");
 		return ERROR_ARGS;
 	}
 
@@ -389,7 +429,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 	};
 	int opt;
 
-	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:NO::x::j::QVh", longopts, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:n:l:6up:f::b:B:W:t:C:NO::x::j::QVhS:", longopts, NULL)) != -1) {
 		switch (opt) {
 		case 'r':
 		case 's':
@@ -405,6 +445,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 				if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
 					test->bind_address = argv[optind++];
 			}
+				
 			break;
 
 		case 'D':
@@ -431,6 +472,11 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			test->mapping = optarg;
 			process_mappings(test);
 			break;
+		case 'S':
+			test->source_address = optarg;
+			test->source_addr_bind = true;
+			break;
+
 
 		case 'P':
 			test->server_ports = atoi(optarg);

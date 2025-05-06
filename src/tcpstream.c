@@ -57,7 +57,48 @@ int n_send(int fd, const char *buffer, size_t total)
 	}
 	return total;
 }
+/************************************************************/
+// Function to get interface name for a given IP Address
+/************************************************************/
 
+int get_interface_name_by_ip(const char *target_ip, char iface_name[]) {
+    struct ifaddrs *ifaddr, *ifa;
+
+    if (getifaddrs(&ifaddr) == -1) {
+        perror("getifaddrs");
+        return 1;
+    }
+
+    /* Could be multiple ip address for a given interface */
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (!ifa->ifa_addr)
+            continue;
+
+        int family = ifa->ifa_addr->sa_family;
+        char ip[INET6_ADDRSTRLEN];
+
+        void *addr;
+        if (family == AF_INET) {
+            addr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+        } else if (family == AF_INET6) {
+            addr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+        } else {
+            continue;
+        }
+
+        inet_ntop(family, addr, ip, sizeof(ip));
+
+        if (strcmp(ip, target_ip) == 0) {
+            strncpy(iface_name, ifa->ifa_name, IFNAMSIZ - 1);
+            iface_name[IFNAMSIZ - 1] = '\0';
+            freeifaddrs(ifaddr);
+            return 0;
+        }
+    }
+
+    freeifaddrs(ifaddr);
+    return 1;  // No match found
+}
 /************************************************************/
 //		ntttcp sender
 /************************************************************/
@@ -88,7 +129,7 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 	uint num_average_rtt = 0;
 	struct tcp_info tcpinfo;
 	uint bytes = sizeof(tcpinfo);
-
+	char if_name[IFNAMSIZ] = {'\0'};
 	sc = (struct ntttcp_stream_client *)ptr;
 
 	/* get address of remote receiver */
@@ -146,9 +187,23 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 				if (sc->domain == AF_INET) {
 					(*(struct sockaddr_in *)&local_addr).sin_family = AF_INET; /* local_addrs[i].ss_family = AF_INET; */
 					(*(struct sockaddr_in *)&local_addr).sin_port = htons(client_port);
+					if(sc->source_addr_bind)
+					{
+						if (inet_pton(AF_INET, sc->source_address,  &((*(struct sockaddr_in *)&local_addr).sin_addr)) <= 0) {
+							ASPRINTF(&log, "Invalid V4 address or Address %s not supported", sc->source_address);
+							/* Allow to go through the default interface */
+						}
+					}
 				} else {
 					(*(struct sockaddr_in6 *)&local_addr).sin6_family = AF_INET6; /* local_addrs[i].ss_family = AF_INET6; */
 					(*(struct sockaddr_in6 *)&local_addr).sin6_port = htons(client_port);
+					if(sc->source_addr_bind)
+					{
+						if (inet_pton(AF_INET6, sc->source_address,  &((*(struct sockaddr_in6 *)&local_addr).sin6_addr)) <= 0) {
+							ASPRINTF(&log, "Invalid V6 address or Address %s not supported", sc->source_address);
+							/* Allow to go through the default interface */
+						}
+					}
 				}
 
 				if ((ret = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0) {
@@ -158,6 +213,63 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 						sc->domain == AF_INET ? inet_ntoa((*(struct sockaddr_in *)&local_addr).sin_addr) : "::", /* TODO - get the IPv6 addr string */
 						client_port, errno);
 					PRINT_INFO_FREE(log);
+				}
+			}
+			else
+			{
+				/* 2. bind this socket fd to any TCP port */
+
+				memset(&local_addr, 0, sizeof(local_addr));
+				if (sc->domain == AF_INET) {
+					(*(struct sockaddr_in *)&local_addr).sin_family = AF_INET; /* local_addrs[i].ss_family = AF_INET; */
+					(*(struct sockaddr_in *)&local_addr).sin_port = htons(0);
+					
+					if(sc->source_addr_bind)
+					{
+						if (inet_pton(AF_INET, sc->source_address,  &((*(struct sockaddr_in *)&local_addr).sin_addr)) <= 0) {
+							ASPRINTF(&log, "Invalid V4 address or Address %s not supported", sc->source_address);
+							/* Allow to go through the default interface */
+						}
+					}
+				} else {
+					(*(struct sockaddr_in6 *)&local_addr).sin6_family = AF_INET6; /* local_addrs[i].ss_family = AF_INET6; */
+					(*(struct sockaddr_in6 *)&local_addr).sin6_port = htons(0);
+
+					if(sc->source_addr_bind)
+					{
+						if (inet_pton(AF_INET6, sc->source_address,  &((*(struct sockaddr_in6 *)&local_addr).sin6_addr)) <= 0) {
+							ASPRINTF(&log, "Invalid V6 address or Address %s not supported", sc->source_address);
+							/* Allow to go through the default interface */
+						}
+					}
+				}
+
+				if ((ret = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0) {
+					ASPRINTF(&log,
+						"failed to bind socket[%d] to a local : [%s]. errno = %d. Ignored",
+						sockfd,
+						sc->domain == AF_INET ? inet_ntoa((*(struct sockaddr_in *)&local_addr).sin_addr) : "::", /* TODO - get the IPv6 addr string */
+						errno);
+					PRINT_INFO_FREE(log);
+				}
+			}
+
+			/* bind to device - to override destination ip address based route lookup */
+			
+			if(sc->source_addr_bind)
+			{
+				if(get_interface_name_by_ip(sc->source_address, if_name) == 0)
+				{
+					if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, if_name, strlen(if_name)) < 0) {
+						ASPRINTF(&log, "cannot set option SO_BINDTODEVICE for socket[%d]", sockfd);
+						PRINT_INFO_FREE(log);
+						/* Allow to go through the default interface */
+					}
+				}
+				else
+				{
+					ASPRINTF(&log, "can not get interface name using ip addr[%s]", sc->source_address);
+					/* Allow to go through the default interface */
 				}
 			}
 

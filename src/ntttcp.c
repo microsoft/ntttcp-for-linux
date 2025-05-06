@@ -26,9 +26,11 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->multi_clients_mode	= false;
 	test->last_client		= false;
 	test->use_epoll			= false;
+	test->source_addr_bind 		= false;
 	test->exit_after_done		= true;
 	test->mapping			= "16,*,*";
 	test->bind_address		= "0.0.0.0";
+	test->source_address		= "0.0.0.0";
 	test->cpu_affinity		= -1; /* no hard cpu affinity */
 	test->server_ports		= DEFAULT_NUM_SERVER_PORTS;	 //default:16 */
 	test->threads_per_server_port	= DEFAULT_THREADS_PER_SERVER_PORT; /* default: 4, sender only */
@@ -251,6 +253,8 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoin
 	s->domain			= test->domain;
 	s->protocol			= test->protocol;
 	s->bind_address 		= test->bind_address;
+	s->source_address 		= test->source_address;
+	s->source_addr_bind 		= test->source_addr_bind;
 	s->num_connections		= test->conns_per_thread;
 	s->send_buf_size		= test->send_buf_size;
 	s->sc_bandwidth_limit_bytes	= test->bandwidth_limit / (test->server_ports * test->threads_per_server_port) / 8;

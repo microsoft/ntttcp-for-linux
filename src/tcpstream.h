@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <sys/epoll.h>
 #include <unistd.h>
+#include <net/if.h>
 #include "multithreading.h"
 #include "util.h"
 
@@ -23,3 +24,4 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss);
 int ntttcp_server_epoll(struct ntttcp_stream_server *ss);
 int ntttcp_server_select(struct ntttcp_stream_server *ss);
 void *run_ntttcp_receiver_tcp_stream(void *ptr);
+int get_interface_name_by_ip(const char *target_ip, char iface_name[]);
