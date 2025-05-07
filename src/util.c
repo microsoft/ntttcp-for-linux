@@ -809,3 +809,70 @@ bool check_is_ip_addr_valid_local(int ss_family, char *ip_to_check)
 	freeifaddrs(ifaddrp);
 	return is_valid;
 }
+
+int validate_ip_address(int domain, const char *ip_str) {
+	struct sockaddr_in sa4;
+	struct sockaddr_in6 sa6;
+
+	if (domain == AF_INET && !strstr(ip_str, ".")) {
+		PRINT_ERR("invalid ipv4 client address provided");
+		return ERROR_ARGS;
+	}
+
+	if (domain == AF_INET6 && !strstr(ip_str, ":")) {
+		PRINT_ERR("invalid ipv6 client address provided");
+		return ERROR_ARGS;
+	}
+
+	if (inet_pton(AF_INET, ip_str, &(sa4.sin_addr)) == 1) {
+		return NO_ERROR;
+	} else if (inet_pton(AF_INET6, ip_str, &(sa6.sin6_addr)) == 1) {
+		return NO_ERROR;
+	}
+
+	return ERROR_ARGS;
+}
+
+/************************************************************/
+// Function to get interface name for a given IP Address
+/************************************************************/
+
+int get_interface_name_by_ip(const char *target_ip, char iface_name[]) {
+    struct ifaddrs *ifaddr, *ifa;
+
+    if (getifaddrs(&ifaddr) == -1) {
+        perror("getifaddrs");
+        return 1;
+    }
+
+    /* Could be multiple ip address for a given interface */
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (!ifa->ifa_addr)
+            continue;
+
+        int family = ifa->ifa_addr->sa_family;
+        char ip[INET6_ADDRSTRLEN];
+
+        void *addr;
+        if (family == AF_INET) {
+            addr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+        } else if (family == AF_INET6) {
+            addr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+        } else {
+            continue;
+        }
+
+        inet_ntop(family, addr, ip, sizeof(ip));
+
+        if (strcmp(ip, target_ip) == 0) {
+            strncpy(iface_name, ifa->ifa_name, IFNAMSIZ - 1);
+            iface_name[IFNAMSIZ - 1] = '\0';
+            freeifaddrs(ifaddr);
+            return 0;
+        }
+    }
+
+    freeifaddrs(ifaddr);
+    return 1;  // No match found
+}
+

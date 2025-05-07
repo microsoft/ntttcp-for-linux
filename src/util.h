@@ -23,6 +23,7 @@
 #include <ifaddrs.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <net/if.h>
 #include "ntttcp.h"
 #include "oscounter.h"
 
@@ -110,3 +111,4 @@ int set_socket_non_blocking(int fd);
 void enable_fq_rate_limit(struct ntttcp_stream_client *sc, int sockfd);
 bool check_resource_limit(struct ntttcp_test *test);
 bool check_is_ip_addr_valid_local(int ss_family, char *ip_to_check);
+int get_interface_name_by_ip(const char *target_ip, char iface_name[]);

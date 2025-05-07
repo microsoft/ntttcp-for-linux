@@ -67,16 +67,16 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 		(*(struct sockaddr_in *)&local_addr).sin_port = htons(client_port);
 		(*(struct sockaddr_in *)&local_addr).sin_family = sc->domain; /* AF_INET */
 
-		if(sc->source_addr_bind)
+		if(sc->is_client_address)
 		{
-			if (inet_pton(sc->domain, sc->source_address,  &((*(struct sockaddr_in *)&local_addr).sin_addr)) <= 0) {
-				ASPRINTF(&log, "Invalid V4 address or Address %s not supported", sc->source_address);
+			if (inet_pton(sc->domain, sc->client_address,  &((*(struct sockaddr_in *)&local_addr).sin_addr)) <= 0) {
+				ASPRINTF(&log, "Invalid IPV4 address or Address %s not supported", sc->client_address);
 				/* Allow to go through the default interface */
 			}
 
 			/* bind to device - to override destination based route lookup */
 
-			if(get_interface_name_by_ip(sc->source_address, if_name) == 0)
+			if(get_interface_name_by_ip(sc->client_address, if_name) == 0)
 			{
 				if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, if_name, strlen(if_name)) < 0) {
 					ASPRINTF(&log, "cannot set option SO_BINDTODEVICE for socket[%d]", sockfd);
@@ -86,7 +86,7 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 			}
 			else
 			{
-				ASPRINTF(&log, "can not get interface name using ip addr[%s]\n", sc->source_address);
+				ASPRINTF(&log, "can not get interface name using client ip addr[%s]\n", sc->client_address);
 				/* Allow to go through the default interface */
 			}
 		}
