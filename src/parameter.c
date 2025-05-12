@@ -268,7 +268,7 @@ int verify_args(struct ntttcp_test *test)
 		test->client_address = "::";
 
 	/* validate ip address */
-	if(test->is_client_address)
+	if(test->use_client_address)
 	{
 		if (validate_ip_address(test->domain, test->client_address) != 0)
 		{
@@ -440,7 +440,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 					test->client_address = argv[optind++];
 			}
 
-			test->is_client_address = true;
+			test->use_client_address = true;
 			break;
 
 		case 'M':

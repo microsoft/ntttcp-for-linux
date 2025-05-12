@@ -34,7 +34,7 @@ struct ntttcp_test
 	uint	server_ports; /*    How many ports opening in receiver side, from -m flag, or -P flag */
 	int	cpu_affinity; /*    CPU affinity, from -m flag */
 	char	*bind_address; /*    Socket binding address */
-	bool	is_client_address; /* '-a' option for tx side */
+	bool	use_client_address; /* '-a' option for tx side */
 	char	*client_address;  /* NIC Interface address or client address */
 	uint	threads_per_server_port; /* '-n' for number of threads per each server port. sender only */
 	uint	conns_per_thread; /* '-l' for number of connections in each sender thread. sender only */
@@ -98,7 +98,7 @@ struct ntttcp_stream_client{
 	int	protocol;
 	char	*bind_address;
 	char	*client_address;
-	bool    is_client_address;
+	bool    use_client_address;
 	uint	server_port;
 	uint	client_port;
 	uint	num_connections;

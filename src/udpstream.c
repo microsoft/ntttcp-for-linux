@@ -67,7 +67,7 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 		(*(struct sockaddr_in *)&local_addr).sin_port = htons(client_port);
 		(*(struct sockaddr_in *)&local_addr).sin_family = sc->domain; /* AF_INET */
 
-		if(sc->is_client_address)
+		if(sc->use_client_address)
 		{
 			if (inet_pton(sc->domain, sc->client_address,  &((*(struct sockaddr_in *)&local_addr).sin_addr)) <= 0) {
 				ASPRINTF(&log, "Invalid IPV4 address or Address %s not supported", sc->client_address);
@@ -82,12 +82,14 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 					ASPRINTF(&log, "cannot set option SO_BINDTODEVICE for socket[%d]", sockfd);
 					PRINT_INFO_FREE(log);
 					/* Allow to go through the default interface */
+	    			        ASPRINTF(&log, "Testing will continue with the default interface");
 				}
 			}
 			else
 			{
 				ASPRINTF(&log, "can not get interface name using client ip addr[%s]\n", sc->client_address);
 				/* Allow to go through the default interface */
+				ASPRINTF(&log, "Testing will continue with the default interface");
 			}
 		}
 
