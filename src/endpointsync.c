@@ -14,6 +14,7 @@ int create_sender_sync_socket(struct ntttcp_test_endpoint *tep)
 	char *log = NULL;
 	int sockfd = 0; /* socket id */
 	struct ntttcp_test *test = tep->test;
+	struct ntttcp_stream_client sc = {0};
 
 	struct sockaddr_storage local_addr; /* for local address */
 	socklen_t local_addr_size; /* local address size, for getsockname(), to get local port */
@@ -24,8 +25,15 @@ int create_sender_sync_socket(struct ntttcp_test_endpoint *tep)
 	struct addrinfo hints, *serv_info, *p; /* to get remote peer's sockaddr for connect() */
 
 	int i = 0;
-
+	int ret = 0;
 	sync_port = test->server_base_port - 1;
+
+	memset(&sc, 0, sizeof(sc));
+	
+	/* get client info to perform a bind for a sync socket */
+	sc.domain = test->domain;
+	sc.use_client_address = test->use_client_address;
+	sc.client_address = test->client_address;
 
 	ip_address_max_size = (test->domain == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
 	if ((ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL) {
@@ -54,6 +62,15 @@ int create_sender_sync_socket(struct ntttcp_test_endpoint *tep)
 			free(ip_address_str);
 			return 0;
 		}
+
+		ret = ntttcp_bind_socket(sockfd, 0, &sc);
+		if(ret != 0)
+		{
+			ASPRINTF(&log, "failed to bind sync socket domain [%d] errno [%d]", sc.domain, errno);
+			PRINT_INFO_FREE(log);
+			/* Allow to go through the default interface */
+		}
+
 		ip_address_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, ip_address_str, ip_address_max_size);
 		if ((i = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
 			if (i == -1) {

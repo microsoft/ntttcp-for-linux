@@ -36,9 +36,8 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 	int sockfds[DEFAULT_CLIENT_CONNS_PER_THREAD] = {-1};
 	uint client_port = 0;
 	struct hostent *hp;
-	char if_name[IFNAMSIZ] = {'\0'};
 
-	struct sockaddr_in local_addr, serv_addr;
+	struct sockaddr_in serv_addr;
 	int sa_size = sizeof(struct sockaddr_in);
 	memset((char *)&serv_addr, 0, sa_size);
 	serv_addr.sin_family = sc->domain; /* AF_INET */
@@ -64,41 +63,12 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 		 */
 		client_port = (sc->num_connections > 1 && sc->client_port != 0) ? sc->client_port + i : sc->client_port;
 
-		(*(struct sockaddr_in *)&local_addr).sin_port = htons(client_port);
-		(*(struct sockaddr_in *)&local_addr).sin_family = sc->domain; /* AF_INET */
-
-		if(sc->use_client_address)
+		ret = ntttcp_bind_socket(sockfd, client_port, sc);
+		if(ret != 0)
 		{
-			if (inet_pton(sc->domain, sc->client_address,  &((*(struct sockaddr_in *)&local_addr).sin_addr)) <= 0) {
-				ASPRINTF(&log, "Invalid IPV4 address or Address %s not supported", sc->client_address);
-				/* Allow to go through the default interface */
-			}
-
-			/* bind to device - to override destination based route lookup */
-
-			if(get_interface_name_by_ip(sc->client_address, if_name) == 0)
-			{
-				if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, if_name, strlen(if_name)) < 0) {
-					ASPRINTF(&log, "cannot set option SO_BINDTODEVICE for socket[%d]", sockfd);
-					PRINT_INFO_FREE(log);
-					/* Allow to go through the default interface */
-	    			        ASPRINTF(&log, "Testing will continue with the default interface");
-				}
-			}
-			else
-			{
-				ASPRINTF(&log, "can not get interface name using client ip addr[%s]\n", sc->client_address);
-				/* Allow to go through the default interface */
-				ASPRINTF(&log, "Testing will continue with the default interface");
-			}
-		}
-
-
-		if ((ret = bind(sockfd, (struct sockaddr *)&local_addr, sa_size)) < 0) {
-			ASPRINTF(&log,
-					 "failed to bind socket[%d] to a local port: [%s:%d]. errno = %d. Ignored",
-					 sockfd, inet_ntoa((*(struct sockaddr_in *)&local_addr).sin_addr), client_port, errno);
+			ASPRINTF(&log, "failed to bind socket domain [%d] client_port [%d] errno [%d]", sc->domain, client_port, errno);
 			PRINT_INFO_FREE(log);
+			/* Allow to go through the default interface */
 		}
 
 		/* set socket rate limit if specified by user */
@@ -115,7 +85,7 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 
 		ASPRINTF(&log,
 				"Running UDP stream: local:%d [socket:%d] --> %s:%d",
-				ntohs(((struct sockaddr_in *)&local_addr)->sin_port), sockfd, sc->bind_address, sc->server_port);
+				ntohs((client_port)), sockfd, sc->bind_address, sc->server_port);
 		PRINT_DBG_FREE(log);
 
 		sockfds[i] = sockfd;

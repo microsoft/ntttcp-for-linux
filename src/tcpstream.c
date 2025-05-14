@@ -88,7 +88,6 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 	uint num_average_rtt = 0;
 	struct tcp_info tcpinfo;
 	uint bytes = sizeof(tcpinfo);
-	char if_name[IFNAMSIZ] = {'\0'};
 	sc = (struct ntttcp_stream_client *)ptr;
 
 	/* get address of remote receiver */
@@ -141,97 +140,14 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 			if (sc->client_port != 0) {
 				/* 2. bind this socket fd to a local fixed TCP port */
 				client_port = sc->client_port + i;
-
-				memset(&local_addr, 0, sizeof(local_addr));
-				if (sc->domain == AF_INET) {
-					(*(struct sockaddr_in *)&local_addr).sin_family = AF_INET; /* local_addrs[i].ss_family = AF_INET; */
-					(*(struct sockaddr_in *)&local_addr).sin_port = htons(client_port);
-					if(sc->use_client_address)
-					{
-						if (inet_pton(AF_INET, sc->client_address,  &((*(struct sockaddr_in *)&local_addr).sin_addr)) <= 0) {
-							ASPRINTF(&log, "Invalid IPv4 address or Address %s not supported", sc->client_address);
-							/* Allow to go through the default interface */
-							ASPRINTF(&log, "Testing will continue with the default interface");
-						}
-					}
-				} else {
-					(*(struct sockaddr_in6 *)&local_addr).sin6_family = AF_INET6; /* local_addrs[i].ss_family = AF_INET6; */
-					(*(struct sockaddr_in6 *)&local_addr).sin6_port = htons(client_port);
-					if(sc->use_client_address)
-					{
-						if (inet_pton(AF_INET6, sc->client_address,  &((*(struct sockaddr_in6 *)&local_addr).sin6_addr)) <= 0) {
-							ASPRINTF(&log, "Invalid IPv6 address or Address %s not supported", sc->client_address);
-							/* Allow to go through the default interface */
-							ASPRINTF(&log, "Testing will continue with the default interface");
-						}
-					}
-				}
-
-				if ((ret = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0) {
-					ASPRINTF(&log,
-						"failed to bind socket[%d] to a local port: [%s:%d]. errno = %d. Ignored",
-						sockfd,
-						sc->domain == AF_INET ? inet_ntoa((*(struct sockaddr_in *)&local_addr).sin_addr) : "::", /* TODO - get the IPv6 addr string */
-						client_port, errno);
-					PRINT_INFO_FREE(log);
-				}
-			}
-			else
-			{
-				/* 2. bind this socket fd to any TCP port */
-
-				memset(&local_addr, 0, sizeof(local_addr));
-				if (sc->domain == AF_INET) {
-					(*(struct sockaddr_in *)&local_addr).sin_family = AF_INET; /* local_addrs[i].ss_family = AF_INET; */
-					(*(struct sockaddr_in *)&local_addr).sin_port = htons(0);
-					
-					if(sc->use_client_address)
-					{
-						if (inet_pton(AF_INET, sc->client_address,  &((*(struct sockaddr_in *)&local_addr).sin_addr)) <= 0) {
-							ASPRINTF(&log, "Invalid IPv4 address or Address %s not supported", sc->client_address);
-							/* Allow to go through the default interface */
-						}
-					}
-				} else {
-					(*(struct sockaddr_in6 *)&local_addr).sin6_family = AF_INET6; /* local_addrs[i].ss_family = AF_INET6; */
-					(*(struct sockaddr_in6 *)&local_addr).sin6_port = htons(0);
-
-					if(sc->use_client_address)
-					{
-						if (inet_pton(AF_INET6, sc->client_address,  &((*(struct sockaddr_in6 *)&local_addr).sin6_addr)) <= 0) {
-							ASPRINTF(&log, "Invalid IPv6 address or Address %s not supported", sc->client_address);
-							/* Allow to go through the default interface */
-						}
-					}
-				}
-
-				if ((ret = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0) {
-					ASPRINTF(&log,
-						"failed to bind socket[%d] to a local : [%s]. errno = %d. Ignored",
-						sockfd,
-						sc->domain == AF_INET ? inet_ntoa((*(struct sockaddr_in *)&local_addr).sin_addr) : "::", /* TODO - get the IPv6 addr string */
-						errno);
-					PRINT_INFO_FREE(log);
-				}
 			}
 
-			/* bind to device - to override destination ip address based route lookup */
-			
-			if(sc->use_client_address)
+			ret = ntttcp_bind_socket(sockfd, client_port, sc);
+			if(ret != 0)
 			{
-				if(get_interface_name_by_ip(sc->client_address, if_name) == 0)
-				{
-					if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, if_name, strlen(if_name)) < 0) {
-						ASPRINTF(&log, "cannot set option SO_BINDTODEVICE for socket[%d]", sockfd);
-						PRINT_INFO_FREE(log);
-						/* Allow to go through the default interface */
-					}
-				}
-				else
-				{
-					ASPRINTF(&log, "can not get interface name using client ip addr[%s]", sc->client_address);
-					/* Allow to go through the default interface */
-				}
+				ASPRINTF(&log, "failed to bind socket domain [%d] client_port [%d] errno [%d]", sc->domain, client_port, errno);
+				PRINT_INFO_FREE(log);
+				/* Allow to go through the default interface */
 			}
 
 			/* 3. connect to receiver */
