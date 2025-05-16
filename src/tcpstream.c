@@ -74,13 +74,14 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 
 	uint client_port = 0;
 	int sockfds[MAX_CLIENT_CONNS_PER_THREAD] = {-1};
-	struct sockaddr_storage local_addr; /* for local address */
+	struct sockaddr_storage local_addr = {0}; /* for local address */
 	socklen_t local_addr_size = sizeof(local_addr); /* local address size */
 
 	char *remote_addr_str = NULL; /* used to get remote peer's ip address */
 	int ip_addr_max_size; /* used to get remote peer's ip address */
 	char *port_str; /* used to get remote peer's port number */
 	struct addrinfo hints, *remote_serv_info, *p; /* to get remote peer's sockaddr */
+    char if_name[IFNAMSIZ] = {'\0'};
 
 	struct timeval timeout = {SOCKET_TIMEOUT_SEC, 0}; /* set socket timeout */
 	/* the variables below are used to retrieve RTT and calculate average RTT */
@@ -89,6 +90,8 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 	struct tcp_info tcpinfo;
 	uint bytes = sizeof(tcpinfo);
 	sc = (struct ntttcp_stream_client *)ptr;
+
+    struct sockaddr_storage client_addr = {0}; 
 
 	/* get address of remote receiver */
 	memset(&hints, 0, sizeof hints);
@@ -108,6 +111,27 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 		freeaddrinfo(remote_serv_info);
 		return 0;
 	}
+    
+    if (sc->use_client_address) {
+
+        /* get interface name using the interface ip address */
+        if (get_interface_name_by_ip(sc->client_address, if_name) != 0) {
+            ASPRINTF(&log, "failed to get interface name by address [%s]", sc->client_address);
+            PRINT_INFO_FREE(log);
+            freeaddrinfo(remote_serv_info);
+            free(remote_addr_str);
+            return 0;
+        }
+    }
+
+    /* update client information */
+    if (ntttcp_update_client_info(&client_addr, sc) < 0) {
+        ASPRINTF(&log, "failed to update tcp client info [%s]", sc->client_address);
+        PRINT_INFO_FREE(log);
+        freeaddrinfo(remote_serv_info);
+        free(remote_addr_str);
+        return 0;
+    }
 
 	for (i = 0; i < sc->num_connections; i++) {
 
@@ -118,7 +142,6 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 				PRINT_ERR("cannot create a socket endpoint");
 				sockfds[i] = -1;
 				continue;
-				;
 			} else {
 				/* 1a. set socket timeout */
 				if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
@@ -140,15 +163,26 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 			if (sc->client_port != 0) {
 				/* 2. bind this socket fd to a local fixed TCP port */
 				client_port = sc->client_port + i;
+            }
+
+            /* update client port information */
+            ntttcp_update_client_port_info(&client_addr, client_port);
+
+			ret = ntttcp_bind_socket(sockfd, &client_addr);
+			if (ret != 0) {
+				ASPRINTF(&log, "failed to do tcp bind : socket domain [%d] client_port [%d] errno [%d]", 
+                        sc->domain, client_port, errno);
+				PRINT_INFO_FREE(log);
+                free(remote_addr_str);
+            	freeaddrinfo(remote_serv_info);
+                close(sockfd);
+                return 0;
 			}
 
-			ret = ntttcp_bind_socket(sockfd, client_port, sc);
-			if(ret != 0)
-			{
-				ASPRINTF(&log, "failed to bind socket domain [%d] client_port [%d] errno [%d]", sc->domain, client_port, errno);
-				PRINT_INFO_FREE(log);
-				/* Allow to go through the default interface */
-			}
+            /* perform SO_BINDTODEVICE operation for a socket */
+            if (sc->use_client_address) {
+                ntttcp_bind_to_device(sockfd, sc, if_name);
+            }
 
 			/* 3. connect to receiver */
 			remote_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, remote_addr_str, ip_addr_max_size);

@@ -46,7 +46,7 @@ void print_flags(struct ntttcp_test *test)
 
 	if (test->client_role)
 	{
-		printf("%s:\t %s\n", "client address", test->client_address);
+		printf("%s:\t\t\t %s\n", "client address", test->client_address);
 	}
 
 	if (test->domain == AF_INET)
@@ -112,7 +112,7 @@ void print_flags(struct ntttcp_test *test)
 void print_usage()
 {
 	printf("Author: %s\n", AUTHOR_NAME);
-	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-n|-l|-6|-u|-p|-f|-b|-B|-W|-t|-C|-N|-O|-x|-j|-Q|-V|-h|-m <mapping>]\n");
+	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-a|-n|-l|-6|-u|-p|-f|-b|-B|-W|-t|-C|-N|-O|-x|-j|-Q|-V|-h|-m <mapping>]\n");
 	printf("        [--show-tcp-retrans|--show-nic-packets|--show-dev-interrupts|--fq-rate-limit]\n\n");
 	printf("\t-r   Run as a receiver\n");
 	printf("\t-s   Run as a sender\n");
@@ -125,6 +125,7 @@ void print_usage()
 	printf("\t-H   [receiver only] hold receiver always running even after one test finished\n");
 
 	printf("\t-P   Number of ports listening on receiver side	[default: %d] [max: %d]\n", DEFAULT_NUM_SERVER_PORTS, MAX_NUM_SERVER_PORTS);
+	printf("\t-a   [sender only] source interface ip address \n");
 	printf("\t-n   [sender only] number of threads per each receiver port     [default: %d] [max: %d]\n", DEFAULT_THREADS_PER_SERVER_PORT, MAX_THREADS_PER_SERVER_PORT);
 	printf("\t-l   [sender only] number of connections per each sender thread [default: %d] [max: %d]\n", DEFAULT_CLIENT_CONNS_PER_THREAD, MAX_CLIENT_CONNS_PER_THREAD);
 
@@ -182,6 +183,7 @@ void print_usage()
 	printf("\t3) ./ntttcp -s 192.168.1.1 --fq-rate-limit 10G\n");
 	printf("\t4) ./ntttcp -s 192.168.1.1 -B 10G\n");
 	printf("\t4) ./ntttcp -s 192.168.1.1 --show-tcp-retrans --show-nic-packets eth0 --show-dev-interrupts mlx4 -V\n");
+	printf("\t3) ./ntttcp -s 192.168.1.1 -n 64 -a 10.1.1.11 \n");
 }
 
 void print_version()
@@ -266,12 +268,15 @@ int verify_args(struct ntttcp_test *test)
 
 	if (test->domain == AF_INET6 && strcmp(test->client_address, "0.0.0.0") == 0)
 		test->client_address = "::";
+    
+    if (test->use_client_address && test->server_role) {
+        PRINT_ERR("source interface address ('-a') is only for sender or client");
+		return ERROR_ARGS;
+    }
 
 	/* validate ip address */
-	if(test->use_client_address)
-	{
-		if (validate_ip_address(test->domain, test->client_address) != 0)
-		{
+	if (test->use_client_address) {
+		if (validate_ip_address(test->domain, test->client_address) != 0) {
 			PRINT_ERR("invalid client address");
 			return ERROR_ARGS;
 		}
@@ -408,7 +413,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 	};
 	int opt;
 
-	while ((opt = getopt_long(argc, argv, "r::s::DaMLeHm:P:n:l:6up:f::b:B:W:t:C:NO::x::j::QVh", longopts, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:a:n:l:6up:f::b:B:W:t:C:NO::x::j::QVh", longopts, NULL)) != -1) {
 		switch (opt) {
 		case 'r':
 		case 's':
@@ -429,18 +434,6 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 		case 'D':
 			test->daemon = true;
-			break;
-
-		case 'a':
-		
-			if (optarg) {
-				test->client_address = optarg;
-			} else {
-				if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
-					test->client_address = argv[optind++];
-			}
-
-			test->use_client_address = true;
 			break;
 
 		case 'M':
@@ -466,6 +459,18 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 		case 'P':
 			test->server_ports = atoi(optarg);
+			break;
+
+        case 'a':
+		
+			if (optarg) {
+				test->client_address = optarg;
+			} else {
+				if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
+					test->client_address = argv[optind++];
+			}
+
+			test->use_client_address = true;
 			break;
 
 		case 'n':

@@ -16,7 +16,7 @@ int create_sender_sync_socket(struct ntttcp_test_endpoint *tep)
 	struct ntttcp_test *test = tep->test;
 	struct ntttcp_stream_client sc = {0};
 
-	struct sockaddr_storage local_addr; /* for local address */
+	struct sockaddr_storage local_addr = {0}; /* for local address */
 	socklen_t local_addr_size; /* local address size, for getsockname(), to get local port */
 	char *ip_address_str; /* used to get remote peer's ip address */
 	int ip_address_max_size; /* used to get remote peer's ip address */
@@ -24,12 +24,12 @@ int create_sender_sync_socket(struct ntttcp_test_endpoint *tep)
 	char *port_str; /* to get remote peer's port number for getaddrinfo() */
 	struct addrinfo hints, *serv_info, *p; /* to get remote peer's sockaddr for connect() */
 
+    char if_name[IFNAMSIZ] = {'\0'};
+
 	int i = 0;
 	int ret = 0;
 	sync_port = test->server_base_port - 1;
 
-	memset(&sc, 0, sizeof(sc));
-	
 	/* get client info to perform a bind for a sync socket */
 	sc.domain = test->domain;
 	sc.use_client_address = test->use_client_address;
@@ -38,7 +38,6 @@ int create_sender_sync_socket(struct ntttcp_test_endpoint *tep)
 	ip_address_max_size = (test->domain == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
 	if ((ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for ip address string");
-		freeaddrinfo(serv_info);
 		return 0;
 	}
 
@@ -54,6 +53,27 @@ int create_sender_sync_socket(struct ntttcp_test_endpoint *tep)
 	}
 	free(port_str);
 
+    /* cache the interface name using the interface ip address */
+    if (sc.use_client_address) {
+        if (get_interface_name_by_ip(sc.client_address, if_name) != 0) {
+            ASPRINTF(&log, "failed to get interface name by address [%s]", sc.client_address);
+            PRINT_ERR_FREE(log);
+            freeaddrinfo(serv_info);
+            free(ip_address_str);
+            return 0;
+        }
+    }
+
+    /* update client information (domain and address) */
+    if (ntttcp_update_client_info(&local_addr, &sc) < 0) {
+        ASPRINTF(&log, "failed to update client info [%s]", sc.client_address);
+        PRINT_ERR_FREE(log);
+		freeaddrinfo(serv_info);
+		free(ip_address_str);
+		return 0;
+    }
+
+
 	/* only get the first entry to connect */
 	for (p = serv_info; p != NULL; p = p->ai_next) {
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
@@ -62,14 +82,22 @@ int create_sender_sync_socket(struct ntttcp_test_endpoint *tep)
 			free(ip_address_str);
 			return 0;
 		}
-
-		ret = ntttcp_bind_socket(sockfd, 0, &sc);
-		if(ret != 0)
-		{
-			ASPRINTF(&log, "failed to bind sync socket domain [%d] errno [%d]", sc.domain, errno);
-			PRINT_INFO_FREE(log);
-			/* Allow to go through the default interface */
+        
+        /* perform bind operation for a given socket  */
+		ret = ntttcp_bind_socket(sockfd, &local_addr);
+		if (ret != NO_ERROR) {
+            ASPRINTF(&log, "failed to perform bind with client address [%s] on socket: %d errno = %d", sc.client_address, sockfd, errno);
+            PRINT_ERR_FREE(log);
+			freeaddrinfo(serv_info);
+			free(ip_address_str);
+            close(sockfd);
+			return 0;
 		}
+
+        /* perform SO_BINDTODEVICE operation for a given socket */
+        if (sc.use_client_address) {
+            ntttcp_bind_to_device(sockfd, &sc, if_name);
+        }
 
 		ip_address_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, ip_address_str, ip_address_max_size);
 		if ((i = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {

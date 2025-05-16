@@ -810,9 +810,22 @@ bool check_is_ip_addr_valid_local(int ss_family, char *ip_to_check)
 	return is_valid;
 }
 
-int validate_ip_address(int domain, const char *ip_str) {
-	struct sockaddr_in sa4;
-	struct sockaddr_in6 sa6;
+/**
+
+ * @brief Validate whether the given IP string is a valid IPv4 or IPv6 address.
+ * This function checks if the input IP address string is syntactically correct for
+ * the specified address family (AF_INET or AF_INET6). It performs a basic heuristic
+ * check using strstr() and a formal check using inet_pton().
+
+ * @param domain Address family: AF_INET for IPv4, AF_INET6 for IPv6.
+ * @param ip_str Null-terminated string representing the IP address to validate.
+ * @return int Returns NO_ERROR if the IP address is valid, otherwise returns ERROR_ARGS.
+*/
+
+int validate_ip_address(int domain, const char *ip_str) 
+{
+    struct in_addr ipv4_addr;
+    struct in6_addr ipv6_addr;
 
 	if (domain == AF_INET && !strstr(ip_str, ".")) {
 		PRINT_ERR("invalid ipv4 client address provided");
@@ -824,24 +837,54 @@ int validate_ip_address(int domain, const char *ip_str) {
 		return ERROR_ARGS;
 	}
 
-	if (inet_pton(AF_INET, ip_str, &(sa4.sin_addr)) == 1) {
+	if (inet_pton(AF_INET, ip_str, &ipv4_addr) == 1) {
 		return NO_ERROR;
-	} else if (inet_pton(AF_INET6, ip_str, &(sa6.sin6_addr)) == 1) {
+	} else if (inet_pton(AF_INET6, ip_str, &ipv6_addr) == 1) {
 		return NO_ERROR;
 	}
 
 	return ERROR_ARGS;
 }
 
-/************************************************************/
-// Function to get interface name for a given IP Address
-/************************************************************/
+/**
 
-int get_interface_name_by_ip(const char *target_ip, char iface_name[]) {
+ * @brief Retrieve the name of the network interface associated with a given IP address.
+ * This function scans the system's network interfaces using getifaddrs() and compares
+
+ * each interface's IP address to the provided target IP. If a match is found, the corresponding
+ * interface name is copied into the provided buffer.
+
+ * Supports both IPv4 and IPv6.
+
+ * @param target_ip A string representing the IP address to match (IPv4 or IPv6).
+
+ * @param iface_name Output buffer to store the name of the matching interface.
+ * @return int Returns 0 on success (interface name found),
+ * or 1 on failure (invalid IP, no match, or system error).
+*/
+int get_interface_name_by_ip(const char *target_ip, char iface_name[]) 
+{
     struct ifaddrs *ifaddr, *ifa;
+    int family;
+    void *addr;
+
+    struct in_addr sin_addr;
+    struct in6_addr sin6_addr;
+    bool use_v4 = false;
+    bool use_v6 = false;
+    char *log = NULL;
 
     if (getifaddrs(&ifaddr) == -1) {
         perror("getifaddrs");
+        return 1;
+    }
+
+    if (inet_pton(AF_INET, target_ip, &sin_addr) == 1) {
+        use_v4 = true;
+    } else if (inet_pton(AF_INET6, target_ip, &sin6_addr) == 1) {
+        use_v6 = true;
+    } else {
+        perror("invalid target ip:");
         return 1;
     }
 
@@ -850,10 +893,8 @@ int get_interface_name_by_ip(const char *target_ip, char iface_name[]) {
         if (!ifa->ifa_addr)
             continue;
 
-        int family = ifa->ifa_addr->sa_family;
-        char ip[INET6_ADDRSTRLEN];
+        family = ifa->ifa_addr->sa_family;
 
-        void *addr;
         if (family == AF_INET) {
             addr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
         } else if (family == AF_INET6) {
@@ -861,15 +902,33 @@ int get_interface_name_by_ip(const char *target_ip, char iface_name[]) {
         } else {
             continue;
         }
-
-        inet_ntop(family, addr, ip, sizeof(ip));
-
-        if (strcmp(ip, target_ip) == 0) {
-            strncpy(iface_name, ifa->ifa_name, IFNAMSIZ - 1);
-            iface_name[IFNAMSIZ - 1] = '\0';
-            freeifaddrs(ifaddr);
-            return 0;
+        
+        if (strlen(ifa->ifa_name) >= IFNAMSIZ) {
+            ASPRINTF(&log, "Interface: [%s] name is too big", ifa->ifa_name);
+            PRINT_ERR_FREE(log);
+            return 1;
         }
+
+        /* compare v4 address */
+        if (use_v4) {
+            if (memcmp(&sin_addr, (struct in_addr *)addr, sizeof(struct in_addr)) == 0) {
+                strncpy(iface_name, ifa->ifa_name, IFNAMSIZ - 1);
+                iface_name[IFNAMSIZ - 1] = '\0';
+                freeifaddrs(ifaddr);
+                return 0;
+            }
+        }
+
+        /* compare v6 address */
+        if (use_v6) {
+            if (memcmp(&sin6_addr, (struct in6_addr *)addr, sizeof(struct in6_addr)) == 0) {
+                strncpy(iface_name, ifa->ifa_name, IFNAMSIZ - 1);
+                iface_name[IFNAMSIZ - 1] = '\0';
+                freeifaddrs(ifaddr);
+                return 0;
+            }
+        }
+
     }
 
     freeifaddrs(ifaddr);
@@ -877,89 +936,160 @@ int get_interface_name_by_ip(const char *target_ip, char iface_name[]) {
 }
 
 /**
- * Bind a socket to a local address and port, optionally using a specific client address.
- *
- * @param sockfd        The socket file descriptor to bind.
- * @param client_port   The local port number to bind the socket to.
- * @param sc            Pointer to the ntttcp_stream_client structure containing socket configuration,
- *                      including address family and optional client address.
- *
- * This function sets up the local address structure based on the address family (IPv4 or IPv6)
- * and attempts to bind the socket to the specified port. If a client address is provided and
- * valid, it will bind to that address; otherwise, it binds using the default interface.
- *
- * Note: If two interfaces share the same subnet, bind() alone does not determine the outgoing
- * interface. In such cases, SO_BINDTODEVICE should be used to bind to a specific device.
- *
- * @return 0 on success, or a negative value if bind() fails.
- */
+ * @brief Populate a sockaddr_storage structure with client address information (IPv4 or IPv6).
+ * This function updates the address family and IP address fields in a sockaddr_storage
+ * structure based on the client's configuration. It supports both IPv4 and IPv6 and uses
+ * inet_pton() to convert the textual client address to binary form.
+ * If the address is invalid or conversion fails, the function returns an error.
 
-int ntttcp_bind_socket(int sockfd, int client_port, struct ntttcp_stream_client *sc)
+ * @param local_addr Pointer to a sockaddr_storage structure to populate.
+ * @param sc Pointer to the ntttcp_stream_client structure with client info.
+
+ * @return int Returns NO_ERROR on success, or ERROR_ARGS on invalid input or conversion failure.
+*/
+int ntttcp_update_client_info(struct sockaddr_storage *local_addr, struct ntttcp_stream_client *sc)
+{
+    char *log = NULL;
+
+    if (sc == NULL || local_addr == NULL) {
+        ASPRINTF(&log, "invalid arguments to the function %s", __func__);
+        PRINT_DBG_FREE(log);
+        return ERROR_ARGS;
+    }
+
+    if (sc->domain == AF_INET) {
+
+        (*(struct sockaddr_in *)local_addr).sin_family = AF_INET; /* local_addrs[i].ss_family = AF_INET; */
+
+        if (sc->use_client_address) {
+            if (inet_pton(AF_INET, sc->client_address,  &((*(struct sockaddr_in *)local_addr).sin_addr)) <= 0) {
+                ASPRINTF(&log, "Invalid IPv4 info - domain [%d] address [%s] ", sc->domain, sc->client_address);
+                PRINT_DBG_FREE(log);
+                return ERROR_ARGS;
+            }
+        }
+
+    } else {
+
+        (*(struct sockaddr_in6 *)local_addr).sin6_family = AF_INET6; /* local_addrs[i].ss_family = AF_INET6; */
+
+        if (sc->use_client_address) {
+            if (inet_pton(AF_INET6, sc->client_address,  &((*(struct sockaddr_in6 *)local_addr).sin6_addr)) <= 0) {
+                ASPRINTF(&log, "Invalid IPv6 Info - domain [%d] address [%s]", sc->domain, sc->client_address);
+                PRINT_DBG_FREE(log);
+                return ERROR_ARGS;
+            }
+        }
+    }
+
+    return NO_ERROR;
+}
+
+/**
+ * @brief Update the port field in a sockaddr_storage structure for either IPv4 or IPv6.
+ * This function sets the port number in the provided local address structure,
+ * supporting both IPv4 (sockaddr_in) and IPv6 (sockaddr_in6). The port is
+ * converted to network byte order using htons().
+
+ * @param local_addr Pointer to a sockaddr_storage structure to update.
+ * @param client_port Port number to set (in host byte order).
+
+@return void
+*/
+
+
+void ntttcp_update_client_port_info(struct sockaddr_storage *local_addr, int client_port)
+{
+    char *log = NULL;
+
+    if (local_addr == NULL) {
+        ASPRINTF(&log, "invalid arguments to the function %s", __func__);
+        PRINT_DBG_FREE(log);
+        return;
+    }
+
+    if (local_addr->ss_family == AF_INET) {
+         (*(struct sockaddr_in *)local_addr).sin_port = htons(client_port);
+    } else {
+         (*(struct sockaddr_in6 *)local_addr).sin6_port = htons(client_port);
+    }
+
+    return;
+}
+
+/**
+ * Bind a socket to a specific network interface if client address enforcement is enabled.
+ * This function uses the SO_BINDTODEVICE socket option to bind the given socket to a specific
+ * network interface. This is useful in cases where multiple interfaces exist on the same subnet
+ * and routing alone cannot determine the correct outgoing interface.
+
+ * @param sockfd The socket file descriptor to bind.
+ * @param sc Pointer to the ntttcp_stream_client structure containing client configuration.
+ * @param if_name Name of the interface to bind to (e.g., "eth0").
+
+ * @return void
+*/
+void ntttcp_bind_to_device(int sockfd, struct ntttcp_stream_client *sc, char if_name[])
+{
+    char *log = NULL;
+
+    if (sc == NULL) {
+        ASPRINTF(&log, "invalid arguments to the function %s", __func__);
+        PRINT_INFO_FREE(log);
+        return;
+    }
+
+    if (sc->use_client_address) {
+        /* When two interfaces share the same subnet, bind() alone does not determine the outgoing interface.
+           The interface selection falls back to the routing table (typically the default route).
+           To enforce interface selection, use SO_BINDTODEVICE to bind to a specific device. */
+
+        if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, if_name, strlen(if_name)) < 0) {
+            ASPRINTF(&log, "cannot set option SO_BINDTODEVICE for socket[%d] ifname [%s] client_address [%s]", 
+                     sockfd, if_name, sc->client_address);
+            PRINT_INFO_FREE(log);
+            /* Allow to go through the default interface */
+        }
+    }
+
+    return;
+}
+
+/**
+ * @brief Bind a socket to the provided local address (IPv4 or IPv6).
+ * This function attempts to bind the given socket file descriptor to the specified local address.
+ * It supports both IPv4 and IPv6 via the sockaddr_storage structure. On failure, it logs a
+ * descriptive message including the address and port.
+
+ * @param sockfd The socket file descriptor to bind.
+ * @param local_addr Pointer to a sockaddr_storage structure containing the local IP and port.
+
+ * @return int Returns NO_ERROR on success; ERROR_ARGS on failure.
+*/
+
+int ntttcp_bind_socket(int sockfd, struct sockaddr_storage *local_addr)
 {
 	char *log = NULL;
-	struct sockaddr_storage local_addr; /* for local address */
-	socklen_t local_addr_size = sizeof(local_addr); /* local address size */
-	char if_name[IFNAMSIZ] = {'\0'};
-	int ret = 0; /* hold function return value */
 
-	memset(&local_addr, 0, sizeof(local_addr));
+    if (local_addr == NULL) {
+        ASPRINTF(&log,"invalid arguments to the function %s", __func__);
+        PRINT_INFO_FREE(log);
+        return ERROR_ARGS;
+    }
 
-	if (sc->domain == AF_INET) {
-		(*(struct sockaddr_in *)&local_addr).sin_family = AF_INET; /* local_addrs[i].ss_family = AF_INET; */
-		(*(struct sockaddr_in *)&local_addr).sin_port = htons(client_port);
+    int addr_len = (local_addr->ss_family == AF_INET) ? 
+                      sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);
 
-		if(sc->use_client_address)
-		{
-			if (inet_pton(AF_INET, sc->client_address,  &((*(struct sockaddr_in *)&local_addr).sin_addr)) <= 0) {
-				ASPRINTF(&log, "Invalid IPv4 address or Address %s not supported", sc->client_address);
-				/* Allow to go through the default interface */
-			}
-		}
-	} else {
-		(*(struct sockaddr_in6 *)&local_addr).sin6_family = AF_INET6; /* local_addrs[i].ss_family = AF_INET6; */
-		(*(struct sockaddr_in6 *)&local_addr).sin6_port = htons(client_port);
-
-		if(sc->use_client_address)
-		{
-			if (inet_pton(AF_INET6, sc->client_address,  &((*(struct sockaddr_in6 *)&local_addr).sin6_addr)) <= 0) {
-				ASPRINTF(&log, "Invalid IPv6 address or Address %s not supported", sc->client_address);
-				/* Allow to go through the default interface */
-			}
-		}
-	}
-
-	if ((ret = bind(sockfd, (struct sockaddr *)&local_addr, local_addr_size)) < 0) {
+	if (bind(sockfd, (struct sockaddr *)local_addr, addr_len) < 0) {
 		ASPRINTF(&log,
-				"failed to bind socket[%d] to a local : [%s]. errno = %d. Ignored",
+				"failed to bind socket[%d] to a local port: [%s:%d]. errno = %d. Ignored",
 				sockfd,
-				sc->domain == AF_INET ? inet_ntoa((*(struct sockaddr_in *)&local_addr).sin_addr) : "::", /* TODO - get the IPv6 addr string */
+				local_addr->ss_family == AF_INET ? inet_ntoa((*(struct sockaddr_in *)local_addr).sin_addr) : "::", /* TODO - get the IPv6 addr string */
+                 local_addr->ss_family == AF_INET ? ntohs((*(struct sockaddr_in *)local_addr).sin_port) : ntohs((*(struct sockaddr_in6 *)local_addr).sin6_port), 
 				errno);
 		PRINT_INFO_FREE(log);
-		return ret;
-	}
-
-
-
-	/* When two interfaces share the same subnet, bind() alone does not determine the outgoing interface.
-	   The interface selection falls back to the routing table (typically the default route).
-	   To enforce interface selection, use SO_BINDTODEVICE to bind to a specific device. */
-
-	if(sc->use_client_address)
-	{
-		if(get_interface_name_by_ip(sc->client_address, if_name) == 0)
-		{
-			if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, if_name, strlen(if_name)) < 0) {
-				ASPRINTF(&log, "cannot set option SO_BINDTODEVICE for socket[%d]", sockfd);
-				PRINT_INFO_FREE(log);
-				/* Allow to go through the default interface */
-			}
-		}
-		else
-		{
-			ASPRINTF(&log, "can not get interface name using client ip addr[%s]", sc->client_address);
-			/* Allow to go through the default interface */
-		}
+		return ERROR_ARGS;
 	}
 	
-	return ret;
+	return NO_ERROR;
 }
