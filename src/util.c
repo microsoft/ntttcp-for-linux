@@ -852,7 +852,7 @@ int validate_ip_address(const char *ip_str)
  * @return int Returns 0 on success (interface name found),
  * or 1 on failure (invalid IP, no match, or system error).
 */
-int get_interface_name_by_ip(const char *target_ip, char iface_name[]) 
+int get_interface_name_by_ip(const char *target_ip, char iface_name[], size_t iface_size) 
 {
     struct ifaddrs *ifaddr, *ifa;
     int ret = 1;
@@ -900,12 +900,12 @@ int get_interface_name_by_ip(const char *target_ip, char iface_name[])
     goto cleanup;
 
 intf_found:
-    if (strlen(ifa->ifa_name) >= IFNAMSIZ) {
+    if (strlen(ifa->ifa_name) >= iface_size) {
         ASPRINTF(&log, "Interface: [%s] name is too long", ifa->ifa_name);
         PRINT_ERR_FREE(log);
     } else {
-        strncpy(iface_name, ifa->ifa_name, IFNAMSIZ - 1);
-        iface_name[IFNAMSIZ - 1] = '\0';
+        strncpy(iface_name, ifa->ifa_name, iface_size - 1);
+        iface_name[iface_size - 1] = '\0';
         ret = 0;
     }
 
@@ -1050,11 +1050,6 @@ int ntttcp_bind_socket(int sockfd, struct sockaddr_storage *local_addr)
 {
     char *log = NULL;
     int addr_len;
-    if (local_addr == NULL) {
-        ASPRINTF(&log,"invalid arguments to the function %s", __func__);
-        PRINT_INFO_FREE(log);
-        return ERROR_ARGS;
-    }
 
     addr_len = (local_addr->ss_family == AF_INET) ? 
         sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);

@@ -35,10 +35,6 @@ int create_sender_sync_socket(struct ntttcp_test_endpoint *tep)
     sc.client_address = test->client_address;
 
     ip_address_max_size = (test->domain == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
-    if ((ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL) {
-        PRINT_ERR("cannot allocate memory for ip address string");
-        return 0;
-    }
 
     /* connect to remote receiver */
     memset(&hints, 0, sizeof hints);
@@ -54,11 +50,10 @@ int create_sender_sync_socket(struct ntttcp_test_endpoint *tep)
 
     /* cache the interface name using the interface ip address */
     if (sc.use_client_address) {
-        if (get_interface_name_by_ip(sc.client_address, if_name) != 0) {
+        if (get_interface_name_by_ip(sc.client_address, if_name, IFNAMSIZ) != 0) {
             ASPRINTF(&log, "failed to get interface name by address [%s]", sc.client_address);
             PRINT_ERR_FREE(log);
             freeaddrinfo(serv_info);
-            free(ip_address_str);
             return 0;
         }
     }
@@ -68,10 +63,13 @@ int create_sender_sync_socket(struct ntttcp_test_endpoint *tep)
         ASPRINTF(&log, "failed to update client info [%s]", sc.client_address);
         PRINT_ERR_FREE(log);
         freeaddrinfo(serv_info);
-        free(ip_address_str);
         return 0;
     }
 
+    if ((ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL) {
+        PRINT_ERR("cannot allocate memory for ip address string");
+        return 0;
+    }
 
     /* only get the first entry to connect */
     for (p = serv_info; p != NULL; p = p->ai_next) {

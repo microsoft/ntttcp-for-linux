@@ -54,7 +54,7 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 
     if (sc->use_client_address) {
         /* get interface name using the interface ip address */
-        if (get_interface_name_by_ip(sc->client_address, if_name) != 0) {
+        if (get_interface_name_by_ip(sc->client_address, if_name, IFNAMSIZ) != 0) {
             ASPRINTF(&log, "failed to get interface name by address [%s]", sc->client_address);
             PRINT_ERR(log);
             return NULL;
