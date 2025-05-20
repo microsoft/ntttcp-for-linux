@@ -117,4 +117,4 @@ int  ntttcp_update_client_info(struct sockaddr_storage *local_addr, struct ntttc
 void ntttcp_update_client_port_info(struct sockaddr_storage *local_addr, int client_port);
 void ntttcp_bind_to_device(int sockfd, struct ntttcp_stream_client *sc, char if_name[]);
 int  ntttcp_bind_socket(int sockfd, struct sockaddr_storage *local_addr);
-int  validate_ip_address(int domain, const char *ip_str);
+int  validate_ip_address(const char *ip_str);

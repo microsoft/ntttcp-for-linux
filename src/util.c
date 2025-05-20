@@ -822,20 +822,10 @@ bool check_is_ip_addr_valid_local(int ss_family, char *ip_to_check)
  * @return int Returns NO_ERROR if the IP address is valid, otherwise returns ERROR_ARGS.
 */
 
-int validate_ip_address(int domain, const char *ip_str) 
+int validate_ip_address(const char *ip_str) 
 {
-    struct in_addr ipv4_addr;
-    struct in6_addr ipv6_addr;
-
-	if (domain == AF_INET && !strstr(ip_str, ".")) {
-		PRINT_ERR("invalid ipv4 client address provided");
-		return ERROR_ARGS;
-	}
-
-	if (domain == AF_INET6 && !strstr(ip_str, ":")) {
-		PRINT_ERR("invalid ipv6 client address provided");
-		return ERROR_ARGS;
-	}
+	struct in_addr ipv4_addr;
+	struct in6_addr ipv6_addr;
 
 	if (inet_pton(AF_INET, ip_str, &ipv4_addr) == 1) {
 		return NO_ERROR;
@@ -864,75 +854,64 @@ int validate_ip_address(int domain, const char *ip_str)
 */
 int get_interface_name_by_ip(const char *target_ip, char iface_name[]) 
 {
-    struct ifaddrs *ifaddr, *ifa;
+	struct ifaddrs *ifaddr, *ifa;
+	int ret = 1;
+	char *log = NULL;
     int family;
-    void *addr;
+    void *addr = NULL;
+	struct in_addr sin_addr;
+	struct in6_addr sin6_addr;
+	bool use_v4 = false, use_v6 = false;
 
-    struct in_addr sin_addr;
-    struct in6_addr sin6_addr;
-    bool use_v4 = false;
-    bool use_v6 = false;
-    char *log = NULL;
+	if (getifaddrs(&ifaddr) == -1) {
+		perror("getifaddrs");
+		return 1;
+	}
 
-    if (getifaddrs(&ifaddr) == -1) {
-        perror("getifaddrs");
-        return 1;
-    }
+	if (inet_pton(AF_INET, target_ip, &sin_addr) == 1) {
+		use_v4 = true;
+	} else if (inet_pton(AF_INET6, target_ip, &sin6_addr) == 1) {
+		use_v6 = true;
+	} else {
+        ASPRINTF(&log,"Invalid target IP: %s\n", target_ip);
+		PRINT_ERR_FREE(log);
+		freeifaddrs(ifaddr);
+		return 1;
+	}
 
-    if (inet_pton(AF_INET, target_ip, &sin_addr) == 1) {
-        use_v4 = true;
-    } else if (inet_pton(AF_INET6, target_ip, &sin6_addr) == 1) {
-        use_v6 = true;
-    } else {
-        perror("invalid target ip:");
-        return 1;
-    }
+	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+		if (!ifa->ifa_addr)
+			continue;
 
-    /* Could be multiple ip address for a given interface */
-    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-        if (!ifa->ifa_addr)
-            continue;
+		family = ifa->ifa_addr->sa_family;
 
-        family = ifa->ifa_addr->sa_family;
+		if (use_v4 && family == AF_INET) {
+			addr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+			if (memcmp(&sin_addr, addr, sizeof(sin_addr)) == 0)
+				goto intf_found;
+		} 
+		else if (use_v6 && family == AF_INET6) {
+			addr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+			if (memcmp(&sin6_addr, addr, sizeof(sin6_addr)) == 0)
+				goto intf_found;
+		}
+	}
 
-        if (family == AF_INET) {
-            addr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
-        } else if (family == AF_INET6) {
-            addr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
-        } else {
-            continue;
-        }
-        
-        if (strlen(ifa->ifa_name) >= IFNAMSIZ) {
-            ASPRINTF(&log, "Interface: [%s] name is too big", ifa->ifa_name);
-            PRINT_ERR_FREE(log);
-            return 1;
-        }
+	goto cleanup;
 
-        /* compare v4 address */
-        if (use_v4) {
-            if (memcmp(&sin_addr, (struct in_addr *)addr, sizeof(struct in_addr)) == 0) {
-                strncpy(iface_name, ifa->ifa_name, IFNAMSIZ - 1);
-                iface_name[IFNAMSIZ - 1] = '\0';
-                freeifaddrs(ifaddr);
-                return 0;
-            }
-        }
+intf_found:
+	if (strlen(ifa->ifa_name) >= IFNAMSIZ) {
+		ASPRINTF(&log, "Interface: [%s] name is too long", ifa->ifa_name);
+		PRINT_ERR_FREE(log);
+	} else {
+		strncpy(iface_name, ifa->ifa_name, IFNAMSIZ - 1);
+		iface_name[IFNAMSIZ - 1] = '\0';
+		ret = 0;
+	}
 
-        /* compare v6 address */
-        if (use_v6) {
-            if (memcmp(&sin6_addr, (struct in6_addr *)addr, sizeof(struct in6_addr)) == 0) {
-                strncpy(iface_name, ifa->ifa_name, IFNAMSIZ - 1);
-                iface_name[IFNAMSIZ - 1] = '\0';
-                freeifaddrs(ifaddr);
-                return 0;
-            }
-        }
-
-    }
-
-    freeifaddrs(ifaddr);
-    return 1;  // No match found
+cleanup:
+	freeifaddrs(ifaddr);
+	return ret;
 }
 
 /**

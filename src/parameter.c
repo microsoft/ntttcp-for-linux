@@ -44,8 +44,7 @@ void print_flags(struct ntttcp_test *test)
 
 	printf("%s:\t\t\t %s\n", "server address", test->bind_address);
 
-	if (test->client_role)
-	{
+	if (test->client_role) {
 		printf("%s:\t\t\t %s\n", "client address", test->client_address);
 	}
 
@@ -276,7 +275,7 @@ int verify_args(struct ntttcp_test *test)
 
 	/* validate ip address */
 	if (test->use_client_address) {
-		if (validate_ip_address(test->domain, test->client_address) != 0) {
+		if (validate_ip_address(test->client_address) != 0) {
 			PRINT_ERR("invalid client address");
 			return ERROR_ARGS;
 		}
