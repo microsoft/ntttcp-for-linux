@@ -250,34 +250,37 @@ int verify_args(struct ntttcp_test *test)
 	if (!strcmp(test->mapping, "")) {
 		PRINT_ERR("no mapping provided");
 		return ERROR_ARGS;
-    }
+	}
 
-    if (test->domain == AF_INET6 && strcmp(test->bind_address, "0.0.0.0") == 0)
-        test->bind_address = "::";
+	if (test->domain == AF_INET6 && strcmp(test->bind_address, "0.0.0.0") == 0)
+		test->bind_address = "::";
 
-    if (test->domain == AF_INET6 && !strstr(test->bind_address, ":")) {
-        PRINT_ERR("invalid ipv6 address provided");
-        return ERROR_ARGS;
-    }
+	if (test->domain == AF_INET6 && !strstr(test->bind_address, ":")) {
+		PRINT_ERR("invalid ipv6 address provided");
+		return ERROR_ARGS;
+	}
 
-    if (test->domain == AF_INET && !strstr(test->bind_address, ".")) {
-        PRINT_ERR("invalid ipv4 address provided");
-        return ERROR_ARGS;
-    }
+	if (test->domain == AF_INET && !strstr(test->bind_address, ".")) {
+		PRINT_ERR("invalid ipv4 address provided");
+		return ERROR_ARGS;
+	}
 
-    if (test->domain == AF_INET6 && strcmp(test->client_address, "0.0.0.0") == 0)
-        test->client_address = "::";
-
+	if (test->domain == AF_INET6 && strcmp(test->client_address, "0.0.0.0") == 0)
+		test->client_address = "::";
+    
     if (test->use_client_address && test->server_role) {
         PRINT_ERR("source interface address ('-a') is only for sender or client");
-        return ERROR_ARGS;
+		return ERROR_ARGS;
     }
 
-    /* validate ip address */
-    if (test->use_client_address && validate_ip_address(test->client_address) != NO_ERROR) {
-        PRINT_ERR("invalid client address");
-        return ERROR_ARGS;
-    }
+	/* validate ip address */
+	if (test->use_client_address) {
+		if (validate_ip_address(test->client_address) != 0) {
+			PRINT_ERR("invalid client address");
+			return ERROR_ARGS;
+		}
+	}
+
 
 	if (!test->server_role && !test->client_role) {
 		PRINT_INFO("no role specified. use receiver role");
