@@ -23,8 +23,7 @@ int create_sender_sync_socket(struct ntttcp_test_endpoint *tep)
 	int sync_port = 0;
 	char *port_str; /* to get remote peer's port number for getaddrinfo() */
 	struct addrinfo hints, *serv_info, *p; /* to get remote peer's sockaddr for connect() */
-
-    char if_name[IFNAMSIZ] = {'\0'};
+        char if_name[IFNAMSIZ] = {'\0'};
 
 	int i = 0;
 	int ret = 0;
@@ -49,75 +48,76 @@ int create_sender_sync_socket(struct ntttcp_test_endpoint *tep)
 	}
 	free(port_str);
 
-    /* cache the interface name using the interface ip address */
-    if (sc.use_client_address) {
-        if (get_interface_name_by_ip(sc.client_address, if_name, IFNAMSIZ) != 0) {
-            ASPRINTF(&log, "failed to get interface name by address [%s]", sc.client_address);
-            PRINT_ERR_FREE(log);
-            freeaddrinfo(serv_info);
-            return 0;
+        /* cache the interface name using the interface ip address */
+        if (sc.use_client_address) {
+                if (get_interface_name_by_ip(sc.client_address, sc.domain, if_name, IFNAMSIZ) != 0) {
+                        ASPRINTF(&log, "failed to get interface name by address [%s]", sc.client_address);
+                        PRINT_ERR_FREE(log);
+                        freeaddrinfo(serv_info);
+                        return 0;
+                }
         }
-    }
 
-    /* update client information (domain and address) */
-    if (ntttcp_update_client_info(&local_addr, &sc) < 0) {
-        ASPRINTF(&log, "failed to update client info [%s]", sc.client_address);
-        PRINT_ERR_FREE(log);
-        freeaddrinfo(serv_info);
-        return 0;
-    }
+        /* update client information (domain and address) */
+        if (ntttcp_update_client_info(&local_addr, &sc) < 0) {
+                ASPRINTF(&log, "failed to update client info [%s]", sc.client_address);
+                PRINT_ERR_FREE(log);
+                freeaddrinfo(serv_info);
+                return 0;
+        }
 
-    if ((ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL) {
-        PRINT_ERR("cannot allocate memory for ip address string");
-        return 0;
-    }
+        if ((ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL) {
+                PRINT_ERR("cannot allocate memory for ip address string");
+                freeaddrinfo(serv_info);
+                return 0;
+        }
 
 	/* only get the first entry to connect */
-	for (p = serv_info; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
-			PRINT_ERR("cannot create socket endpoint");
-			freeaddrinfo(serv_info);
-			free(ip_address_str);
-			return 0;
-		}
-        
-        /* perform bind operation for a given socket  */
-		ret = ntttcp_bind_socket(sockfd, &local_addr);
-		if (ret != NO_ERROR) {
-            ASPRINTF(&log, "failed to perform bind with client address [%s] on socket: %d errno = %d", sc.client_address, sockfd, errno);
-            PRINT_ERR_FREE(log);
-			freeaddrinfo(serv_info);
-			free(ip_address_str);
-            close(sockfd);
-			return 0;
-		}
+        for (p = serv_info; p != NULL; p = p->ai_next) {
+                if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
+                        PRINT_ERR("cannot create socket endpoint");
+                        freeaddrinfo(serv_info);
+                        free(ip_address_str);
+                        return 0;
+                }
 
-        /* perform SO_BINDTODEVICE operation for a given socket */
-        if (sc.use_client_address) {
-            ntttcp_bind_to_device(sockfd, &sc, if_name);
+                /* perform bind operation for a given socket  */
+                ret = ntttcp_bind_socket(sockfd, &local_addr);
+                if (ret != NO_ERROR) {
+                        ASPRINTF(&log, "failed to perform bind with client address [%s] on socket: %d errno = %d", sc.client_address, sockfd, errno);
+                        PRINT_ERR_FREE(log);
+                        freeaddrinfo(serv_info);
+                        free(ip_address_str);
+                        close(sockfd);
+                        return 0;
+                }
+
+                /* perform SO_BINDTODEVICE operation for a given socket */
+                if (sc.use_client_address) {
+                        ntttcp_bind_to_device(sockfd, &sc, if_name);
+                }
+
+                ip_address_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, ip_address_str, ip_address_max_size);
+                if ((i = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
+                        if (i == -1) {
+                                ASPRINTF(&log,
+                                                "failed to connect to receiver: %s:%d on socket: %d. errno = %d",
+                                                ip_address_str, sync_port, sockfd, errno);
+                                PRINT_ERR_FREE(log);
+                        } else {
+                                ASPRINTF(&log,
+                                                "failed to connect to receiver: %s:%d on socket: %d. error code = %d",
+                                                ip_address_str, sync_port, sockfd, i);
+                                PRINT_ERR_FREE(log);
+                        }
+                        freeaddrinfo(serv_info);
+                        free(ip_address_str);
+                        close(sockfd);
+                        return 0;
+                } else {
+                        break; /* connected */
+                }
         }
-
-		ip_address_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, ip_address_str, ip_address_max_size);
-		if ((i = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
-			if (i == -1) {
-				ASPRINTF(&log,
-					"failed to connect to receiver: %s:%d on socket: %d. errno = %d",
-					ip_address_str, sync_port, sockfd, errno);
-				PRINT_ERR_FREE(log);
-			} else {
-				ASPRINTF(&log,
-					"failed to connect to receiver: %s:%d on socket: %d. error code = %d",
-					ip_address_str, sync_port, sockfd, i);
-				PRINT_ERR_FREE(log);
-			}
-			freeaddrinfo(serv_info);
-			free(ip_address_str);
-			close(sockfd);
-			return 0;
-		} else {
-			break; /* connected */
-		}
-	}
 
 	/* get local port number */
 	local_addr_size = sizeof(local_addr);

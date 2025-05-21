@@ -36,8 +36,8 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 	int sockfds[DEFAULT_CLIENT_CONNS_PER_THREAD] = {-1};
 	uint client_port = 0;
 	struct hostent *hp;
-    char if_name[IFNAMSIZ] = {'\0'};
-    struct sockaddr_storage client_addr = {0};
+        char if_name[IFNAMSIZ] = {'\0'};
+        struct sockaddr_storage client_addr = {0};
 
 	struct sockaddr_in serv_addr;
 	int sa_size = sizeof(struct sockaddr_in);
@@ -51,21 +51,21 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 		serv_addr.sin_addr.s_addr = inet_addr(sc->bind_address);
 	}
 
-    if (sc->use_client_address) {
-        /* get interface name using the interface ip address */
-        if (get_interface_name_by_ip(sc->client_address, if_name, IFNAMSIZ) != 0) {
-            ASPRINTF(&log, "failed to get interface name by address [%s]", sc->client_address);
-            PRINT_ERR(log);
-            return NULL;
+        if (sc->use_client_address) {
+                /* get interface name using the interface ip address */
+                if (get_interface_name_by_ip(sc->client_address, sc->domain, if_name, IFNAMSIZ) != 0) {
+                        ASPRINTF(&log, "failed to get interface name by address [%s]", sc->client_address);
+                        PRINT_ERR(log);
+                        return NULL;
+                }
         }
-    }
 
-    /* update client information */
-    if (ntttcp_update_client_info(&client_addr, sc) < 0) {
-        ASPRINTF(&log, "failed to update udp client info [%s]", sc->client_address);
-        PRINT_ERR(log);
-		return NULL;
-    }
+        /* update client information */
+        if (ntttcp_update_client_info(&client_addr, sc) < 0) {
+                ASPRINTF(&log, "failed to update udp client info [%s]", sc->client_address);
+                PRINT_ERR(log);
+                return NULL;
+        }
 
 	for (i = 0; i < sc->num_connections; i++) {
 
@@ -81,22 +81,21 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 		 */
 		client_port = (sc->num_connections > 1 && sc->client_port != 0) ? sc->client_port + i : sc->client_port;
 
-        /* update client port information */
-        ntttcp_update_client_port_info(&client_addr, client_port);
+                /* update client port information */
+                ntttcp_update_client_port_info(&client_addr, client_port);
 
-		ret = ntttcp_bind_socket(sockfd, &client_addr);
-		if (ret != 0) {
-			ASPRINTF(&log, "failed to do udp socket bind : socket domain [%d] client_port [%d] errno [%d]", 
+                ret = ntttcp_bind_socket(sockfd, &client_addr);
+                if (ret != 0) {
+                        ASPRINTF(&log, "failed to do udp socket bind : socket domain [%d] client_port [%d] errno [%d]", 
                         sc->domain, client_port, errno);
-			PRINT_ERR(log);
-            continue;
-		}
-
-        /* perform SO_BINDTODEVICE operation for a socket */
-        if (sc->use_client_address) {
-            ntttcp_bind_to_device(sockfd, sc, if_name);
-        }
-
+                        PRINT_ERR(log);
+                        continue;
+                }
+                
+                /* perform SO_BINDTODEVICE operation for a socket */
+                if (sc->use_client_address) {
+                        ntttcp_bind_to_device(sockfd, sc, if_name);
+                }
 
 		/* set socket rate limit if specified by user */
 		if (sc->socket_fq_rate_limit_bytes != 0)

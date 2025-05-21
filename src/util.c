@@ -852,45 +852,49 @@ int validate_ip_address(const char *ip_str)
  * @return int Returns 0 on success (interface name found),
  * or 1 on failure (invalid IP, no match, or system error).
 */
-int get_interface_name_by_ip(const char *target_ip, char iface_name[], size_t iface_size) 
+int get_interface_name_by_ip(const char *target_ip, int addr_family, char iface_name[], size_t iface_size) 
 {
 	struct ifaddrs *ifaddr, *ifa;
 	int ret = 1;
 	char *log = NULL;
-        int family;
         void *addr = NULL;
 	struct in_addr sin_addr;
 	struct in6_addr sin6_addr;
-	bool use_v4 = false, use_v6 = false;
 
 	if (getifaddrs(&ifaddr) == -1) {
 		perror("getifaddrs");
 		return 1;
 	}
 
-	if (inet_pton(AF_INET, target_ip, &sin_addr) == 1) {
-		use_v4 = true;
-	} else if (inet_pton(AF_INET6, target_ip, &sin6_addr) == 1) {
-		use_v6 = true;
-	} else {
-        ASPRINTF(&log,"Invalid target IP: %s\n", target_ip);
-		PRINT_ERR_FREE(log);
-		freeifaddrs(ifaddr);
-		return 1;
-	}
+        if (addr_family == AF_INET)
+        {
+                if (inet_pton(AF_INET, target_ip, &sin_addr) != 1) {
+                        ASPRINTF(&log,"Invalid target IPv4: %s\n", target_ip);
+                        PRINT_ERR_FREE(log);
+                        freeifaddrs(ifaddr);
+                        return 1;
+                }
+        }
+        else
+        {
+                if (inet_pton(AF_INET6, target_ip, &sin6_addr) != 1) {
+                        ASPRINTF(&log,"Invalid target IPv6: %s\n", target_ip);
+                        PRINT_ERR_FREE(log);
+                        freeifaddrs(ifaddr);
+                        return 1;
+                }
+        }
 
-	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-		if (!ifa->ifa_addr)
+        for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+		if (!ifa->ifa_addr || (addr_family != ifa->ifa_addr->sa_family))
 			continue;
 
-		family = ifa->ifa_addr->sa_family;
-
-		if (use_v4 && family == AF_INET) {
+		if (addr_family == AF_INET) {
 			addr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
 			if (memcmp(&sin_addr, addr, sizeof(sin_addr)) == 0)
 				goto intf_found;
 		} 
-		else if (use_v6 && family == AF_INET6) {
+		else if (addr_family == AF_INET6) {
 			addr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
 			if (memcmp(&sin6_addr, addr, sizeof(sin6_addr)) == 0)
 				goto intf_found;
@@ -900,12 +904,12 @@ int get_interface_name_by_ip(const char *target_ip, char iface_name[], size_t if
 	goto cleanup;
 
 intf_found:
-	if (strlen(ifa->ifa_name) >= IFNAMSIZ) {
+	if (strlen(ifa->ifa_name) >= iface_size) {
 		ASPRINTF(&log, "Interface: [%s] name is too long", ifa->ifa_name);
 		PRINT_ERR_FREE(log);
 	} else {
-		strncpy(iface_name, ifa->ifa_name, IFNAMSIZ - 1);
-		iface_name[IFNAMSIZ - 1] = '\0';
+		strncpy(iface_name, ifa->ifa_name, iface_size - 1);
+		iface_name[iface_size - 1] = '\0';
 		ret = 0;
 	}
 
@@ -979,14 +983,6 @@ int ntttcp_update_client_info(struct sockaddr_storage *local_addr, struct ntttcp
 
 void ntttcp_update_client_port_info(struct sockaddr_storage *local_addr, int client_port)
 {
-        char *log = NULL;
-
-        if (local_addr == NULL) {
-                ASPRINTF(&log, "invalid arguments to the function %s", __func__);
-                PRINT_DBG_FREE(log);
-                return;
-        }
-
         if (local_addr->ss_family == AF_INET) {
                 (*(struct sockaddr_in *)local_addr).sin_port = htons(client_port);
         } else {
@@ -1012,23 +1008,15 @@ void ntttcp_bind_to_device(int sockfd, struct ntttcp_stream_client *sc, char if_
 {
         char *log = NULL;
 
-        if (sc == NULL) {
-                ASPRINTF(&log, "invalid arguments to the function %s", __func__);
+        /* When two interfaces share the same subnet, bind() alone does not determine the outgoing interface.
+           The interface selection falls back to the routing table (typically the default route).
+           To enforce interface selection, use SO_BINDTODEVICE to bind to a specific device. */
+        
+        if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, if_name, strlen(if_name)) < 0) {
+                ASPRINTF(&log, "cannot set option SO_BINDTODEVICE for socket[%d] ifname [%s] client_address [%s]", 
+                        sockfd, if_name, sc->client_address);
                 PRINT_INFO_FREE(log);
-                return;
-        }
-
-        if (sc->use_client_address) {
-                /* When two interfaces share the same subnet, bind() alone does not determine the outgoing interface.
-                   The interface selection falls back to the routing table (typically the default route).
-                   To enforce interface selection, use SO_BINDTODEVICE to bind to a specific device. */
-
-                if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, if_name, strlen(if_name)) < 0) {
-                        ASPRINTF(&log, "cannot set option SO_BINDTODEVICE for socket[%d] ifname [%s] client_address [%s]", 
-                                        sockfd, if_name, sc->client_address);
-                        PRINT_INFO_FREE(log);
-                        /* Allow to go through the default interface */
-                }
+                /* Allow to go through the default interface */
         }
 
         return;
@@ -1056,12 +1044,11 @@ int ntttcp_bind_socket(int sockfd, struct sockaddr_storage *local_addr)
                 sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);
 
         if (bind(sockfd, (struct sockaddr *)local_addr, addr_len) < 0) {
-                ASPRINTF(&log,
-                                "failed to bind socket[%d] to a local port: [%s:%d]. errno = %d. Ignored",
-                                sockfd,
-                                local_addr->ss_family == AF_INET ? inet_ntoa((*(struct sockaddr_in *)local_addr).sin_addr) : "::", /* TODO - get the IPv6 addr string */
-                                local_addr->ss_family == AF_INET ? ntohs((*(struct sockaddr_in *)local_addr).sin_port) : ntohs((*(struct sockaddr_in6 *)local_addr).sin6_port), 
-                                errno);
+                ASPRINTF(&log, "failed to bind socket[%d] to a local port: [%s:%d]. errno = %d. Ignored",
+                        sockfd,
+                        local_addr->ss_family == AF_INET ? inet_ntoa((*(struct sockaddr_in *)local_addr).sin_addr) : "::", /* TODO - get the IPv6 addr string */
+                        local_addr->ss_family == AF_INET ? ntohs((*(struct sockaddr_in *)local_addr).sin_port) : ntohs((*(struct sockaddr_in6 *)local_addr).sin6_port), 
+                        errno);
                 PRINT_INFO_FREE(log);
                 return ERROR_ARGS;
         }
