@@ -5,7 +5,7 @@
 // ----------------------------------------------------------------------------------
 
 #define TOOL_NAME "NTTTCP for Linux"
-#define TOOL_VERSION "1.4.0"
+#define TOOL_VERSION "1.4.1"
 #define AUTHOR_NAME "Shihua (Simon) Xiao, sixiao@microsoft.com"
 
 #define TCP 				SOCK_STREAM
