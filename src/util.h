@@ -115,6 +115,6 @@ bool check_is_ip_addr_valid_local(int ss_family, char *ip_to_check);
 int  get_interface_name_by_ip(const char *target_ip, int addr_family, char iface_name[], size_t iface_size);
 int  ntttcp_update_client_info(struct sockaddr_storage *local_addr, struct ntttcp_stream_client *sc);
 void ntttcp_update_client_port_info(struct sockaddr_storage *local_addr, int client_port);
-void ntttcp_bind_to_device(int sockfd, struct ntttcp_stream_client *sc, char if_name[]);
+int ntttcp_bind_to_device(int sockfd, struct ntttcp_stream_client *sc, char if_name[]);
 int  ntttcp_bind_socket(int sockfd, struct sockaddr_storage *local_addr);
 int  validate_ip_address(const char *ip_str);

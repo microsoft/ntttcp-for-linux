@@ -94,7 +94,13 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
                 
                 /* perform SO_BINDTODEVICE operation for a socket */
                 if (sc->use_client_address) {
-                        ntttcp_bind_to_device(sockfd, sc, if_name);
+                        ret = ntttcp_bind_to_device(sockfd, sc, if_name);
+                        if (ret != NO_ERROR) {
+                                ASPRINTF(&log, "failed to do udp socket bind to device : socket domain [%d] client_port [%d] errno [%d] if_name [%s]", 
+                                sc->domain, client_port, errno, if_name);
+                                PRINT_ERR(log);
+                                continue;
+                        }
                 }
 
 		/* set socket rate limit if specified by user */

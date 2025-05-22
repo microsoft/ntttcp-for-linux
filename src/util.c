@@ -866,17 +866,14 @@ int get_interface_name_by_ip(const char *target_ip, int addr_family, char iface_
 		return 1;
 	}
 
-        if (addr_family == AF_INET)
-        {
+        if (addr_family == AF_INET) {
                 if (inet_pton(AF_INET, target_ip, &sin_addr) != 1) {
                         ASPRINTF(&log,"Invalid target IPv4: %s\n", target_ip);
                         PRINT_ERR_FREE(log);
                         freeifaddrs(ifaddr);
                         return 1;
                 }
-        }
-        else
-        {
+        } else {
                 if (inet_pton(AF_INET6, target_ip, &sin6_addr) != 1) {
                         ASPRINTF(&log,"Invalid target IPv6: %s\n", target_ip);
                         PRINT_ERR_FREE(log);
@@ -1002,9 +999,9 @@ void ntttcp_update_client_port_info(struct sockaddr_storage *local_addr, int cli
  * @param sc Pointer to the ntttcp_stream_client structure containing client configuration.
  * @param if_name Name of the interface to bind to (e.g., "eth0").
 
- * @return void
+ * @return int Returns NO_ERROR on success; ERROR_ARGS on failure.
 */
-void ntttcp_bind_to_device(int sockfd, struct ntttcp_stream_client *sc, char if_name[])
+int ntttcp_bind_to_device(int sockfd, struct ntttcp_stream_client *sc, char if_name[])
 {
         char *log = NULL;
 
@@ -1016,10 +1013,10 @@ void ntttcp_bind_to_device(int sockfd, struct ntttcp_stream_client *sc, char if_
                 ASPRINTF(&log, "cannot set option SO_BINDTODEVICE for socket[%d] ifname [%s] client_address [%s]", 
                         sockfd, if_name, sc->client_address);
                 PRINT_INFO_FREE(log);
-                /* Allow to go through the default interface */
+                return ERROR_ARGS;
         }
 
-        return;
+        return NO_ERROR;
 }
 
 /**

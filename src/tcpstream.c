@@ -179,7 +179,16 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 
                         /* perform SO_BINDTODEVICE operation for a socket */
                         if (sc->use_client_address) {
-                                ntttcp_bind_to_device(sockfd, sc, if_name);
+                                ret = ntttcp_bind_to_device(sockfd, sc, if_name);
+                                if (ret != NO_ERROR) {
+                                        ASPRINTF(&log, "failed to do tcp bind to device : socket domain [%d] client_port [%d] errno [%d] ifname [%s]", 
+                                        sc->domain, client_port, errno, if_name);
+                                        PRINT_INFO_FREE(log);
+                                        free(remote_addr_str);
+                                        freeaddrinfo(remote_serv_info);
+                                        close(sockfd);
+                                        return 0;
+                                }
                         }
 
 			/* 3. connect to receiver */

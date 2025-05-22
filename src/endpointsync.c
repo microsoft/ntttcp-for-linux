@@ -94,7 +94,16 @@ int create_sender_sync_socket(struct ntttcp_test_endpoint *tep)
 
                 /* perform SO_BINDTODEVICE operation for a given socket */
                 if (sc.use_client_address) {
-                        ntttcp_bind_to_device(sockfd, &sc, if_name);
+                        ret = ntttcp_bind_to_device(sockfd, &sc, if_name);
+                        if (ret != NO_ERROR) {
+                                ASPRINTF(&log, "failed to perform bind to device with client address [%s] on socket: %d errno = %d", 
+                                sc.client_address, sockfd, errno);
+                                PRINT_ERR_FREE(log);
+                                freeaddrinfo(serv_info);
+                                free(ip_address_str);
+                                close(sockfd);
+                                return 0;
+                        }
                 }
 
                 ip_address_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, ip_address_str, ip_address_max_size);

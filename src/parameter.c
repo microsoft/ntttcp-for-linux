@@ -124,7 +124,7 @@ void print_usage()
 	printf("\t-H   [receiver only] hold receiver always running even after one test finished\n");
 
 	printf("\t-P   Number of ports listening on receiver side	[default: %d] [max: %d]\n", DEFAULT_NUM_SERVER_PORTS, MAX_NUM_SERVER_PORTS);
-	printf("\t-a   [sender only] source interface ip address \n");
+	printf("\t-a   [sender only] source interface ip address\n");
 	printf("\t-n   [sender only] number of threads per each receiver port     [default: %d] [max: %d]\n", DEFAULT_THREADS_PER_SERVER_PORT, MAX_THREADS_PER_SERVER_PORT);
 	printf("\t-l   [sender only] number of connections per each sender thread [default: %d] [max: %d]\n", DEFAULT_CLIENT_CONNS_PER_THREAD, MAX_CLIENT_CONNS_PER_THREAD);
 
@@ -182,7 +182,7 @@ void print_usage()
 	printf("\t3) ./ntttcp -s 192.168.1.1 --fq-rate-limit 10G\n");
 	printf("\t4) ./ntttcp -s 192.168.1.1 -B 10G\n");
 	printf("\t4) ./ntttcp -s 192.168.1.1 --show-tcp-retrans --show-nic-packets eth0 --show-dev-interrupts mlx4 -V\n");
-	printf("\t3) ./ntttcp -s 192.168.1.1 -n 64 -a 10.1.1.11 \n");
+	printf("\t3) ./ntttcp -s 192.168.1.1 -n 64 -a 192.168.1.11\n");
 }
 
 void print_version()
@@ -425,7 +425,6 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 				if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
 					test->bind_address = argv[optind++];
 			}
-				
 			break;
 
 		case 'D':
@@ -457,14 +456,8 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			test->server_ports = atoi(optarg);
 			break;
 
-                case 'a':
-		
-			if (optarg) {
-                                test->client_address = optarg;
-                        } else {
-                                if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
-                                        test->client_address = argv[optind++];
-                        }
+                case 'a':	
+                        test->client_address     = optarg;
                         test->use_client_address = true;
                         break;
 
