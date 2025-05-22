@@ -89,6 +89,8 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
                         ASPRINTF(&log, "failed to do udp socket bind : socket domain [%d] client_port [%d] errno [%d]", 
                         sc->domain, client_port, errno);
                         PRINT_ERR(log);
+                        close(sockfd);
+                        sockfds[i] = -1;
                         continue;
                 }
                 
@@ -99,6 +101,8 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
                                 ASPRINTF(&log, "failed to do udp socket bind to device : socket domain [%d] client_port [%d] errno [%d] if_name [%s]", 
                                 sc->domain, client_port, errno, if_name);
                                 PRINT_ERR(log);
+                                close(sockfd);
+                                sockfds[i] = -1;
                                 continue;
                         }
                 }
@@ -108,11 +112,12 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 			enable_fq_rate_limit(sc, sockfd);
 
 		if (connect(sockfd, &serv_addr, sa_size) == -1) {
-			ASPRINTF(&log,
-					"failed to connect socket[%d] to remote: [%s:%d]. errno = %d.",
-					sockfd, sc->bind_address, sc->server_port, errno);
-			PRINT_ERR(log);
-			continue;
+                        ASPRINTF(&log,"failed to connect socket[%d] to remote: [%s:%d]. errno = %d.",
+                                sockfd, sc->bind_address, sc->server_port, errno);
+                        PRINT_ERR(log);
+                        close(sockfd);
+                        sockfds[i] = -1;
+                        continue;
 		}
 
 		ASPRINTF(&log,

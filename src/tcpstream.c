@@ -171,10 +171,9 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
                                 ASPRINTF(&log, "failed to do tcp bind : socket domain [%d] client_port [%d] errno [%d]", 
                                 sc->domain, client_port, errno);
                                 PRINT_INFO_FREE(log);
-                                free(remote_addr_str);
-                                freeaddrinfo(remote_serv_info);
                                 close(sockfd);
-                                return 0;
+                                sockfds[i] = -1;
+                                continue;
 			}
 
                         /* perform SO_BINDTODEVICE operation for a socket */
@@ -184,10 +183,9 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
                                         ASPRINTF(&log, "failed to do tcp bind to device : socket domain [%d] client_port [%d] errno [%d] ifname [%s]", 
                                         sc->domain, client_port, errno, if_name);
                                         PRINT_INFO_FREE(log);
-                                        free(remote_addr_str);
-                                        freeaddrinfo(remote_serv_info);
                                         close(sockfd);
-                                        return 0;
+                                        sockfds[i] = -1;
+                                        continue;
                                 }
                         }
 
