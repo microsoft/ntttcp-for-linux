@@ -36,8 +36,10 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 	int sockfds[DEFAULT_CLIENT_CONNS_PER_THREAD] = {-1};
 	uint client_port = 0;
 	struct hostent *hp;
+        char if_name[IFNAMSIZ] = {'\0'};
+        struct sockaddr_storage client_addr = {0};
 
-	struct sockaddr_in local_addr, serv_addr;
+	struct sockaddr_in serv_addr;
 	int sa_size = sizeof(struct sockaddr_in);
 	memset((char *)&serv_addr, 0, sa_size);
 	serv_addr.sin_family = sc->domain; /* AF_INET */
@@ -48,6 +50,22 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 	} else {
 		serv_addr.sin_addr.s_addr = inet_addr(sc->bind_address);
 	}
+
+        if (sc->use_client_address) {
+                /* get interface name using the interface ip address */
+                if (get_interface_name_by_ip(sc->client_address, sc->domain, if_name, IFNAMSIZ) != 0) {
+                        ASPRINTF(&log, "failed to get interface name by address [%s]", sc->client_address);
+                        PRINT_ERR(log);
+                        return NULL;
+                }
+        }
+
+        /* update client information */
+        if (ntttcp_update_client_info(&client_addr, sc) < 0) {
+                ASPRINTF(&log, "failed to update udp client info [%s]", sc->client_address);
+                PRINT_ERR(log);
+                return NULL;
+        }
 
 	for (i = 0; i < sc->num_connections; i++) {
 
@@ -63,31 +81,48 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 		 */
 		client_port = (sc->num_connections > 1 && sc->client_port != 0) ? sc->client_port + i : sc->client_port;
 
-		(*(struct sockaddr_in *)&local_addr).sin_port = htons(client_port);
-		(*(struct sockaddr_in *)&local_addr).sin_family = sc->domain; /* AF_INET */
+                /* update client port information */
+                ntttcp_update_client_port_info(&client_addr, client_port);
 
-		if ((ret = bind(sockfd, (struct sockaddr *)&local_addr, sa_size)) < 0) {
-			ASPRINTF(&log,
-					 "failed to bind socket[%d] to a local port: [%s:%d]. errno = %d. Ignored",
-					 sockfd, inet_ntoa((*(struct sockaddr_in *)&local_addr).sin_addr), client_port, errno);
-			PRINT_INFO_FREE(log);
-		}
+                ret = ntttcp_bind_socket(sockfd, &client_addr);
+                if (ret != 0) {
+                        ASPRINTF(&log, "failed to do udp socket bind : socket domain [%d] client_port [%d] errno [%d]", 
+                        sc->domain, client_port, errno);
+                        PRINT_ERR(log);
+                        close(sockfd);
+                        sockfds[i] = -1;
+                        continue;
+                }
+                
+                /* perform SO_BINDTODEVICE operation for a socket */
+                if (sc->use_client_address) {
+                        ret = ntttcp_bind_to_device(sockfd, sc, if_name);
+                        if (ret != NO_ERROR) {
+                                ASPRINTF(&log, "failed to do udp socket bind to device : socket domain [%d] client_port [%d] errno [%d] if_name [%s]", 
+                                sc->domain, client_port, errno, if_name);
+                                PRINT_ERR(log);
+                                close(sockfd);
+                                sockfds[i] = -1;
+                                continue;
+                        }
+                }
 
 		/* set socket rate limit if specified by user */
 		if (sc->socket_fq_rate_limit_bytes != 0)
 			enable_fq_rate_limit(sc, sockfd);
 
 		if (connect(sockfd, &serv_addr, sa_size) == -1) {
-			ASPRINTF(&log,
-					"failed to connect socket[%d] to remote: [%s:%d]. errno = %d.",
-					sockfd, sc->bind_address, sc->server_port, errno);
-			PRINT_ERR(log);
-			continue;
+                        ASPRINTF(&log,"failed to connect socket[%d] to remote: [%s:%d]. errno = %d.",
+                                sockfd, sc->bind_address, sc->server_port, errno);
+                        PRINT_ERR(log);
+                        close(sockfd);
+                        sockfds[i] = -1;
+                        continue;
 		}
 
 		ASPRINTF(&log,
 				"Running UDP stream: local:%d [socket:%d] --> %s:%d",
-				ntohs(((struct sockaddr_in *)&local_addr)->sin_port), sockfd, sc->bind_address, sc->server_port);
+				ntohs((client_port)), sockfd, sc->bind_address, sc->server_port);
 		PRINT_DBG_FREE(log);
 
 		sockfds[i] = sockfd;
