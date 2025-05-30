@@ -29,7 +29,7 @@ jobs:
         id: build
         with:
           arch: aarch64
-          distro: ubuntu20.04
+          distro: ubuntu-latest
           run: |
             apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake file
             cd src/ && cmake . && make && ls -lh ntttcp && file ntttcp
