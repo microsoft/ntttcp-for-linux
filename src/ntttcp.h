@@ -65,6 +65,8 @@ struct ntttcp_test
 
 	bool	quiet; /* '-Q' for quiet logging */
 	bool	verbose; /* '-V' for verbose logging */
+
+	bool 	tcp_nodelay; /* --no-delay set TCP no delay, disabling Nagle's Algorithm */
 };
 
 /* manage the ntttcp sender/client, or receiver/server endpoints */
@@ -110,6 +112,7 @@ struct ntttcp_stream_client{
 	bool	no_synch;
 	bool	continuous_mode;
 	bool	verbose;
+	bool	tcp_nodelay;
 
 	uint	average_rtt;
 	uint	num_conns_created;
@@ -129,6 +132,7 @@ struct ntttcp_stream_server{
 	bool	continuous_mode;
 	bool	verbose;
 	bool	use_epoll;
+	bool	tcp_nodelay;
 
 	int	listener; /* this is the socket to listen on port to accept new connections */
 	int	max_fd; /* track the max socket fd */

@@ -156,6 +156,13 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 					sockfds[i] = -1;
 					continue;
 				}
+				if (sc->tcp_nodelay && set_socket_tcp_nodelay(sockfd) == -1) {
+					ASPRINTF(&log, "cannot set option TCP_NODELAY for socket[%d]", sockfd);
+					PRINT_INFO_FREE(log);
+					close(sockfd);
+					sockfds[i] = -1;
+					continue;
+				}
 			}
 
 			if (sc->client_port != 0) {
@@ -355,6 +362,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 			close(sockfd);
 			return -1;
 		}
+
 		if ((i = bind(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
 			ASPRINTF(&log,
 				"failed to bind the socket to local address: %s on socket: %d. return = %d",
@@ -486,6 +494,11 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 
 					if (set_socket_non_blocking(newfd) == -1) {
 						ASPRINTF(&log, "cannot set the new socket as non-blocking: %d", newfd);
+						PRINT_DBG_FREE(log);
+					}
+
+					if (ss->tcp_nodelay && set_socket_tcp_nodelay(newfd) == -1) {
+						ASPRINTF(&log, "cannot set the TCP_NODELAY socket option for : %d", newfd);
 						PRINT_DBG_FREE(log);
 					}
 
@@ -623,6 +636,12 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 					ASPRINTF(&log, "cannot set the new socket as non-blocking: %d", newfd);
 					PRINT_DBG_FREE(log);
 				}
+                                
+				if (ss->tcp_nodelay && set_socket_tcp_nodelay(newfd) == -1) {
+					ASPRINTF(&log, "cannot set the TCP_NODELAY socket option for: %d", newfd);
+					PRINT_DBG_FREE(log);
+				}
+
 				FD_SET(newfd, &ss->read_set); /* add the new one to read_set */
 				if (newfd > ss->max_fd) {
 					/* update the maximum */

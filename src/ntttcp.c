@@ -58,6 +58,7 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->json_log_filename		= DEFAULT_JSON_LOG_FILE_NAME; /* "ntttcp-for-linux-log.json" */
 	test->quiet			= false;
 	test->verbose			= false;
+	test->tcp_nodelay       	= false;
 }
 
 bool is_running_tty(void)
@@ -268,6 +269,7 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoin
 	s->num_conns_created		= 0;
 	s->total_bytes_transferred	= 0;
 	s->average_rtt			= (uint)-1;
+	s->tcp_nodelay			= test->tcp_nodelay;
 	return s;
 }
 
@@ -291,8 +293,10 @@ struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test_endpoin
 	s->is_sync_thread	= false;
 	s->no_synch		= test->no_synch;
 	s->continuous_mode	= (test->duration == 0);
-	s->use_epoll		= test->use_epoll;
+	s->use_epoll            = test->use_epoll;
 	s->total_bytes_transferred = 0;
+	s->tcp_nodelay          = test->tcp_nodelay;
+
 	/* other fields will be assigned at run time */
 	return s;
 }
