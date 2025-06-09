@@ -1069,8 +1069,8 @@ int set_socket_tcp_nodelay(int sockfd)
         int opt = 1;
         char *log;
 
-        if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *)&opt, sizeof(opt)) < 0) {
-                ASPRINTF(&log, "cannot set TCP_NODELAY socket options: %d", sockfd);
+        if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0) {
+                ASPRINTF(&log, "cannot set TCP_NODELAY socket options: %d error: %s", sockfd, strerror(errno));
                 PRINT_ERR_FREE(log);
                 return -1;
         }
