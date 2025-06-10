@@ -143,21 +143,21 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 			} else {
 				/* 1a. set socket timeout */
 				if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
-					ASPRINTF(&log, "cannot set option SO_SNDTIMEO for socket[%d]", sockfd);
+					ASPRINTF(&log, "cannot set option SO_SNDTIMEO for socket[%d] error [%s]", sockfd, strerror(errno));
 					PRINT_INFO_FREE(log);
 					close(sockfd);
 					sockfds[i] = -1;
 					continue;
 				}
 				if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-					ASPRINTF(&log, "cannot set option SO_RCVTIMEO for socket[%d]", sockfd);
+					ASPRINTF(&log, "cannot set option SO_RCVTIMEO for socket[%d] error [%s]", sockfd, strerror(errno));
 					PRINT_INFO_FREE(log);
 					close(sockfd);
 					sockfds[i] = -1;
 					continue;
 				}
 				if (sc->tcp_nodelay && set_socket_tcp_nodelay(sockfd) == -1) {
-					ASPRINTF(&log, "cannot set option TCP_NODELAY for socket[%d]", sockfd);
+					ASPRINTF(&log, "cannot set option TCP_NODELAY for socket[%d] error [%s]", sockfd, strerror(errno));
 					PRINT_INFO_FREE(log);
 					close(sockfd);
 					sockfds[i] = -1;
@@ -493,12 +493,12 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 					}
 
 					if (set_socket_non_blocking(newfd) == -1) {
-						ASPRINTF(&log, "cannot set the new socket as non-blocking: %d", newfd);
+						ASPRINTF(&log, "cannot set the new socket as non-blocking: %d error [%s]", newfd, strerror(errno));
 						PRINT_DBG_FREE(log);
 					}
 
 					if (ss->tcp_nodelay && set_socket_tcp_nodelay(newfd) == -1) {
-						ASPRINTF(&log, "cannot set the TCP_NODELAY socket option for : %d", newfd);
+						ASPRINTF(&log, "cannot set the TCP_NODELAY for socket [%d] error [%s]", newfd, strerror(errno));
 						PRINT_DBG_FREE(log);
 					}
 
@@ -633,12 +633,12 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 
 				/* then we got a new connection */
 				if (set_socket_non_blocking(newfd) == -1) {
-					ASPRINTF(&log, "cannot set the new socket as non-blocking: %d", newfd);
+					ASPRINTF(&log, "cannot set the new socket as non-blocking: %d error [%s]", newfd, strerror(errno));
 					PRINT_DBG_FREE(log);
 				}
                                 
 				if (ss->tcp_nodelay && set_socket_tcp_nodelay(newfd) == -1) {
-					ASPRINTF(&log, "cannot set the TCP_NODELAY socket option for: %d", newfd);
+					ASPRINTF(&log, "cannot set the TCP_NODELAY for socket [%d] error [%s]", newfd, strerror(errno));
 					PRINT_DBG_FREE(log);
 				}
 
