@@ -1061,17 +1061,14 @@ int ntttcp_bind_socket(int sockfd, struct sockaddr_storage *local_addr)
  *
  * Returns:
  *   0 on success,
- *  -1 on failure (with error logged).
+ *  -1 on failure.
  */
 
 int set_socket_tcp_nodelay(int sockfd)
 {
         int opt = 1;
-        char *log;
 
         if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0) {
-                ASPRINTF(&log, "cannot set TCP_NODELAY socket options: %d error: %s", sockfd, strerror(errno));
-                PRINT_ERR_FREE(log);
                 return -1;
         }
 	return 0;
