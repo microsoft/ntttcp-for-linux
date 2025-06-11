@@ -43,6 +43,7 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->send_buf_size		= DEFAULT_SEND_BUFFER_SIZE; /* 128K */
 	test->bandwidth_limit		= 0; /* no bandwidth limit */
 	test->fq_rate_limit		= 0; /* o fq rate limit */
+	test->tcp_nodelay       	= false;
 	test->warmup			= DEFAULT_WARMUP_SEC; /* 0 sec */
 	test->duration			= DEFAULT_TEST_DURATION; /* 60 sec */
 	test->cooldown			= DEFAULT_COOLDOWN_SEC; /* 0 sec */
@@ -58,7 +59,6 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->json_log_filename		= DEFAULT_JSON_LOG_FILE_NAME; /* "ntttcp-for-linux-log.json" */
 	test->quiet			= false;
 	test->verbose			= false;
-	test->tcp_nodelay       	= false;
 }
 
 bool is_running_tty(void)
@@ -265,11 +265,11 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoin
 	s->is_sync_thread		= false;
 	s->no_synch			= test->no_synch;
 	s->continuous_mode		= (test->duration == 0);
+	s->tcp_nodelay			= test->tcp_nodelay;
 
 	s->num_conns_created		= 0;
 	s->total_bytes_transferred	= 0;
 	s->average_rtt			= (uint)-1;
-	s->tcp_nodelay			= test->tcp_nodelay;
 	return s;
 }
 
@@ -289,13 +289,13 @@ struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test_endpoin
 	s->bind_address 	= test->bind_address;
 	/* s->server_port, should be specified by caller */
 	s->recv_buf_size	= test->recv_buf_size;
+	s->tcp_nodelay          = test->tcp_nodelay;
 	s->verbose		= test->verbose;
 	s->is_sync_thread	= false;
 	s->no_synch		= test->no_synch;
 	s->continuous_mode	= (test->duration == 0);
 	s->use_epoll            = test->use_epoll;
 	s->total_bytes_transferred = 0;
-	s->tcp_nodelay          = test->tcp_nodelay;
 
 	/* other fields will be assigned at run time */
 	return s;

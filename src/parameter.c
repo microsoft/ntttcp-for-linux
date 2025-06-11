@@ -397,7 +397,7 @@ int verify_args(struct ntttcp_test *test)
 	}
 
 	if (test->protocol == UDP && test->tcp_nodelay) {
-		PRINT_ERR("--no-delay option is applicable for TCP");
+		PRINT_ERR("--no-delay option is not applicable for UDP");
 		return ERROR_ARGS;
 	}
 

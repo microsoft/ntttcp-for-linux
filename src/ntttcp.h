@@ -48,6 +48,7 @@ struct ntttcp_test
 	ulong	send_buf_size; /* '-b' for send buffer option */
 	long	bandwidth_limit; /* '-B' for test bandwidth limit implemented by this tool */
 	long	fq_rate_limit; /* '--fq-rate-limit' for rate limitation implemented by Fair Queue traffic policing (FQ) */
+	bool 	tcp_nodelay; /* --no-delay set TCP no delay, disabling Nagle's Algorithm */
 
 	int	warmup; /* '-W' for test warm-up time in sec */
 	int	duration; /* '-t' for total duration in sec of test (0: continuous_mode) */
@@ -66,7 +67,6 @@ struct ntttcp_test
 	bool	quiet; /* '-Q' for quiet logging */
 	bool	verbose; /* '-V' for verbose logging */
 
-	bool 	tcp_nodelay; /* --no-delay set TCP no delay, disabling Nagle's Algorithm */
 };
 
 /* manage the ntttcp sender/client, or receiver/server endpoints */
