@@ -107,12 +107,12 @@ struct ntttcp_stream_client{
 	ulong	send_buf_size;
 	ulong	sc_bandwidth_limit_bytes; /* the bandwidth limit per stream client (thread) */
 	ulong	socket_fq_rate_limit_bytes; /* the fq rate limit per socket (connection) */
+	bool	tcp_nodelay;
 	bool	hold_on; /* hold on sending packets on this stream client because of bandwidth limit */
 	bool	is_sync_thread;
 	bool	no_synch;
 	bool	continuous_mode;
 	bool	verbose;
-	bool	tcp_nodelay;
 
 	uint	average_rtt;
 	uint	num_conns_created;
@@ -127,12 +127,12 @@ struct ntttcp_stream_server{
 	char	*bind_address;
 	uint	server_port;
 	ulong	recv_buf_size;
+	bool	tcp_nodelay;
 	bool	is_sync_thread;
 	bool	no_synch;
 	bool	continuous_mode;
 	bool	verbose;
 	bool	use_epoll;
-	bool	tcp_nodelay;
 
 	int	listener; /* this is the socket to listen on port to accept new connections */
 	int	max_fd; /* track the max socket fd */
