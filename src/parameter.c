@@ -75,6 +75,8 @@ void print_flags(struct ntttcp_test *test)
 	if (test->client_role && test->fq_rate_limit != 0)
 		printf("%s:\t %ld\n", "fq rate limit (bits/sec)", test->fq_rate_limit);
 
+	printf("%s:\t %s\n", "tcp nodelay", test->tcp_nodelay ? "yes" : "no");
+
 	if (test->warmup == 0)
 		printf("%s:\t\t %s\n", "test warm-up (sec)", "no");
 	else
@@ -105,7 +107,6 @@ void print_flags(struct ntttcp_test *test)
 
 	printf("%s:\t\t\t %s\n", "quiet mode", test->quiet ? "enabled" : "disabled");
 	printf("%s:\t\t\t %s\n", "verbose mode", test->verbose ? "enabled" : "disabled");
-	printf("%s:\t\t\t %s\n", "tcp nodelay", test->tcp_nodelay ? "yes" : "no");
 	printf("---------------------------------------------------------\n");
 }
 
