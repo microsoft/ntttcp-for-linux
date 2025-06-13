@@ -43,6 +43,7 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->send_buf_size		= DEFAULT_SEND_BUFFER_SIZE; /* 128K */
 	test->bandwidth_limit		= 0; /* no bandwidth limit */
 	test->fq_rate_limit		= 0; /* o fq rate limit */
+	test->tcp_nodelay       	= false;
 	test->warmup			= DEFAULT_WARMUP_SEC; /* 0 sec */
 	test->duration			= DEFAULT_TEST_DURATION; /* 60 sec */
 	test->cooldown			= DEFAULT_COOLDOWN_SEC; /* 0 sec */
@@ -258,6 +259,7 @@ struct ntttcp_stream_client *new_ntttcp_client_stream(struct ntttcp_test_endpoin
 	s->num_connections		= test->conns_per_thread;
 	s->send_buf_size		= test->send_buf_size;
 	s->sc_bandwidth_limit_bytes	= test->bandwidth_limit / (test->server_ports * test->threads_per_server_port) / 8;
+	s->tcp_nodelay			= test->tcp_nodelay;
 	s->socket_fq_rate_limit_bytes	= test->fq_rate_limit / (test->server_ports * test->threads_per_server_port * test->conns_per_thread) / 8;
 	s->hold_on			= false;
 	s->verbose			= test->verbose;
@@ -287,12 +289,14 @@ struct ntttcp_stream_server *new_ntttcp_server_stream(struct ntttcp_test_endpoin
 	s->bind_address 	= test->bind_address;
 	/* s->server_port, should be specified by caller */
 	s->recv_buf_size	= test->recv_buf_size;
+	s->tcp_nodelay          = test->tcp_nodelay;
 	s->verbose		= test->verbose;
 	s->is_sync_thread	= false;
 	s->no_synch		= test->no_synch;
 	s->continuous_mode	= (test->duration == 0);
-	s->use_epoll		= test->use_epoll;
+	s->use_epoll            = test->use_epoll;
 	s->total_bytes_transferred = 0;
+
 	/* other fields will be assigned at run time */
 	return s;
 }

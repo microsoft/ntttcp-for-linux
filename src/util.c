@@ -1052,3 +1052,24 @@ int ntttcp_bind_socket(int sockfd, struct sockaddr_storage *local_addr)
 
         return NO_ERROR;
 }
+
+/*
+ * Sets the TCP_NODELAY option on a socket to disable Nagle's algorithm.
+ *
+ * Parameters:
+ *   sockfd - The file descriptor of the socket.
+ *
+ * Returns:
+ *   0 on success,
+ *  -1 on failure.
+ */
+
+int set_socket_tcp_nodelay(int sockfd)
+{
+        int opt = 1;
+
+        if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) < 0) {
+                return -1;
+        }
+	return 0;
+}

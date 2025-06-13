@@ -48,6 +48,7 @@ struct ntttcp_test
 	ulong	send_buf_size; /* '-b' for send buffer option */
 	long	bandwidth_limit; /* '-B' for test bandwidth limit implemented by this tool */
 	long	fq_rate_limit; /* '--fq-rate-limit' for rate limitation implemented by Fair Queue traffic policing (FQ) */
+	bool 	tcp_nodelay; /* --no-delay set TCP no delay, disabling Nagle's Algorithm */
 
 	int	warmup; /* '-W' for test warm-up time in sec */
 	int	duration; /* '-t' for total duration in sec of test (0: continuous_mode) */
@@ -105,6 +106,7 @@ struct ntttcp_stream_client{
 	ulong	send_buf_size;
 	ulong	sc_bandwidth_limit_bytes; /* the bandwidth limit per stream client (thread) */
 	ulong	socket_fq_rate_limit_bytes; /* the fq rate limit per socket (connection) */
+	bool	tcp_nodelay;
 	bool	hold_on; /* hold on sending packets on this stream client because of bandwidth limit */
 	bool	is_sync_thread;
 	bool	no_synch;
@@ -124,6 +126,7 @@ struct ntttcp_stream_server{
 	char	*bind_address;
 	uint	server_port;
 	ulong	recv_buf_size;
+	bool	tcp_nodelay;
 	bool	is_sync_thread;
 	bool	no_synch;
 	bool	continuous_mode;

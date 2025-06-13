@@ -75,6 +75,8 @@ void print_flags(struct ntttcp_test *test)
 	if (test->client_role && test->fq_rate_limit != 0)
 		printf("%s:\t %ld\n", "fq rate limit (bits/sec)", test->fq_rate_limit);
 
+	printf("%s:\t %s\n", "tcp nodelay", test->tcp_nodelay ? "yes" : "no");
+
 	if (test->warmup == 0)
 		printf("%s:\t\t %s\n", "test warm-up (sec)", "no");
 	else
@@ -112,7 +114,7 @@ void print_usage()
 {
 	printf("Author: %s\n", AUTHOR_NAME);
 	printf("ntttcp: [-r|-s|-D|-M|-L|-e|-H|-P|-a|-n|-l|-6|-u|-p|-f|-b|-B|-W|-t|-C|-N|-O|-x|-j|-Q|-V|-h|-m <mapping>]\n");
-	printf("        [--show-tcp-retrans|--show-nic-packets|--show-dev-interrupts|--fq-rate-limit]\n\n");
+	printf("        [--show-tcp-retrans|--show-nic-packets|--show-dev-interrupts|--fq-rate-limit|--no-delay]\n\n");
 	printf("\t-r   Run as a receiver\n");
 	printf("\t-s   Run as a sender\n");
 	printf("\t-D   Run as daemon\n");
@@ -166,6 +168,7 @@ void print_usage()
 	printf("\t\t\t\tShow number of interrupts for the devices specified by the differentiator\n");
 	printf("\t\t\t\tExamples for differentiator: Hyper-V PCIe MSI, mlx4, Hypervisor callback interrupts, ...\n");
 	printf("\t--fq-rate-limit\t\tLimit socket rate by Fair Queue (FQ) traffic policing\n");
+	printf("\t--no-delay\t\tset TCP no delay, disabling Nagle's algorithm\n");
 	printf("\n");
 
 	printf("Example:\n");
@@ -173,7 +176,7 @@ void print_usage()
 	printf("\t1) ./ntttcp -r\n");
 	printf("\t2) ./ntttcp -r 192.168.1.1\n");
 	printf("\t3) ./ntttcp -r -m 8,*,192.168.1.1 -6\n");
-	printf("\t4) ./ntttcp -r -m 8,0,192.168.1.1 -6 --show-tcp-retrans --show-nic-packets eth0 --show-dev-interrupts mlx4 -V\n");
+	printf("\t4) ./ntttcp -r -m 8,0,192.168.1.1 -6 --show-tcp-retrans --show-nic-packets eth0 --show-dev-interrupts mlx4 --no-delay -V\n");
 	printf("\tsender:\n");
 	printf("\t1) ./ntttcp -s\n");
 	printf("\t2) ./ntttcp -s 192.168.1.1\n");
@@ -181,7 +184,7 @@ void print_usage()
 	printf("\t4) ./ntttcp -s 192.168.1.1 -P 64 -n 16 -l 10 -f25001 -6 -V\n");
 	printf("\t3) ./ntttcp -s 192.168.1.1 --fq-rate-limit 10G\n");
 	printf("\t4) ./ntttcp -s 192.168.1.1 -B 10G\n");
-	printf("\t4) ./ntttcp -s 192.168.1.1 --show-tcp-retrans --show-nic-packets eth0 --show-dev-interrupts mlx4 -V\n");
+	printf("\t4) ./ntttcp -s 192.168.1.1 --show-tcp-retrans --show-nic-packets eth0 --show-dev-interrupts mlx4 --no-delay -V\n");
 	printf("\t3) ./ntttcp -s 192.168.1.1 -n 64 -a 192.168.1.11\n");
 }
 
@@ -394,6 +397,11 @@ int verify_args(struct ntttcp_test *test)
 		PRINT_INFO("invalid test cool-down seconds provided. use the default value");
 	}
 
+	if (test->protocol == UDP && test->tcp_nodelay) {
+		PRINT_ERR("--no-delay option is not applicable for UDP");
+		return ERROR_ARGS;
+	}
+
 	return NO_ERROR;
 }
 
@@ -405,6 +413,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		{"show-nic-packets", required_argument, NULL, LO_SHOW_NIC_PACKETS},
 		{"show-dev-interrupts", required_argument, NULL, LO_SHOW_DEV_INTERRUPTS},
 		{"fq-rate-limit", required_argument, NULL, LO_FQ_RATE_LIMIT},
+		{"no-delay", no_argument, NULL, LO_TCP_NO_DELAY},
 		{0, 0, 0, 0}
 	};
 	int opt;
@@ -532,6 +541,10 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 		case LO_SHOW_DEV_INTERRUPTS:
 			test->show_dev_interrupts = optarg;
+			break;
+
+		case LO_TCP_NO_DELAY:
+			test->tcp_nodelay = true;
 			break;
 
 		case 'O':
