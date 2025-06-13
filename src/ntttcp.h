@@ -66,7 +66,6 @@ struct ntttcp_test
 
 	bool	quiet; /* '-Q' for quiet logging */
 	bool	verbose; /* '-V' for verbose logging */
-
 };
 
 /* manage the ntttcp sender/client, or receiver/server endpoints */
