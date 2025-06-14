@@ -234,6 +234,16 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 			return 0;
 		}
 
+		int opt = 1;
+		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+			ASPRINTF(&log, "cannot set socket options: %d", sockfd);
+			PRINT_ERR_FREE(log);
+			freeaddrinfo(serv_info);
+			free(local_addr_str);
+			close(sockfd);
+			return 0;
+		}
+
 		if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
 			ASPRINTF(&log, "cannot set socket options: %d", sockfd);
 			PRINT_ERR_FREE(log);

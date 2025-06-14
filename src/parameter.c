@@ -127,7 +127,7 @@ void print_usage()
 
 	printf("\t-P   Number of ports listening on receiver side	[default: %d] [max: %d]\n", DEFAULT_NUM_SERVER_PORTS, MAX_NUM_SERVER_PORTS);
 	printf("\t-a   [sender only] source interface ip address\n");
-	printf("\t-n   [sender only] number of threads per each receiver port     [default: %d] [max: %d]\n", DEFAULT_THREADS_PER_SERVER_PORT, MAX_THREADS_PER_SERVER_PORT);
+	printf("\t-n   number of threads per each receiver port     [default: %d] [max: %d]\n", DEFAULT_THREADS_PER_SERVER_PORT, MAX_THREADS_PER_SERVER_PORT);
 	printf("\t-l   [sender only] number of connections per each sender thread [default: %d] [max: %d]\n", DEFAULT_CLIENT_CONNS_PER_THREAD, MAX_CLIENT_CONNS_PER_THREAD);
 
 	printf("\t-6   IPv6 mode    [default: IPv4]\n");

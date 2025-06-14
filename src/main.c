@@ -202,21 +202,23 @@ int run_ntttcp_receiver(struct ntttcp_test_endpoint *tep)
 
 	/* create test threads */
 	for (t = 0; t < test->server_ports; t++) {
-		ss = tep->server_streams[t];
-		ss->server_port = test->server_base_port + t;
+		for (uint n = 0; n < test->threads_per_server_port; n ++) {
+			ss = tep->server_streams[t * test->threads_per_server_port + n];
+			ss->server_port = test->server_base_port + t;
 
-		if (test->protocol == TCP) {
-			rc = pthread_create(&tep->threads[t], NULL, run_ntttcp_receiver_tcp_stream, (void *)ss);
-		} else {
-			rc = pthread_create(&tep->threads[t], NULL, run_ntttcp_receiver_udp_stream, (void *)ss);
-		}
+			if (test->protocol == TCP) {
+				rc = pthread_create(&tep->threads[threads_created], NULL, run_ntttcp_receiver_tcp_stream, (void *)ss);
+			} else {
+				rc = pthread_create(&tep->threads[threads_created], NULL, run_ntttcp_receiver_udp_stream, (void *)ss);
+			}
 
-		if (rc) {
-			PRINT_ERR("pthread_create() create thread failed");
-			err_code = ERROR_PTHREAD_CREATE;
-			continue;
+			if (rc) {
+				PRINT_ERR("pthread_create() create thread failed");
+				err_code = ERROR_PTHREAD_CREATE;
+				continue;
+			}
+			threads_created++;
 		}
-		threads_created++;
 	}
 
 	/* create synch thread; and put it to the end of the thread array */

@@ -125,9 +125,9 @@ struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, 
 		}
 	} else {
 		if (test->no_synch == true)
-			total_threads = test->server_ports;
+			total_threads = test->server_ports * test->threads_per_server_port;
 		else
-			total_threads = test->server_ports + 1; /* the last one is synch thread */
+			total_threads = test->server_ports * test->threads_per_server_port + 1; /* the last one is synch thread */
 
 		e->total_threads = total_threads;
 		e->server_streams = (struct ntttcp_stream_server **)malloc(sizeof(struct ntttcp_stream_server *) * total_threads);
