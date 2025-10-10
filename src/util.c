@@ -474,9 +474,9 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<softirq metric=\"%%\">%.2f</softirq>\n", tepr->cpu_ps_softirq_usage * 100);
 	fprintf(logfile, "	<cycles_per_byte metric=\"cycles/byte\">%.2f</cycles_per_byte>\n", tepr->cycles_per_byte);
 	fprintf(logfile, "	<cpu_busy_all metric=\"%%\">%.2f</cpu_busy_all>\n", tepr->cpu_busy_percent * 100);
-
-	if (tep->test->verbose) {
-		if (tep->endpoint_role == ROLE_SENDER && tep->test->protocol == TCP) {
+	fprintf(logfile, "	<io>%u</io>\n", 0);
+	if (test->verbose){
+		if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
 			fprintf(logfile, "	<tcp_average_rtt metric=\"us\">%u</tcp_average_rtt>\n", tepr->average_rtt);
 		}
 	}
