@@ -448,6 +448,17 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<bufferCount>%u</bufferCount>\n", 0);
 	fprintf(logfile, "	<bufferLen>%u</bufferLen>\n", 0);
 	
+	if(tep->test->show_tcp_retransmit == true) {
+		fprintf(logfile, "	<tcp_retransmits metric=\"retrans_segs\">%" PRIu64 "</tcp_retransmits>\n", tepr->packets_retransmitted);
+		fprintf(logfile, "	<tcp_retransmits metric=\"retrans_segments_per_sec\">%.2f</tcp_retransmits>\n", tepr->retrans_segments_per_sec);
+		fprintf(logfile, "	<tcp_retransmits metric=\"lost_retrans_per_sec\">%.2f</tcp_retransmits>\n", tepr->tcp_lost_retransmit_per_sec);
+		fprintf(logfile, "	<tcp_retransmits metric=\"syn_retrans_per_sec\">%.2f</tcp_retransmits>\n", tepr->tcp_syn_retrans_per_sec);
+		fprintf(logfile, "	<tcp_retransmits metric=\"fast_retrans_per_sec\">%.2f</tcp_retransmits>\n", tepr->tcp_fast_retrans_per_sec);
+		fprintf(logfile, "	<tcp_retransmits metric=\"forward_retrans_per_sec\">%.2f</tcp_retransmits>\n", tepr->tcp_forward_retrans_per_sec);
+		fprintf(logfile, "	<tcp_retransmits metric=\"slowStart_retrans_per_sec\">%.2f</tcp_retransmits>\n", tepr->tcp_slowStart_retrans_per_sec);
+		fprintf(logfile, "	<tcp_retransmits metric=\"retrans_fail_per_sec\">%.2f</tcp_retransmits>\n", tepr->tcp_retrans_fail_per_sec);
+	}
+
 	if (tepr->final_cpu_ps->nproc == tepr->init_cpu_ps->nproc){
 		fprintf(logfile, "	<cpu_cores metric=\"cpu cores\">%d</cpu_cores>\n", tepr->final_cpu_ps->nproc);
 	} else {
@@ -462,9 +473,9 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<softirq metric=\"%%\">%.2f</softirq>\n", tepr->cpu_ps_softirq_usage * 100);
 	fprintf(logfile, "	<cycles_per_byte metric=\"cycles/byte\">%.2f</cycles_per_byte>\n", tepr->cycles_per_byte);
 	fprintf(logfile, "	<cpu_busy_all metric=\"%%\">%.2f</cpu_busy_all>\n", tepr->cpu_busy_percent * 100);
-	fprintf(logfile, "	<io>%u</io>\n", 0);
-	if (test->verbose){
-		if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
+
+	if (tep->test->verbose) {
+		if (tep->endpoint_role == ROLE_SENDER && tep->test->protocol == TCP) {
 			fprintf(logfile, "	<tcp_average_rtt metric=\"us\">%u</tcp_average_rtt>\n", tepr->average_rtt);
 		}
 	}
@@ -814,7 +825,7 @@ bool check_is_ip_addr_valid_local(int ss_family, char *ip_to_check)
 
  * @brief Validate whether the given IP string is a valid IPv4 or IPv6 address.
  * This function checks if the input IP address string is syntactically correct for
- * the specified address family (AF_INET or AF_INET6). It performs a basic heuristic
+ * the specified address family (AF_INET for IPv4, AF_INET6 for IPv6). It performs a basic heuristic
  * check using strstr() and a formal check using inet_pton().
 
  * @param domain Address family: AF_INET for IPv4, AF_INET6 for IPv6.
