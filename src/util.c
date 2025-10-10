@@ -826,7 +826,7 @@ bool check_is_ip_addr_valid_local(int ss_family, char *ip_to_check)
 
  * @brief Validate whether the given IP string is a valid IPv4 or IPv6 address.
  * This function checks if the input IP address string is syntactically correct for
- * the specified address family (AF_INET for IPv4, AF_INET6 for IPv6). It performs a basic heuristic
+ * the specified address family (AF_INET or AF_INET6). It performs a basic heuristic
  * check using strstr() and a formal check using inet_pton().
 
  * @param domain Address family: AF_INET for IPv4, AF_INET6 for IPv6.
