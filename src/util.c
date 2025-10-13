@@ -449,7 +449,7 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<bufferLen>%u</bufferLen>\n", 0);
 	
 	// Adding tcp retransmit info to xml log
-	if(tep->test->show_tcp_retransmit == true) {
+	if (tep->test->show_tcp_retransmit == true) {
 		fprintf(logfile, "	<tcp_retransmits metric=\"retrans_segs\">%" PRIu64 "</tcp_retransmits>\n", tepr->packets_retransmitted);
 		fprintf(logfile, "	<tcp_retransmits metric=\"retrans_segments_per_sec\">%.2f</tcp_retransmits>\n", tepr->retrans_segments_per_sec);
 		fprintf(logfile, "	<tcp_retransmits metric=\"lost_retrans_per_sec\">%.2f</tcp_retransmits>\n", tepr->tcp_lost_retransmit_per_sec);
