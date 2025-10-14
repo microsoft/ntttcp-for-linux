@@ -660,7 +660,42 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 	fprintf(json_file, "        \"bufferCount\" : \"%u\",\n", 0);
 	fprintf(json_file, "        \"bufferLen\" : \"%u\",\n", 0);
 	fprintf(json_file, "        \"io\" : \"%u\",\n", 0);
-
+	if (test->show_tcp_retransmit) {
+		fprintf(json_file, "        \"tcp_retransmits\" : [\n");
+		fprintf(json_file, "            {\n");
+		fprintf(json_file, "                \"metric\" : \"retrans_segs\",\n");
+		fprintf(json_file, "                \"value\" : \"%"PRIu64"\"\n", tepr->packets_retransmitted);
+		fprintf(json_file, "            },\n");
+		fprintf(json_file, "            {\n");
+		fprintf(json_file, "                \"metric\" : \"retrans_segments_per_sec\",\n");
+		fprintf(json_file, "                \"value\" : \"%.2f\"\n", tepr->retrans_segments_per_sec);
+		fprintf(json_file, "            },\n");
+		fprintf(json_file, "            {\n");
+		fprintf(json_file, "                \"metric\" : \"lost_retrans_per_sec\",\n");
+		fprintf(json_file, "                \"value\" : \"%.2f\"\n", tepr->tcp_lost_retransmit_per_sec);
+		fprintf(json_file, "            },\n");
+		fprintf(json_file, "            {\n");
+		fprintf(json_file, "                \"metric\" : \"syn_retrans_per_sec\",\n");
+		fprintf(json_file, "                \"value\" : \"%.2f\"\n", tepr->tcp_syn_retrans_per_sec);
+		fprintf(json_file, "            },\n");
+		fprintf(json_file, "            {\n");
+		fprintf(json_file, "                \"metric\" : \"fast_retrans_per_sec\",\n");
+		fprintf(json_file, "                \"value\" : \"%.2f\"\n", tepr->tcp_fast_retrans_per_sec);
+		fprintf(json_file, "            },\n");
+		fprintf(json_file, "            {\n");
+		fprintf(json_file, "                \"metric\" : \"forward_retrans_per_sec\",\n");
+		fprintf(json_file, "                \"value\" : \"%.2f\"\n", tepr->tcp_forward_retrans_per_sec);
+		fprintf(json_file, "            },\n");
+		fprintf(json_file, "            {\n");
+		fprintf(json_file, "                \"metric\" : \"slowStart_retrans_per_sec\",\n");
+		fprintf(json_file, "                \"value\" : \"%.2f\"\n", tepr->tcp_slowStart_retrans_per_sec);
+		fprintf(json_file, "            },\n");
+		fprintf(json_file, "            {\n");
+		fprintf(json_file, "                \"metric\" : \"retrans_fail_per_sec\",\n");
+		fprintf(json_file, "                \"value\" : \"%.2f\"\n", tepr->tcp_retrans_fail_per_sec);
+		fprintf(json_file, "            }\n");
+		fprintf(json_file, "        ],\n");
+	}
 	if(test->verbose){
 		if (tep->endpoint_role == ROLE_SENDER && test->protocol == TCP) {
 			fprintf(json_file, "        \"tcpAverageRtt metric\" : \"%u us\",\n", tepr->average_rtt);
