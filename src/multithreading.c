@@ -68,7 +68,7 @@ void sig_handler(int signo)
 	}
 }
 
-void timer_fired()
+void timer_fired(int)
 {
 	turn_off_light();
 }
