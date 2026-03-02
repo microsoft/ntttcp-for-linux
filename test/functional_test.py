@@ -57,11 +57,11 @@ class TestNtttcp:
             sender_cmd = f"{sender_cmd} {sender_option}"
         return receiver_cmd, sender_cmd
 
-    def setup(self):
+    def setup_method(self):
         time.sleep(1)
         print("\n")
 
-    def teardown(self):
+    def teardown_method(self):
         subprocess.run("killall ntttcp", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def test_daemon(self) -> None:
@@ -97,7 +97,7 @@ class TestNtttcp:
             throughput = parse_result.get_throughput_Gbps()
             assert throughput >= self.expected_throughput
 
-    def test_running_with_warmup_cooldowm_time(self) -> None:
+    def test_running_with_warmup_cooldown_time(self) -> None:
         set_warmup_time = 3
         set_cooldown_time = 4
         common_option = f"-W {set_warmup_time} -C {set_cooldown_time}"
@@ -179,13 +179,13 @@ class TestNtttcp:
         assert throughput >= self.expected_throughput
 
     def test_mapping_option(self) -> None:
-        ports = 200
-        defualt_threads = 4
-        receiver_cmd = f"ulimit -n 10240 && ./src/ntttcp -D -r -m {ports},*,{self.loopback_interface} -D -t 5"
+        ports = 50
+        default_threads = 4
+        receiver_cmd = f"ulimit -n 10240 && ./src/ntttcp -D -r -m {ports},*,{self.loopback_interface} -t 5"
         sender_cmd = f"ulimit -n 10240 && ./src/ntttcp -s{self.loopback_interface} -P {ports} -t 5"
         result = self.run_test(receiver_cmd, sender_cmd)
         parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
-        assert parse_result.get_ports_numbers() == ports * defualt_threads
+        assert parse_result.get_ports_numbers() == ports * default_threads
         throughput = parse_result.get_throughput_Gbps()
         assert throughput >= self.expected_throughput
 
