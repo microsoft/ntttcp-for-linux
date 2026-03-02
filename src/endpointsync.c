@@ -281,7 +281,6 @@ void *create_receiver_sync_socket(void *ptr)
 	struct ntttcp_test *test = tep->test;
 	struct ntttcp_stream_server *ss;
 
-	int sync_listener = 0;
 	int answer_to_send = 0; /* the int to be sent */
 	int converted = 0;
 	int request_received = 0; /* the int to be received */
@@ -307,7 +306,7 @@ void *create_receiver_sync_socket(void *ptr)
 	ss->server_port = test->server_base_port - 1;
 	ss->protocol = TCP; /* no matter what test will be executed, the synch thread always uses TCP */
 	ss->listener = ntttcp_server_listen(ss);
-	if (sync_listener == -1) {
+	if (ss->listener == -1) {
 		PRINT_ERR("receiver: failed to listen on sync port");
 		return NULL;
 	}
@@ -360,7 +359,7 @@ void *create_receiver_sync_socket(void *ptr)
 			break;
 
 		/* we are notified by epoll_wait() */
-		n_fds = epoll_wait(efd, events, ss->max_fd + 1, -1);
+		n_fds = epoll_wait(efd, events, ss->max_fd + 1, 1000);
 		if (n_fds < 0 && errno != EINTR) {
 			ASPRINTF(&log, "error happened when epoll_wait(), errno=%d, n_fds=%d", errno, n_fds);
 			PRINT_ERR_FREE(log);
