@@ -57,11 +57,11 @@ class TestNtttcp:
             sender_cmd = f"{sender_cmd} {sender_option}"
         return receiver_cmd, sender_cmd
 
-    def setup_method(self):
+    def setup_method(self, method):
         time.sleep(1)
         print("\n")
 
-    def teardown_method(self):
+    def teardown_method(self, method):
         subprocess.run("killall ntttcp", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def test_daemon(self) -> None:

@@ -308,6 +308,7 @@ void *create_receiver_sync_socket(void *ptr)
 	ss->listener = ntttcp_server_listen(ss);
 	if (ss->listener == -1) {
 		PRINT_ERR("receiver: failed to listen on sync port");
+		free(ss);
 		return NULL;
 	}
 
@@ -359,7 +360,7 @@ void *create_receiver_sync_socket(void *ptr)
 			break;
 
 		/* we are notified by epoll_wait() */
-		n_fds = epoll_wait(efd, events, ss->max_fd + 1, 1000);
+		n_fds = epoll_wait(efd, events, MAX_EPOLL_EVENTS, 1000);
 		if (n_fds < 0 && errno != EINTR) {
 			ASPRINTF(&log, "error happened when epoll_wait(), errno=%d, n_fds=%d", errno, n_fds);
 			PRINT_ERR_FREE(log);
