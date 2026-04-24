@@ -79,6 +79,7 @@ struct ntttcp_test_endpoint_results{
 	double		cpu_ps_softirq_usage;
 	uint64_t	total_interrupts;
 	double		packets_per_interrupt;
+	double		interrupts_per_sec;
 
 	/* fields for xml log (compatible with Windows ntttcp.exe) */
 	double		total_bytes_MB;

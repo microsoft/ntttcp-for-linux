@@ -117,6 +117,7 @@ int process_test_results(struct ntttcp_test_endpoint *tep)
 	tepr->packets_sent = tepr->final_tx_packets - tepr->init_tx_packets;
 	tepr->packets_received = tepr->final_rx_packets - tepr->init_rx_packets;
 	tepr->total_interrupts = tepr->final_interrupts - tepr->init_interrupts;
+	tepr->interrupts_per_sec = test_duration > 0 ? (double)tepr->total_interrupts / test_duration : 0.0;
 	tepr->packets_per_interrupt = tepr->total_interrupts == 0 ? 0 : (tepr->packets_sent + tepr->packets_received) / (double)tepr->total_interrupts;
 
 	cpu_ps_total_diff = tepr->final_cpu_ps->total_time - tepr->init_cpu_ps->total_time;
@@ -225,6 +226,8 @@ void print_test_results(struct ntttcp_test_endpoint *tep)
 	if (strcmp(tep->test->show_dev_interrupts, "")) {
 		PRINT_INFO("interrupts:");
 		ASPRINTF(&log, "\t total\t\t:%" PRIu64, tepr->total_interrupts);
+		PRINT_INFO_FREE(log);
+		ASPRINTF(&log, "\t interrupts/sec\t:%.3f", tepr->interrupts_per_sec);
 		PRINT_INFO_FREE(log);
 	}
 	if (strcmp(tep->test->show_interface_packets, "") && strcmp(tep->test->show_dev_interrupts, "")) {
@@ -438,7 +441,8 @@ int write_result_into_xml_file(struct ntttcp_test_endpoint *tep)
 	fprintf(logfile, "	<total_buffers>%.3f</total_buffers>\n", 0.000);
 	fprintf(logfile, "	<throughput metric=\"buffers/s\">%.3f</throughput>\n", 0.000);
 	fprintf(logfile, "	<avg_packets_per_interrupt metric=\"packets/interrupt\">%.3f</avg_packets_per_interrupt>\n", tepr->packets_per_interrupt);
-	fprintf(logfile, "	<interrupts metric=\"count/sec\">%.3f</interrupts>\n", 0.000);
+	fprintf(logfile, "	<interrupts metric=\"count/sec\">%.3f</interrupts>\n", tepr->interrupts_per_sec);
+	fprintf(logfile, "	<total_interrupts metric=\"count\">%" PRIu64 "</total_interrupts>\n", tepr->total_interrupts);
 	fprintf(logfile, "	<dpcs metric=\"count/sec\">%.3f</dpcs>\n", 0.000);
 	fprintf(logfile, "	<avg_packets_per_dpc metric=\"packets/dpc\">%.3f</avg_packets_per_dpc>\n", 0.000);
 	fprintf(logfile, "	<packets_sent>%" PRIu64 "</packets_sent>\n", tepr->packets_sent);
@@ -635,7 +639,11 @@ int write_result_into_json_file(struct ntttcp_test_endpoint *tep)
 	fprintf(json_file, "        },\n");
 	fprintf(json_file, "        \"interrupt\" : {\n");
 	fprintf(json_file, "            \"metric\" : \"count/sec\",\n");
-	fprintf(json_file, "            \"value\" : \"%.3f\"\n", 0.000);
+	fprintf(json_file, "            \"value\" : \"%.3f\"\n", tepr->interrupts_per_sec);
+	fprintf(json_file, "        },\n");
+	fprintf(json_file, "        \"interruptTotal\" : {\n");
+	fprintf(json_file, "            \"metric\" : \"count\",\n");
+	fprintf(json_file, "            \"value\" : \"%" PRIu64 "\"\n", tepr->total_interrupts);
 	fprintf(json_file, "        },\n");
 	fprintf(json_file, "        \"dpcs\" : {\n");
 	fprintf(json_file, "            \"metric\" : \"count/sec\",\n");

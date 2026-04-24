@@ -213,12 +213,52 @@ class TestNtttcp:
 
     def test_show_dev_interrupts(self, ) -> None:
         common_option = "--show-dev-interrupts Hypervisor callback interrupts"
+        sender_xml = "test_interrupts_sender.xml"
+        sender_json = "test_interrupts_sender.json"
+        sender_console = "test_interrupts_sender_console.out"
+        sender_option = f"-x {sender_xml} -j {sender_json} -O {sender_console}"
         receiver_cmd, sender_cmd = self.combine_command(
-                common_option=common_option
+                common_option=common_option,
+                sender_option=sender_option
         )
         result = self.run_test(receiver_cmd, sender_cmd)
         parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
+
+        # Verify console output has interrupts
         assert parse_result.is_show_dev_interrupts() is True
+
+        # Get console interrupt metrics
+        console_info = parse_result.get_console_interrupts_info()
+        assert console_info is not None, "Console output missing interrupt metrics"
+        console_total, console_per_sec = console_info
+
+        # Verify console values are non-zero
+        assert console_total > 0, "Console total_interrupts should be > 0"
+        assert console_per_sec > 0.0, "Console interrupts_per_sec should be > 0"
+
+        # Get and verify XML interrupt metrics
+        xml_info = parse_result.get_xml_interrupts_info(sender_xml)
+        assert xml_info is not None, "XML output missing interrupt metrics"
+        xml_total, xml_per_sec = xml_info
+
+        # Verify XML values match console
+        assert xml_total == console_total, f"XML total_interrupts ({xml_total}) should match console ({console_total})"
+        assert xml_per_sec > 0.0, "XML interrupts/sec should be > 0"
+        # Allow small floating point differences
+        assert abs(xml_per_sec - console_per_sec) < 0.01, \
+            f"XML interrupts_per_sec ({xml_per_sec}) should match console ({console_per_sec})"
+
+        # Get and verify JSON interrupt metrics
+        json_info = parse_result.get_json_interrupts_info(sender_json)
+        assert json_info is not None, "JSON output missing interrupt metrics"
+        json_total, json_per_sec = json_info
+
+        # Verify JSON values match console
+        assert json_total == console_total, f"JSON total_interrupts ({json_total}) should match console ({console_total})"
+        assert json_per_sec > 0.0, "JSON interrupts/sec should be > 0"
+        assert abs(json_per_sec - console_per_sec) < 0.01, \
+            f"JSON interrupts_per_sec ({json_per_sec}) should match console ({console_per_sec})"
+
         throughput = parse_result.get_throughput_Gbps()
         assert throughput >= self.expected_throughput
 

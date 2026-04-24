@@ -194,3 +194,82 @@ class NtttcpOutput:
             return True
         else:
             return False
+
+    def get_console_interrupts_info(self) -> Optional[Tuple[int, float]]:
+        """Extract total interrupts and interrupts/sec from console output"""
+        # INFO:   total          :15
+        total_pattern = re.compile(r"total\s+:(\d+)")
+        total_match = total_pattern.findall(self.sender_stdout)
+        # INFO:   interrupts/sec :3.000
+        per_sec_pattern = re.compile(r"interrupts/sec\s+:(\d+\.\d+)")
+        per_sec_match = per_sec_pattern.findall(self.sender_stdout)
+
+        if total_match and per_sec_match:
+            total_interrupts = int(total_match[0])
+            interrupts_per_sec = float(per_sec_match[0])
+            print(f"Console - total_interrupts: {total_interrupts}, interrupts_per_sec: {interrupts_per_sec}")
+            return total_interrupts, interrupts_per_sec
+        else:
+            return None
+
+    def get_xml_interrupts_info(self, xml_filename: str) -> Optional[Tuple[int, float]]:
+        """Extract total interrupts and interrupts/sec from XML output file"""
+        try:
+            with open(xml_filename, 'r') as f:
+                xml_content = f.read()
+
+            # <total_interrupts metric="count">15</total_interrupts>
+            total_pattern = re.compile(r'<total_interrupts metric="count">(\d+)</total_interrupts>')
+            total_match = total_pattern.findall(xml_content)
+
+            # <interrupts metric="count/sec">3.000</interrupts>
+            per_sec_pattern = re.compile(r'<interrupts metric="count/sec">(\d+\.\d+)</interrupts>')
+            per_sec_match = per_sec_pattern.findall(xml_content)
+
+            if total_match and per_sec_match:
+                total_interrupts = int(total_match[0])
+                interrupts_per_sec = float(per_sec_match[0])
+                print(f"XML - total_interrupts: {total_interrupts}, interrupts_per_sec: {interrupts_per_sec}")
+                return total_interrupts, interrupts_per_sec
+            else:
+                return None
+        except Exception as e:
+            print(f"Error reading XML file: {e}")
+            return None
+
+    def get_json_interrupts_info(self, json_filename: str) -> Optional[Tuple[int, float]]:
+        """Extract total interrupts and interrupts/sec from JSON output file"""
+        try:
+            with open(json_filename, 'r') as f:
+                json_data = json.load(f)
+
+            # Find the root key (either "nttttcps" or "nttttcpr")
+            root_key = None
+            for key in json_data.keys():
+                if key.startswith("ntttcp"):
+                    root_key = key
+                    break
+
+            if not root_key:
+                return None
+
+            data = json_data[root_key]
+
+            # "interruptTotal" : { "metric" : "count", "value" : "15" }
+            total_interrupts = None
+            if "interruptTotal" in data and "value" in data["interruptTotal"]:
+                total_interrupts = int(data["interruptTotal"]["value"])
+
+            # "interrupt" : { "metric" : "count/sec", "value" : "3.000" }
+            interrupts_per_sec = None
+            if "interrupt" in data and "value" in data["interrupt"]:
+                interrupts_per_sec = float(data["interrupt"]["value"])
+
+            if total_interrupts is not None and interrupts_per_sec is not None:
+                print(f"JSON - total_interrupts: {total_interrupts}, interrupts_per_sec: {interrupts_per_sec}")
+                return total_interrupts, interrupts_per_sec
+            else:
+                return None
+        except Exception as e:
+            print(f"Error reading JSON file: {e}")
+            return None
