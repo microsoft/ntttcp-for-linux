@@ -319,6 +319,8 @@ void *create_receiver_sync_socket(void *ptr)
 	ASPRINTF(&port_str, "%d", ss->server_port);
 	if (getaddrinfo(test->bind_address, port_str, &hints, &serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");
+		close(ss->listener);
+		free(ss);
 		return NULL;
 	}
 	free(port_str);
@@ -327,18 +329,19 @@ void *create_receiver_sync_socket(void *ptr)
 	if ((ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for ip address string");
 		freeaddrinfo(serv_info);
+		close(ss->listener);
+		free(ss);
 		return NULL;
 	}
 
-	ip_address_max_size = (ss->domain == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
-	if ((ip_address_str = (char *)malloc(ip_address_max_size)) == (char *)NULL) {
-		PRINT_ERR("cannot allocate memory for ip address of peer");
-		return NULL;
-	}
+	freeaddrinfo(serv_info);
 
 	efd = epoll_create1(0);
 	if (efd == -1) {
 		PRINT_ERR("epoll_create1 failed");
+		free(ip_address_str);
+		close(ss->listener);
+		free(ss);
 		return NULL;
 	}
 
@@ -347,6 +350,9 @@ void *create_receiver_sync_socket(void *ptr)
 	if (epoll_ctl(efd, EPOLL_CTL_ADD, ss->listener, &event) != 0) {
 		PRINT_ERR("epoll_ctl failed");
 		close(efd);
+		free(ip_address_str);
+		close(ss->listener);
+		free(ss);
 		return NULL;
 	}
 
@@ -391,12 +397,16 @@ void *create_receiver_sync_socket(void *ptr)
 				if (set_socket_non_blocking(newfd) == -1) {
 					ASPRINTF(&log, "cannot set the new socket as non-blocking: %d", newfd);
 					PRINT_DBG_FREE(log);
+					close(newfd);
+					continue;
 				}
 
 				event.data.fd = newfd;
 				event.events = EPOLLIN;
 				if (epoll_ctl(efd, EPOLL_CTL_ADD, newfd, &event) != 0) {
 					PRINT_ERR("epoll_ctl failed");
+					close(newfd);
+					continue;
 				}
 				if (newfd > ss->max_fd) {
 					/* update the maximum */

@@ -228,6 +228,7 @@ void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint *e)
 
 	for (i = 0; i < total_threads; i++)
 		free(e->results->threads[i]);
+	free(e->results->threads);
 	free(e->results->init_cpu_usage);
 	free(e->results->init_cpu_ps);
 	free(e->results->init_tcp_retrans);

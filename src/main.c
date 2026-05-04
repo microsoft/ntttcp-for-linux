@@ -39,10 +39,12 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		reply_received = query_receiver_busy_state(tep->synch_socket);
 		if (reply_received == -1) {
 			PRINT_ERR("sender: failed to query receiver state");
+			close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 		if (reply_received == 1) {
 			PRINT_ERR("sender: receiver is busy with another test");
+			close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 
@@ -50,6 +52,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 							   test->warmup + test->duration + test->cooldown);
 		if (reply_received == -1) {
 			PRINT_ERR("sender: failed to negotiate test cycle time with receiver");
+			close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 		if (reply_received != test->duration) {
@@ -145,10 +148,12 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 						  tep->test->last_client ? (int)'L' : (int)'R');
 		if (reply_received == -1) {
 			PRINT_ERR("sender: failed to sync with receiver to start test");
+			close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 		if (reply_received == 0) {
 			PRINT_ERR("sender: receiver refuse to start test right now");
+			close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 
@@ -162,6 +167,8 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	if (tep->negotiated_test_cycle_time == 0) {
 		sleep(UINT_MAX);
 		/* either sleep has elapsed, or sleep was interrupted by a signal */
+		if (test->no_synch == false)
+			close(tep->synch_socket);
 		return err_code;
 	}
 

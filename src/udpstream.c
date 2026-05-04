@@ -55,7 +55,7 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
                 /* get interface name using the interface ip address */
                 if (get_interface_name_by_ip(sc->client_address, sc->domain, if_name, IFNAMSIZ) != 0) {
                         ASPRINTF(&log, "failed to get interface name by address [%s]", sc->client_address);
-                        PRINT_ERR(log);
+                        PRINT_ERR_FREE(log);
                         return NULL;
                 }
         }
@@ -63,13 +63,13 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
         /* update client information */
         if (ntttcp_update_client_info(&client_addr, sc) < 0) {
                 ASPRINTF(&log, "failed to update udp client info [%s]", sc->client_address);
-                PRINT_ERR(log);
+                PRINT_ERR_FREE(log);
                 return NULL;
         }
 
 	for (i = 0; i < sc->num_connections; i++) {
 
-		if ((sockfd = socket(sc->domain, sc->domain, 0)) < 0) {
+		if ((sockfd = socket(sc->domain, UDP, 0)) < 0) {
 			PRINT_ERR("cannot create socket endpoint");
 			sockfds[i] = -1;
 			continue;
@@ -88,7 +88,7 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
                 if (ret != 0) {
                         ASPRINTF(&log, "failed to do udp socket bind : socket domain [%d] client_port [%d] errno [%d]", 
                         sc->domain, client_port, errno);
-                        PRINT_ERR(log);
+                        PRINT_ERR_FREE(log);
                         close(sockfd);
                         sockfds[i] = -1;
                         continue;
@@ -100,7 +100,7 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
                         if (ret != NO_ERROR) {
                                 ASPRINTF(&log, "failed to do udp socket bind to device : socket domain [%d] client_port [%d] errno [%d] if_name [%s]", 
                                 sc->domain, client_port, errno, if_name);
-                                PRINT_ERR(log);
+                                PRINT_ERR_FREE(log);
                                 close(sockfd);
                                 sockfds[i] = -1;
                                 continue;
@@ -114,7 +114,7 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 		if (connect(sockfd, &serv_addr, sa_size) == -1) {
                         ASPRINTF(&log,"failed to connect socket[%d] to remote: [%s:%d]. errno = %d.",
                                 sockfd, sc->bind_address, sc->server_port, errno);
-                        PRINT_ERR(log);
+                        PRINT_ERR_FREE(log);
                         close(sockfd);
                         sockfds[i] = -1;
                         continue;
@@ -248,9 +248,13 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 				"failed to bind the socket to local address: %s on socket: %d. return = %d",
 				local_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, local_addr_str, ip_addr_max_size), sockfd, ret);
 
-			if (ret == -1) /* append more info to log */
-				ASPRINTF(&log, "%s. errcode = %d", log, errno);
+			if (ret == -1) { /* append more info to log */
+				char *old_log = log;
+				ASPRINTF(&log, "%s. errcode = %d", old_log, errno);
+				free(old_log);
+			}
 			PRINT_DBG_FREE(log);
+			close(sockfd);
 			continue;
 		} else {
 			break; /* connected */
@@ -291,5 +295,7 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 		}
 	}
 
+	free(buffer);
+	close(sockfd);
 	return (void *)nbytes;
 }

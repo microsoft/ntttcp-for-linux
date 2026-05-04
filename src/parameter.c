@@ -202,12 +202,19 @@ int process_mappings(struct ntttcp_test *test)
 
 	state = S_THREADS;
 	char *element = strdup(test->mapping);
+	if (!element) {
+		PRINT_ERR("process_mappings: failed to allocate memory");
+		return ERROR_ARGS;
+	}
+	/* strsep() modifies the element pointer; save the original for proper free() */
+	char *element_start = element;
 
 	while ((token = strsep(&element, ",")) != NULL) {
 		if (S_THREADS == state) {
 			threads = atoi(token);
 
 			if (1 > threads) {
+				free(element_start);
 				return ERROR_ARGS;
 			}
 			test->server_ports = threads;
@@ -226,6 +233,7 @@ int process_mappings(struct ntttcp_test *test)
 
 				if (cpu < -1 || cpu > total_cpus - 1) {
 					PRINT_ERR("process_mappings: cpu specified is not in allowed scope");
+					free(element_start);
 					return ERROR_ARGS;
 				}
 				test->cpu_affinity = cpu;
@@ -236,9 +244,15 @@ int process_mappings(struct ntttcp_test *test)
 			++state;
 		} else {
 			PRINT_ERR("process_mappings: unexpected parameters in mapping");
+			free(element_start);
 			return ERROR_ARGS;
 		}
 	}
+	/*
+	 * element_start cannot be freed here: in the S_HOST case, test->bind_address
+	 * points into this buffer and must remain valid for the lifetime of the test.
+	 * The allocation is intentionally kept alive (small, one-time at startup).
+	 */
 	return NO_ERROR;
 }
 
