@@ -273,5 +273,116 @@ class TestNtttcp:
         throughput = parse_result.get_throughput_Gbps()
         assert int(throughput) in range(throughput_limit_gbps - 1, throughput_limit_gbps + 1)
 
+    def test_udp_sender_socket_creation_regression(self) -> None:
+        """
+        Regression test for UDP sender socket creation and connection handling.
+        Tests run_ntttcp_sender_udp4_stream end-to-end with multiple connections
+        to ensure sockets are created, bound, and connected properly.
+
+        This test exercises:
+        - Socket creation loop in run_ntttcp_sender_udp4_stream
+        - Socket binding with proper error handling
+        - Connection establishment to receiver
+        - Data transfer with multiple UDP connections
+        - Proper cleanup of socket file descriptors
+        """
+        n_server_ports = 2
+        n_threads = 3
+        n_connections = 4
+        total_connections = n_server_ports * n_threads * n_connections
+
+        # Test UDP sender with multiple connections per thread
+        common_option = f"-u -P {n_server_ports}"
+        sender_option = f"-n {n_threads} -l {n_connections} -V"
+        receiver_cmd, sender_cmd = self.combine_command(
+            common_option=common_option,
+            sender_option=sender_option
+        )
+
+        result = self.run_test(receiver_cmd, sender_cmd)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
+
+        # Verify all connections were created successfully
+        connections_created = parse_result.get_multi_threads_info()
+        assert connections_created == total_connections, \
+            f"Expected {total_connections} UDP connections, but only {connections_created} were created"
+
+        # Verify data was transferred (UDP should show some throughput)
+        throughput = parse_result.get_throughput_Gbps()
+        assert throughput > 0, "UDP sender should transfer data successfully"
+
+        # Verify no socket creation errors in output
+        assert "cannot create socket endpoint" not in result.sender_stdout, \
+            "Socket creation should succeed for all UDP connections"
+        assert "failed to connect socket" not in result.sender_stdout, \
+            "Socket connection should succeed for all UDP connections"
+
+        self.log.write_info(f"UDP sender regression test passed: {connections_created} connections, {throughput:.2f} Gbps")
+
+    def test_udp_sender_single_connection(self) -> None:
+        """
+        Test UDP sender with single connection to verify basic functionality.
+        This is a simpler test case to catch basic UDP sender issues.
+        """
+        common_option = "-u"
+        sender_option = "-V"
+        receiver_cmd, sender_cmd = self.combine_command(
+            common_option=common_option,
+            sender_option=sender_option
+        )
+
+        result = self.run_test(receiver_cmd, sender_cmd)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
+
+        # Verify data transfer occurred
+        throughput = parse_result.get_throughput_Gbps()
+        assert throughput > 0, "UDP sender should transfer data with single connection"
+
+        # Verify no errors
+        assert "cannot create socket endpoint" not in result.sender_stdout
+        assert "failed to connect socket" not in result.sender_stdout
+
+        self.log.write_info(f"UDP single connection test passed: {throughput:.2f} Gbps")
+
+    def test_udp_sender_with_custom_port(self) -> None:
+        """
+        Test UDP sender with custom starting port to verify socket binding works correctly.
+        This exercises the client_port binding logic in run_ntttcp_sender_udp4_stream.
+        """
+        starting_port = 15000
+        n_server_ports = 2
+        n_threads = 2
+        n_connections = 3
+        total_connections = n_server_ports * n_threads * n_connections
+
+        common_option = f"-u -p {starting_port} -P {n_server_ports}"
+        sender_option = f"-n {n_threads} -l {n_connections} -V"
+        receiver_cmd, sender_cmd = self.combine_command(
+            common_option=common_option,
+            sender_option=sender_option
+        )
+
+        result = self.run_test(receiver_cmd, sender_cmd)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
+
+        # Verify connections were created
+        connections_created = parse_result.get_multi_threads_info()
+        assert connections_created == total_connections, \
+            f"Expected {total_connections} UDP connections with custom port"
+
+        # Verify custom port appears in UDP stream messages
+        assert f"--> 127.0.0.1:{starting_port}" in result.sender_stdout, \
+            f"Expected UDP streams to connect to custom port {starting_port}"
+
+        # Verify data transfer
+        throughput = parse_result.get_throughput_Gbps()
+        assert throughput > 0, "UDP sender should transfer data with custom port"
+
+        # Verify no errors
+        assert "cannot create socket endpoint" not in result.sender_stdout
+        assert "failed to connect socket" not in result.sender_stdout
+
+        self.log.write_info(f"UDP custom port test passed: {connections_created} connections, {throughput:.2f} Gbps")
+
 if __name__ == "__main__":
     pytest.main()

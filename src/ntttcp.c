@@ -18,7 +18,7 @@ struct ntttcp_test *new_ntttcp_test()
 	return test;
 }
 
-void default_ntttcp_test(struct ntttcp_test *test)
+int default_ntttcp_test(struct ntttcp_test *test)
 {
 	test->server_role		= false;
 	test->client_role		= false;
@@ -32,7 +32,7 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->bind_address		= strdup("0.0.0.0");
 	if (!test->bind_address) {
 		PRINT_ERR("failed to allocate memory for bind_address in defaults");
-		exit(-1);
+		return ERROR_MEMORY_ALLOC;
 	}
 	test->client_address		= "0.0.0.0";
 	test->cpu_affinity		= -1; /* no hard cpu affinity */
@@ -63,6 +63,7 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->json_log_filename		= DEFAULT_JSON_LOG_FILE_NAME; /* "ntttcp-for-linux-log.json" */
 	test->quiet			= false;
 	test->verbose			= false;
+	return NO_ERROR;
 }
 
 bool is_running_tty(void)

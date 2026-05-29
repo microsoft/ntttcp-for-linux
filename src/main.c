@@ -39,12 +39,14 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		reply_received = query_receiver_busy_state(tep->synch_socket);
 		if (reply_received == -1) {
 			PRINT_ERR("sender: failed to query receiver state");
-			close(tep->synch_socket);
+			if (test->no_synch == false)
+				close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 		if (reply_received == 1) {
 			PRINT_ERR("sender: receiver is busy with another test");
-			close(tep->synch_socket);
+			if (test->no_synch == false)
+				close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 
@@ -52,7 +54,8 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 							   test->warmup + test->duration + test->cooldown);
 		if (reply_received == -1) {
 			PRINT_ERR("sender: failed to negotiate test cycle time with receiver");
-			close(tep->synch_socket);
+			if (test->no_synch == false)
+				close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 		if (reply_received != test->duration) {
@@ -148,12 +151,14 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 						  tep->test->last_client ? (int)'L' : (int)'R');
 		if (reply_received == -1) {
 			PRINT_ERR("sender: failed to sync with receiver to start test");
-			close(tep->synch_socket);
+			if (test->no_synch == false)
+				close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 		if (reply_received == 0) {
 			PRINT_ERR("sender: receiver refuse to start test right now");
-			close(tep->synch_socket);
+			if (test->no_synch == false)
+				close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 
@@ -340,7 +345,14 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 
-	default_ntttcp_test(test);
+	err_code = default_ntttcp_test(test);
+	if (err_code != NO_ERROR) {
+		PRINT_ERR("main: error when initializing default test parameters");
+		free(test->bind_address);
+		free(test);
+		exit(err_code);
+	}
+
 	err_code = parse_arguments(test, argc, argv);
 	if (err_code != NO_ERROR) {
 		PRINT_ERR("main: error when parsing args");

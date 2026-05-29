@@ -195,7 +195,7 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 	char *log;
 
 	int ret = 0; /* hold function return value */
-	int sockfd = 0; /* socket file descriptor */
+	int sockfd = -1; /* socket file descriptor */
 	char *buffer; /* receive buffer */
 	char *local_addr_str; /* used to get local ip address */
 	int ip_addr_max_size; /* used to get local ip address */

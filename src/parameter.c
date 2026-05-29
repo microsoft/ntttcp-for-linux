@@ -240,6 +240,7 @@ int process_mappings(struct ntttcp_test *test)
 			}
 			++state;
 		} else if (S_HOST == state) {
+			free(test->bind_address);
 			test->bind_address = strdup(token);
 			if (!test->bind_address) {
 				PRINT_ERR("process_mappings: failed to allocate memory for bind_address");
