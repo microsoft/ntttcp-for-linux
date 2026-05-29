@@ -319,6 +319,7 @@ void *create_receiver_sync_socket(void *ptr)
 	ASPRINTF(&port_str, "%d", ss->server_port);
 	if (getaddrinfo(test->bind_address, port_str, &hints, &serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");
+		free(port_str);
 		close(ss->listener);
 		free(ss);
 		return NULL;

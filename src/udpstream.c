@@ -214,6 +214,7 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 	ASPRINTF(&port_str, "%d", ss->server_port);
 	if (getaddrinfo(ss->bind_address, port_str, &hints, &serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");
+		free(port_str);
 		return 0;
 	}
 	free(port_str);
@@ -255,6 +256,7 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 			}
 			PRINT_DBG_FREE(log);
 			close(sockfd);
+			sockfd = -1;
 			continue;
 		} else {
 			break; /* connected */
@@ -265,7 +267,8 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 	if (p == NULL) {
 		ASPRINTF(&log, "cannot bind the socket on address: %s", ss->bind_address);
 		PRINT_ERR_FREE(log);
-		close(sockfd);
+		if (sockfd >= 0)
+			close(sockfd);
 		return 0;
 	}
 

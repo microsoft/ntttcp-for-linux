@@ -29,7 +29,11 @@ void default_ntttcp_test(struct ntttcp_test *test)
 	test->use_client_address	= false;
 	test->exit_after_done		= true;
 	test->mapping			= "16,*,*";
-	test->bind_address		= "0.0.0.0";
+	test->bind_address		= strdup("0.0.0.0");
+	if (!test->bind_address) {
+		PRINT_ERR("failed to allocate memory for bind_address in defaults");
+		exit(-1);
+	}
 	test->client_address		= "0.0.0.0";
 	test->cpu_affinity		= -1; /* no hard cpu affinity */
 	test->server_ports		= DEFAULT_NUM_SERVER_PORTS;	 //default:16 */
@@ -237,6 +241,7 @@ void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint *e)
 	free(e->results->final_tcp_retrans);
 	free(e->results);
 	free(e->threads);
+	free(e->test->bind_address);
 	free(e->test);
 	free(e);
 }
