@@ -371,7 +371,7 @@ class TestNtttcp:
             f"Expected {total_connections} UDP connections with custom port"
 
         # Verify custom port appears in UDP stream messages
-        assert f"--> 127.0.0.1:{starting_port}" in result.sender_stdout, \
+        assert f"--> {self.loopback_interface}:{starting_port}" in result.sender_stdout, \
             f"Expected UDP streams to connect to custom port {starting_port}"
 
         # Verify data transfer

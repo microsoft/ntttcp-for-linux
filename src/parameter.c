@@ -439,6 +439,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 	int opt;
+	int err_code;
 
 	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:a:n:l:6up:f::b:B:W:t:C:NO::x::j::QVh", longopts, NULL)) != -1) {
 		switch (opt) {
@@ -491,7 +492,9 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 		case 'm':
 			test->mapping = optarg;
-			process_mappings(test);
+			err_code = process_mappings(test);
+			if (err_code != NO_ERROR)
+				return err_code;
 			break;
 
 		case 'P':

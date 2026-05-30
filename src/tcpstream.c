@@ -370,12 +370,17 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 				local_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, local_addr_str, ip_addr_max_size),
 				sockfd, i);
 
-			if (i == -1) { /* append more info to log */
+			if (i == -1 && log != NULL) { /* append more info to log */
 				char *old_log = log;
 				ASPRINTF(&log, "%s. errcode = %d", old_log, errno);
-				free(old_log);
+				if (log != NULL) {
+					free(old_log);
+				} else {
+					log = old_log; /* restore original message if second ASPRINTF failed */
+				}
 			}
-			PRINT_DBG_FREE(log);
+			if (log != NULL)
+				PRINT_DBG_FREE(log);
 			close(sockfd);
 			continue;
 		} else {

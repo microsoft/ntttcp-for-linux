@@ -29,11 +29,6 @@ int default_ntttcp_test(struct ntttcp_test *test)
 	test->use_client_address	= false;
 	test->exit_after_done		= true;
 	test->mapping			= "16,*,*";
-	test->bind_address		= strdup("0.0.0.0");
-	if (!test->bind_address) {
-		PRINT_ERR("failed to allocate memory for bind_address in defaults");
-		return ERROR_MEMORY_ALLOC;
-	}
 	test->client_address		= "0.0.0.0";
 	test->cpu_affinity		= -1; /* no hard cpu affinity */
 	test->server_ports		= DEFAULT_NUM_SERVER_PORTS;	 //default:16 */
@@ -63,6 +58,14 @@ int default_ntttcp_test(struct ntttcp_test *test)
 	test->json_log_filename		= DEFAULT_JSON_LOG_FILE_NAME; /* "ntttcp-for-linux-log.json" */
 	test->quiet			= false;
 	test->verbose			= false;
+
+	/* Allocate bind_address last to ensure all other fields are initialized if allocation fails */
+	test->bind_address		= strdup("0.0.0.0");
+	if (!test->bind_address) {
+		PRINT_ERR("failed to allocate memory for bind_address in defaults");
+		return ERROR_MEMORY_ALLOC;
+	}
+
 	return NO_ERROR;
 }
 

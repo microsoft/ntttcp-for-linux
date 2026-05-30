@@ -249,12 +249,17 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 				"failed to bind the socket to local address: %s on socket: %d. return = %d",
 				local_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, local_addr_str, ip_addr_max_size), sockfd, ret);
 
-			if (ret == -1) { /* append more info to log */
+			if (ret == -1 && log != NULL) { /* append more info to log */
 				char *old_log = log;
 				ASPRINTF(&log, "%s. errcode = %d", old_log, errno);
-				free(old_log);
+				if (log != NULL) {
+					free(old_log);
+				} else {
+					log = old_log; /* restore original message if second ASPRINTF failed */
+				}
 			}
-			PRINT_DBG_FREE(log);
+			if (log != NULL)
+				PRINT_DBG_FREE(log);
 			close(sockfd);
 			sockfd = -1;
 			continue;
