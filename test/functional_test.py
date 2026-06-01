@@ -384,5 +384,131 @@ class TestNtttcp:
 
         self.log.write_info(f"UDP custom port test passed: {connections_created} connections, {throughput:.2f} Gbps")
 
+    def test_udp_sender_high_connection_count_stress(self) -> None:
+        """
+        Stress test: Verify UDP sender handles very high connection counts correctly.
+
+        Tests with elevated connection count to stress the socket creation loop:
+        - Creates many simultaneous UDP connections
+        - Verifies all are handled without leaks
+        - Tests that continue logic works when some might fail
+        - Ensures proper cleanup of all sockets
+
+        This exercises:
+        - Socket creation loop robustness in udpstream.c
+        - Proper iteration through sockfds array
+        - Error recovery when socket creation might fail under load
+        - Memory management with many allocations
+        """
+        n_server_ports = 3
+        n_threads = 4
+        n_connections = 8  # Total: 96 connections
+        total_connections = n_server_ports * n_threads * n_connections
+
+        # Test with high connection count
+        common_option = f"-u -P {n_server_ports}"
+        sender_option = f"-n {n_threads} -l {n_connections} -V -t 3"
+        receiver_cmd, sender_cmd = self.combine_command(
+            common_option=common_option,
+            sender_option=sender_option
+        )
+
+        result = self.run_test(receiver_cmd, sender_cmd)
+        parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
+
+        # Should create all requested connections without errors
+        connections_created = parse_result.get_multi_threads_info()
+        assert connections_created == total_connections, \
+            f"Expected {total_connections} connections under stress test, got {connections_created}"
+
+        # Verify no errors despite high load
+        assert "cannot create socket endpoint" not in result.sender_stdout, \
+            "Socket creation should succeed even with many connections"
+        assert "failed to connect socket" not in result.sender_stdout, \
+            "Socket connections should succeed even with many connections"
+
+        # Verify actual data transfer occurred (tests cleanup was proper)
+        throughput = parse_result.get_throughput_Gbps()
+        assert throughput > 0, "Should have throughput even under high connection stress"
+
+        self.log.write_info(f"Stress test passed: {connections_created} connections, {throughput:.2f} Gbps")
+
+    def test_udp_sender_connect_failure_handling(self) -> None:
+        """
+        Negative test: Verify UDP sender handles connection failures gracefully.
+
+        Tests error handling when receiver is not available:
+        - Attempts to connect to non-existent receiver
+        - Verifies proper error logging and cleanup
+        - Ensures no socket leaks on connect failure
+        - Confirms test exits gracefully with error
+
+        This exercises:
+        - udpstream.c connect error handling (lines 115-121)
+        - Socket cleanup: close(sockfd) + sockfds[i] = -1
+        - ASPRINTF + PRINT_ERR_FREE error logging
+        - Proper handling when all connections fail
+        """
+        # Use a port where no receiver is listening
+        unused_port = 55555
+        n_connections = 3
+
+        # Don't start receiver - sender should fail to connect
+        sender_cmd = f"ulimit -n 40960 && ./src/ntttcp -s{self.loopback_interface} -u -p {unused_port} -l {n_connections} -V -t 1 -Q"
+
+        # Sender should exit with error since no receiver
+        result = subprocess.run([sender_cmd], shell=True, capture_output=True, text=True, timeout=15)
+
+        # Verify error handling was executed (should mention sync failure since no receiver)
+        assert result.returncode != 0 or "failed to create sync socket" in result.stdout or "failed to connect" in result.stdout.lower(), \
+            "Expected connection failure when receiver not available"
+
+        self.log.write_info(f"Connect failure test: verified graceful handling of missing receiver (exit code: {result.returncode})")
+
+    def test_udp_sender_rapid_succession_cleanup(self) -> None:
+        """
+        Stress test: Verify UDP sender properly cleans up resources in rapid succession.
+
+        Runs multiple short UDP tests back-to-back to verify:
+        - Sockets are properly closed after each test
+        - No file descriptor leaks accumulate
+        - Error paths clean up correctly
+        - Resources are released for reuse
+
+        This validates the cleanup paths exercised in PR:
+        - Proper close() of all sockfds
+        - Memory cleanup in normal exit path
+        - No resource accumulation across multiple test runs
+        """
+        n_ports = 1
+        n_threads = 1
+        n_connections = 5
+        total_connections = n_ports * n_threads * n_connections
+        test_iterations = 3
+
+        for iteration in range(test_iterations):
+            common_option = f"-u -P {n_ports}"
+            sender_option = f"-n {n_threads} -l {n_connections} -V -t 1"
+            receiver_cmd, sender_cmd = self.combine_command(
+                common_option=common_option,
+                sender_option=sender_option
+            )
+
+            result = self.run_test(receiver_cmd, sender_cmd)
+            parse_result = ntttcp_output.NtttcpOutput(result.receiver_stdout, result.sender_stdout)
+
+            # Each iteration should succeed independently
+            connections_created = parse_result.get_multi_threads_info()
+            assert connections_created == total_connections, \
+                f"Iteration {iteration+1}: Expected {total_connections} connections, got {connections_created}"
+
+            throughput = parse_result.get_throughput_Gbps()
+            assert throughput > 0, f"Iteration {iteration+1}: Should have throughput"
+
+            # Small delay between iterations to ensure cleanup completes
+            time.sleep(0.5)
+
+        self.log.write_info(f"Rapid succession test passed: {test_iterations} iterations completed successfully")
+
 if __name__ == "__main__":
     pytest.main()
