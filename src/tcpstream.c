@@ -326,6 +326,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 	ASPRINTF(&port_str, "%d", ss->server_port);
 	if (getaddrinfo(ss->bind_address, port_str, &hints, &serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");
+		free(port_str);
 		return -1;
 	}
 	free(port_str);
@@ -349,17 +350,17 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0) {
 			ASPRINTF(&log, "cannot set socket options: %d", sockfd);
 			PRINT_ERR_FREE(log);
+			close(sockfd);
 			freeaddrinfo(serv_info);
 			free(local_addr_str);
-			close(sockfd);
 			return -1;
 		}
 		if (set_socket_non_blocking(sockfd) == -1) {
 			ASPRINTF(&log, "cannot set socket as non-blocking: %d", sockfd);
 			PRINT_ERR_FREE(log);
+			close(sockfd);
 			freeaddrinfo(serv_info);
 			free(local_addr_str);
-			close(sockfd);
 			return -1;
 		}
 
@@ -369,9 +370,18 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 				local_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, local_addr_str, ip_addr_max_size),
 				sockfd, i);
 
-			if (i == -1) /* append more info to log */
-				ASPRINTF(&log, "%s. errcode = %d", log, errno);
-			PRINT_DBG_FREE(log);
+			if (i == -1 && log != NULL) { /* append more info to log */
+				char *old_log = log;
+				ASPRINTF(&log, "%s. errcode = %d", old_log, errno);
+				if (log != NULL) {
+					free(old_log);
+				} else {
+					log = old_log; /* restore original message if second ASPRINTF failed */
+				}
+			}
+			if (log != NULL)
+				PRINT_DBG_FREE(log);
+			close(sockfd);
 			continue;
 		} else {
 			break; /* connected */
@@ -382,7 +392,6 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 	if (p == NULL) {
 		ASPRINTF(&log, "cannot bind the socket on address: %s", ss->bind_address);
 		PRINT_ERR_FREE(log);
-		close(sockfd);
 		return -1;
 	}
 
@@ -495,11 +504,15 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 					if (set_socket_non_blocking(newfd) == -1) {
 						ASPRINTF(&log, "cannot set the new socket as non-blocking: %d error [%s]", newfd, strerror(errno));
 						PRINT_DBG_FREE(log);
+						close(newfd);
+						continue;
 					}
 
 					if (ss->tcp_nodelay && set_socket_tcp_nodelay(newfd) == -1) {
 						ASPRINTF(&log, "cannot set the TCP_NODELAY for socket [%d] error [%s]", newfd, strerror(errno));
 						PRINT_DBG_FREE(log);
+						close(newfd);
+						continue;
 					}
 
 					local_addr_size = sizeof(local_addr);
@@ -522,9 +535,11 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 
 					event.data.fd = newfd;
 					event.events = EPOLLIN;
-					if (epoll_ctl(efd, EPOLL_CTL_ADD, newfd, &event) != 0)
+					if (epoll_ctl(efd, EPOLL_CTL_ADD, newfd, &event) != 0) {
 						PRINT_ERR("epoll_ctl failed");
-
+						close(newfd);
+						continue;
+					}
 					/* if there is no synch thread, if any new connection coming, indicates ss started */
 					if (ss->no_synch)
 						turn_on_light();
@@ -635,11 +650,15 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 				if (set_socket_non_blocking(newfd) == -1) {
 					ASPRINTF(&log, "cannot set the new socket as non-blocking: %d error [%s]", newfd, strerror(errno));
 					PRINT_DBG_FREE(log);
+					close(newfd);
+					continue;
 				}
                                 
 				if (ss->tcp_nodelay && set_socket_tcp_nodelay(newfd) == -1) {
 					ASPRINTF(&log, "cannot set the TCP_NODELAY for socket [%d] error [%s]", newfd, strerror(errno));
 					PRINT_DBG_FREE(log);
+					close(newfd);
+					continue;
 				}
 
 				FD_SET(newfd, &ss->read_set); /* add the new one to read_set */

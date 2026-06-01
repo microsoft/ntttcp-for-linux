@@ -87,8 +87,10 @@ uint64_t get_interrupts_from_proc_by_dev(char *dev_name)
 		PRINT_ERR("Cannot open /proc/interrupts");
 		return 0;
 	}
-	if (!strcmp(dev_name, ""))
+	if (!strcmp(dev_name, "")) {
+		fclose(file);
 		return 0;
+	}
 
 	/* the max number of chars in each line = 64 + 12 chars/cpu * 1024 cpus + 128 = 12,480 */
 	char buffer[12480];
