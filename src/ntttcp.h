@@ -143,7 +143,7 @@ struct ntttcp_stream_server{
 };
 
 struct ntttcp_test *new_ntttcp_test();
-void default_ntttcp_test(struct ntttcp_test *test);
+int default_ntttcp_test(struct ntttcp_test *test);
 
 struct ntttcp_test_endpoint *new_ntttcp_test_endpoint(struct ntttcp_test *test, int endpoint_role);
 void set_ntttcp_test_endpoint_test_continuous(struct ntttcp_test_endpoint* e);
