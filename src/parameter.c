@@ -202,12 +202,19 @@ int process_mappings(struct ntttcp_test *test)
 
 	state = S_THREADS;
 	char *element = strdup(test->mapping);
+	if (!element) {
+		PRINT_ERR("process_mappings: failed to allocate memory");
+		return ERROR_ARGS;
+	}
+	/* strsep() modifies the element pointer; save the original for proper free() in all paths */
+	char *element_start = element;
 
 	while ((token = strsep(&element, ",")) != NULL) {
 		if (S_THREADS == state) {
 			threads = atoi(token);
 
 			if (1 > threads) {
+				free(element_start);
 				return ERROR_ARGS;
 			}
 			test->server_ports = threads;
@@ -226,19 +233,28 @@ int process_mappings(struct ntttcp_test *test)
 
 				if (cpu < -1 || cpu > total_cpus - 1) {
 					PRINT_ERR("process_mappings: cpu specified is not in allowed scope");
+					free(element_start);
 					return ERROR_ARGS;
 				}
 				test->cpu_affinity = cpu;
 			}
 			++state;
 		} else if (S_HOST == state) {
-			test->bind_address = token;
+			free(test->bind_address);
+			test->bind_address = strdup(token);
+			if (!test->bind_address) {
+				PRINT_ERR("process_mappings: failed to allocate memory for bind_address");
+				free(element_start);
+				return ERROR_ARGS;
+			}
 			++state;
 		} else {
 			PRINT_ERR("process_mappings: unexpected parameters in mapping");
+			free(element_start);
 			return ERROR_ARGS;
 		}
 	}
+	free(element_start);
 	return NO_ERROR;
 }
 
@@ -255,8 +271,14 @@ int verify_args(struct ntttcp_test *test)
 		return ERROR_ARGS;
 	}
 
-	if (test->domain == AF_INET6 && strcmp(test->bind_address, "0.0.0.0") == 0)
-		test->bind_address = "::";
+	if (test->domain == AF_INET6 && strcmp(test->bind_address, "0.0.0.0") == 0) {
+		free(test->bind_address);
+		test->bind_address = strdup("::");
+		if (!test->bind_address) {
+			PRINT_ERR("failed to allocate memory for bind_address");
+			return ERROR_ARGS;
+		}
+	}
 
 	if (test->domain == AF_INET6 && !strstr(test->bind_address, ":")) {
 		PRINT_ERR("invalid ipv6 address provided");
@@ -429,10 +451,21 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			}
 
 			if (optarg) {
-				test->bind_address = optarg;
+				free(test->bind_address);
+				test->bind_address = strdup(optarg);
+				if (!test->bind_address) {
+					PRINT_ERR("failed to allocate memory for bind_address");
+					exit(ERROR_ARGS);
+				}
 			} else {
-				if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
-					test->bind_address = argv[optind++];
+				if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0]) {
+					free(test->bind_address);
+					test->bind_address = strdup(argv[optind++]);
+					if (!test->bind_address) {
+						PRINT_ERR("failed to allocate memory for bind_address");
+						exit(ERROR_ARGS);
+					}
+				}
 			}
 			break;
 

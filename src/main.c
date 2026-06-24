@@ -358,6 +358,7 @@ int main(int argc, char **argv)
 	if (err_code != NO_ERROR) {
 		PRINT_ERR("main: error when parsing args");
 		print_flags(test);
+		free(test->bind_address);
 		free(test);
 		exit(-1);
 	}
@@ -366,6 +367,7 @@ int main(int argc, char **argv)
 	if (err_code != NO_ERROR) {
 		PRINT_ERR("main: error when verifying the args");
 		print_flags(test);
+		free(test->bind_address);
 		free(test);
 		exit(-1);
 	}
@@ -377,6 +379,7 @@ int main(int argc, char **argv)
 
 	if (!check_resource_limit(test)) {
 		PRINT_ERR("main: error when checking resource limits");
+		free(test->bind_address);
 		free(test);
 		exit(-1);
 	}
