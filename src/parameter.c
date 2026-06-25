@@ -294,17 +294,17 @@ int verify_args(struct ntttcp_test *test)
 
 	if (test->domain == AF_INET6 && strcmp(test->client_address, "0.0.0.0") == 0)
 		test->client_address = "::";
-    
-        if (test->use_client_address && test->server_role) {
-                PRINT_ERR("source interface address ('-a') is only for sender or client");
-                return ERROR_ARGS;
-        }
+
+	if (test->use_client_address && test->server_role) {
+		PRINT_ERR("source interface address ('-a') is only for sender or client");
+		return ERROR_ARGS;
+	}
 
 	/* validate ip address */
 	if (test->use_client_address && validate_ip_address(test->client_address) != NO_ERROR) {
-                PRINT_ERR("invalid client address");
-                return ERROR_ARGS;
-        }
+		PRINT_ERR("invalid client address");
+		return ERROR_ARGS;
+    }
 
 	if (!test->server_role && !test->client_role) {
 		PRINT_INFO("no role specified. use receiver role");
@@ -457,7 +457,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 				char *new_addr = strdup(optarg);
 				if (!new_addr) {
 					PRINT_ERR("failed to allocate memory for bind_address");
-					exit(ERROR_MEMORY_ALLOC);
+					return ERROR_MEMORY_ALLOC;
 				}
 				free(test->bind_address);
 				test->bind_address = new_addr;
@@ -466,7 +466,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 					char *new_addr = strdup(argv[optind++]);
 					if (!new_addr) {
 						PRINT_ERR("failed to allocate memory for bind_address");
-						exit(ERROR_MEMORY_ALLOC);
+						return ERROR_MEMORY_ALLOC;
 					}
 					free(test->bind_address);
 					test->bind_address = new_addr;
@@ -628,7 +628,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		case 'h':
 		default:
 			print_usage();
-			exit(ERROR_ARGS);
+			return ERROR_ARGS;
 		}
 	}
 	return NO_ERROR;

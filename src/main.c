@@ -337,7 +337,7 @@ int main(int argc, char **argv)
 	test = new_ntttcp_test();
 	if (!test) {
 		PRINT_ERR("main: error when creating new test");
-		exit(-1);
+		exit(ERROR_GENERAL);
 	}
 
 	// Handle error return from default_ntttcp_test
@@ -355,7 +355,7 @@ int main(int argc, char **argv)
 		print_flags(test);
 		free(test->bind_address);
 		free(test);
-		exit(-1);
+		exit(err_code);
 	}
 
 	err_code = verify_args(test);
@@ -364,7 +364,7 @@ int main(int argc, char **argv)
 		print_flags(test);
 		free(test->bind_address);
 		free(test);
-		exit(-1);
+		exit(err_code);
 	}
 
 	prepare_logging(test->verbose, test->save_console_log, test->console_log_filename);
@@ -376,7 +376,7 @@ int main(int argc, char **argv)
 		PRINT_ERR("main: error when checking resource limits");
 		free(test->bind_address);
 		free(test);
-		exit(-1);
+		exit(ERROR_GENERAL);
 	}
 
 	turn_off_light();
