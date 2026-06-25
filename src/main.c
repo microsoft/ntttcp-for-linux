@@ -350,6 +350,12 @@ int main(int argc, char **argv)
 	}
 
 	err_code = parse_arguments(test, argc, argv);
+	if (err_code == INFO_HELP_DISPLAYED) {
+		free(test->bind_address);
+		free(test);
+		exit(NO_ERROR);
+	}
+
 	if (err_code != NO_ERROR) {
 		PRINT_ERR("main: error when parsing args");
 		print_flags(test);

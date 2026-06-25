@@ -304,7 +304,7 @@ int verify_args(struct ntttcp_test *test)
 	if (test->use_client_address && validate_ip_address(test->client_address) != NO_ERROR) {
 		PRINT_ERR("invalid client address");
 		return ERROR_ARGS;
-    }
+	}
 
 	if (!test->server_role && !test->client_role) {
 		PRINT_INFO("no role specified. use receiver role");
@@ -626,6 +626,9 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			break;
 
 		case 'h':
+			print_usage();
+			return INFO_HELP_DISPLAYED;
+
 		default:
 			print_usage();
 			return ERROR_ARGS;

@@ -61,6 +61,7 @@
 #define THREAD_STACK_SIZE		65536
 
 #define NO_ERROR			0
+#define INFO_HELP_DISPLAYED		1
 #define ERROR_GENERAL			-1000
 #define ERROR_ARGS			-1001
 #define ERROR_MEMORY_ALLOC		-1002
