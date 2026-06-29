@@ -121,3 +121,4 @@ int  ntttcp_bind_to_device(int sockfd, struct ntttcp_stream_client *sc, char if_
 int  ntttcp_bind_socket(int sockfd, struct sockaddr_storage *local_addr);
 int  validate_ip_address(const char *ip_str);
 int  set_socket_tcp_nodelay(int sockfd);
+int  map_error_code_to_exit_status(int err_code);
