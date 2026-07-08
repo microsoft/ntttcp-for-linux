@@ -59,11 +59,7 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 		/* get interface name using the interface ip address */
 		if (get_interface_name_by_ip(sc->client_address, sc->domain, if_name, IFNAMSIZ) != 0) {
 			ASPRINTF(&log, "failed to get interface name by address [%s]", sc->client_address);
-			if (log != NULL) {
-				PRINT_ERR_FREE(log);
-			} else {
-				PRINT_ERR("failed to get interface name by address");
-			}
+			PRINT_ERR_FREE(log);
 			return NULL;
 		}
 	}
@@ -71,11 +67,7 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 	/* update client information */
 	if (ntttcp_update_client_info(&client_addr, sc) < 0) {
 		ASPRINTF(&log, "failed to update udp client info [%s]", sc->client_address);
-		if (log != NULL) {
-			PRINT_ERR_FREE(log);
-		} else {
-			PRINT_ERR("failed to update udp client info");
-		}
+		PRINT_ERR_FREE(log);
 		return NULL;
 	}
 
@@ -93,65 +85,49 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 		 */
 		client_port = (sc->num_connections > 1 && sc->client_port != 0) ? sc->client_port + i : sc->client_port;
 
-		/* update client port information */
-		ntttcp_update_client_port_info(&client_addr, client_port);
+                /* update client port information */
+                ntttcp_update_client_port_info(&client_addr, client_port);
 
-		ret = ntttcp_bind_socket(sockfd, &client_addr);
-		if (ret != 0) {
-			ASPRINTF(&log, "failed to do udp socket bind : socket domain [%d] client_port [%d] errno [%d]",
-					 sc->domain, client_port, errno);
-			if (log != NULL) {
-				PRINT_ERR_FREE(log);
-			} else {
-				PRINT_ERR("failed to do udp socket bind");
-			}
-			close(sockfd);
-			sockfds[i] = -1;
-			continue;
-		}
-
-		/* perform SO_BINDTODEVICE operation for a socket */
-		if (sc->use_client_address) {
-			ret = ntttcp_bind_to_device(sockfd, sc, if_name);
-			if (ret != NO_ERROR) {
-				ASPRINTF(&log, "failed to do udp socket bind to device : socket domain [%d] client_port [%d] errno [%d] if_name [%s]",
-				sc->domain, client_port, errno, if_name);
-				if (log != NULL) {
-					PRINT_ERR_FREE(log);
-				} else {
-					PRINT_ERR("failed to do udp socket bind to device");
-				}
-				close(sockfd);
-				sockfds[i] = -1;
-				continue;
-			}
-		}
+                ret = ntttcp_bind_socket(sockfd, &client_addr);
+                if (ret != 0) {
+                        ASPRINTF(&log, "failed to do udp socket bind : socket domain [%d] client_port [%d] errno [%d]", 
+                        sc->domain, client_port, errno);
+                        PRINT_ERR_FREE(log);
+                        close(sockfd);
+                        sockfds[i] = -1;
+                        continue;
+                }
+                
+                /* perform SO_BINDTODEVICE operation for a socket */
+                if (sc->use_client_address) {
+                        ret = ntttcp_bind_to_device(sockfd, sc, if_name);
+                        if (ret != NO_ERROR) {
+                                ASPRINTF(&log, "failed to do udp socket bind to device : socket domain [%d] client_port [%d] errno [%d] if_name [%s]", 
+                                sc->domain, client_port, errno, if_name);
+                                PRINT_ERR_FREE(log);
+                                close(sockfd);
+                                sockfds[i] = -1;
+                                continue;
+                        }
+                }
 
 		/* set socket rate limit if specified by user */
 		if (sc->socket_fq_rate_limit_bytes != 0)
 			enable_fq_rate_limit(sc, sockfd);
 
 		if (connect(sockfd, &serv_addr, sa_size) == -1) {
-			ASPRINTF(&log,"failed to connect socket[%d] to remote: [%s:%d]. errno = %d.",
-					sockfd, sc->bind_address, sc->server_port, errno);
-			if (log != NULL) {
-				PRINT_ERR_FREE(log);
-			} else {
-				PRINT_ERR("failed to connect socket to remote");
-			}
-			close(sockfd);
-			sockfds[i] = -1;
-			continue;
+                        ASPRINTF(&log,"failed to connect socket[%d] to remote: [%s:%d]. errno = %d.",
+                                sockfd, sc->bind_address, sc->server_port, errno);
+                        PRINT_ERR_FREE(log);
+                        close(sockfd);
+                        sockfds[i] = -1;
+                        continue;
 		}
 
 		ASPRINTF(&log,
 				"Running UDP stream: local:%d [socket:%d] --> %s:%d",
 				ntohs((client_port)), sockfd, sc->bind_address, sc->server_port);
-		if (log != NULL) {
-			PRINT_DBG_FREE(log);
-		} else {
-			PRINT_DBG("Running UDP stream");
-		}
+		PRINT_DBG_FREE(log);
 
 		sockfds[i] = sockfd;
 		total_sub_conn_created++;
@@ -220,13 +196,14 @@ void *run_ntttcp_receiver_udp_stream(void *ptr)
 
 void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 {
-	char *log = NULL;
+	char *log;
+
 	int ret = 0; /* hold function return value */
 	int sockfd = -1; /* socket file descriptor */
 	char *buffer; /* receive buffer */
 	char *local_addr_str; /* used to get local ip address */
 	int ip_addr_max_size; /* used to get local ip address */
-	char *port_str = NULL; /* used to get port number string for getaddrinfo() */
+	char *port_str; /* used to get port number string for getaddrinfo() */
 	struct addrinfo hints, *serv_info, *p; /* to get local sockaddr for bind() */
 	struct sockaddr_in remote_addr; /* remote address */
 	socklen_t addrlen = sizeof(remote_addr); /* length of addresses */
@@ -241,12 +218,10 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 	ASPRINTF(&port_str, "%d", ss->server_port);
 	if (getaddrinfo(ss->bind_address, port_str, &hints, &serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");
-		if (port_str != NULL)
-			free(port_str);
+		free(port_str);
 		return 0;
 	}
-	if (port_str != NULL)
-		free(port_str);
+	free(port_str);
 
 	ip_addr_max_size = (ss->domain == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
 	if ((local_addr_str = (char *)malloc(ip_addr_max_size)) == (char *)NULL) {
@@ -266,11 +241,7 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 
 		if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
 			ASPRINTF(&log, "cannot set socket options: %d", sockfd);
-			if (log != NULL) {
-				PRINT_ERR_FREE(log);
-			} else {
-				PRINT_ERR("cannot set socket options");
-			}
+			PRINT_ERR_FREE(log);
 			freeaddrinfo(serv_info);
 			free(local_addr_str);
 			close(sockfd);
@@ -306,11 +277,7 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 
 	if (p == NULL) {
 		ASPRINTF(&log, "cannot bind the socket on address: %s", ss->bind_address);
-		if (log != NULL) {
-			PRINT_ERR_FREE(log);
-		} else {
-			PRINT_ERR("cannot bind the socket on address");
-		}
+		PRINT_ERR_FREE(log);
 		if (sockfd >= 0)
 			close(sockfd);
 		return 0;
@@ -338,11 +305,7 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 			__sync_fetch_and_add(&(ss->total_bytes_transferred), nbytes);
 		} else {
 			ASPRINTF(&log, "error: cannot read data from socket: %d", sockfd);
-			if (log != NULL) {
-				PRINT_INFO_FREE(log);
-			} else {
-				PRINT_ERR("error: cannot read data from socket");
-			}
+			PRINT_INFO_FREE(log);
 		}
 	}
 
