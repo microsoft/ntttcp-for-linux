@@ -196,8 +196,7 @@ void *run_ntttcp_receiver_udp_stream(void *ptr)
 
 void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 {
-	char *log;
-
+	char *log = NULL;
 	int ret = 0; /* hold function return value */
 	int sockfd = -1; /* socket file descriptor */
 	char *buffer; /* receive buffer */
