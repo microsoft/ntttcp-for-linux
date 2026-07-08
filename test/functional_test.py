@@ -24,13 +24,13 @@ class TestNtttcp:
         # every receiver command is with "-D", so the receiver command can return
         # at once. Otherwise, we need to use "subprocess.Popen"
         with open("receiver_log.txt", "wb") as receiver_out:
-            subprocess.run([receiver_cmd], shell=True, stdout=receiver_out, check=True)
+            subprocess.run(receiver_cmd, shell=True, stdout=receiver_out, check=True)
         receiver_open = open("receiver_log.txt", "r")
         receiver_out = receiver_open.read()
         receiver_open.close()
         time.sleep(1)
         with open("sender_log.txt", "wb") as sender_out:
-            subprocess.run([sender_cmd], shell=True, stdout=sender_out, check=True)
+            subprocess.run(sender_cmd, shell=True, stdout=sender_out, check=True)
         sender_open = open("sender_log.txt", "r")
         sender_out = sender_open.read()
         sender_open.close()
@@ -441,10 +441,11 @@ class TestNtttcp:
         sender_cmd = f"ulimit -n 40960 && ./src/ntttcp -s{self.loopback_interface} -u -p {unused_port} -l {n_connections} -V -t 1 -Q"
 
         # Sender should exit with error since no receiver
-        result = subprocess.run([sender_cmd], shell=True, capture_output=True, text=True, timeout=15)
+        result = subprocess.run(sender_cmd, shell=True, capture_output=True, text=True, timeout=15)
 
         # Verify error handling was executed (should mention sync failure since no receiver)
-        assert result.returncode != 0 or "failed to create sync socket" in result.stdout or "failed to connect" in result.stdout.lower(), \
+        combined_output = result.stdout + result.stderr
+        assert result.returncode != 0 or "failed to create sync socket" in combined_output or "failed to connect" in combined_output.lower(), \
             "Expected connection failure when receiver not available"
 
         self.log.write_info(f"Connect failure test: verified graceful handling of missing receiver (exit code: {result.returncode})")
