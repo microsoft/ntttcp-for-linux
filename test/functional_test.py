@@ -35,19 +35,13 @@ class TestNtttcp:
         sender_out = sender_open.read()
         sender_open.close()
 
-        return ntttcp_output.NtttcpOutput(
-                receiver_out,
-                sender_out
-                )
+        return ntttcp_output.NtttcpOutput(receiver_out, sender_out)
 
-    def combine_command(
-        self,
-        common_option: Optional[str] = "",
-        receiver_option: Optional[str] = "",
-        sender_option: Optional[str] = "",
-    ) -> Tuple[str, str]:
-        receiver_cmd = f"ulimit -n 40960 && ./src/ntttcp -r{self.loopback_interface} -t {self.set_duration_time_sec} -Q -D"
-        sender_cmd = f"ulimit -n 40960 && ./src/ntttcp -s{self.loopback_interface} -t {self.set_duration_time_sec} -Q"
+    def combine_command(self, common_option: Optional[str] = "", receiver_option: Optional[str] = "",
+                        sender_option: Optional[str] = "", duration: Optional[int] = None) -> Tuple[str, str]:
+        test_duration = duration if duration is not None else self.set_duration_time_sec
+        receiver_cmd = f"ulimit -n 40960 && ./src/ntttcp -r{self.loopback_interface} -t {test_duration} -Q -D"
+        sender_cmd = f"ulimit -n 40960 && ./src/ntttcp -s{self.loopback_interface} -t {test_duration} -Q"
         if common_option:
             receiver_cmd = f"{receiver_cmd} {common_option}"
             sender_cmd = f"{sender_cmd} {common_option}"
@@ -400,10 +394,11 @@ class TestNtttcp:
 
         # Test with high connection count
         common_option = f"-u -P {n_server_ports}"
-        sender_option = f"-n {n_threads} -l {n_connections} -V -t 3"
+        sender_option = f"-n {n_threads} -l {n_connections} -V"
         receiver_cmd, sender_cmd = self.combine_command(
             common_option=common_option,
-            sender_option=sender_option
+            sender_option=sender_option,
+            duration=3
         )
 
         result = self.run_test(receiver_cmd, sender_cmd)
@@ -472,10 +467,11 @@ class TestNtttcp:
 
         for iteration in range(test_iterations):
             common_option = f"-u -P {n_ports}"
-            sender_option = f"-n {n_threads} -l {n_connections} -V -t 1"
+            sender_option = f"-n {n_threads} -l {n_connections} -V"
             receiver_cmd, sender_cmd = self.combine_command(
                 common_option=common_option,
-                sender_option=sender_option
+                sender_option=sender_option,
+                duration=1
             )
 
             result = self.run_test(receiver_cmd, sender_cmd)
