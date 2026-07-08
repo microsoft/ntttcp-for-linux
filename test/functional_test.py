@@ -338,8 +338,9 @@ class TestNtttcp:
 
     def test_udp_sender_with_custom_port(self) -> None:
         """
-        Test UDP sender with custom starting port to verify socket binding works correctly.
-        This exercises the client_port binding logic in run_ntttcp_sender_udp4_stream.
+        Test UDP sender with custom destination/server port to verify connection works correctly.
+        This exercises the destination port configuration (-p flag) in run_ntttcp_sender_udp4_stream.
+        Note: This does NOT test client port binding (-f flag).
         """
         starting_port = 15000
         n_server_ports = 2

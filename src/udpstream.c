@@ -33,11 +33,15 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 	int ret = 0; /* hold function return value */
 	uint i = 0; /* for loop iterator */
 	uint total_sub_conn_created = 0; /* track how many sub connections created in this thread */
-	int sockfds[DEFAULT_CLIENT_CONNS_PER_THREAD] = {-1};
+	int sockfds[MAX_CLIENT_CONNS_PER_THREAD]; /* sc->num_connections is guaranteed to never exceed MAX_CLIENT_CONNS_PER_THREAD */
 	uint client_port = 0;
 	struct hostent *hp;
         char if_name[IFNAMSIZ] = {'\0'};
         struct sockaddr_storage client_addr = {0};
+
+	/* Initialize all socket fds to -1 for safe cleanup */
+	for (i = 0; i < MAX_CLIENT_CONNS_PER_THREAD; i++)
+		sockfds[i] = -1;
 
 	struct sockaddr_in serv_addr;
 	int sa_size = sizeof(struct sockaddr_in);
