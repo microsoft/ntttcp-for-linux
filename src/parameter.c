@@ -202,12 +202,19 @@ int process_mappings(struct ntttcp_test *test)
 
 	state = S_THREADS;
 	char *element = strdup(test->mapping);
+	if (!element) {
+		PRINT_ERR("process_mappings: failed to allocate memory");
+		return ERROR_MEMORY_ALLOC;
+	}
+	/* strsep() modifies the element pointer; save the original for proper free() in all paths */
+	char *element_start = element;
 
 	while ((token = strsep(&element, ",")) != NULL) {
 		if (S_THREADS == state) {
 			threads = atoi(token);
 
 			if (1 > threads) {
+				free(element_start);
 				return ERROR_ARGS;
 			}
 			test->server_ports = threads;
@@ -226,19 +233,29 @@ int process_mappings(struct ntttcp_test *test)
 
 				if (cpu < -1 || cpu > total_cpus - 1) {
 					PRINT_ERR("process_mappings: cpu specified is not in allowed scope");
+					free(element_start);
 					return ERROR_ARGS;
 				}
 				test->cpu_affinity = cpu;
 			}
 			++state;
 		} else if (S_HOST == state) {
-			test->bind_address = token;
+			char *new_addr = strdup(token);
+			if (!new_addr) {
+				PRINT_ERR("process_mappings: failed to allocate memory for bind_address");
+				free(element_start);
+				return ERROR_MEMORY_ALLOC;
+			}
+			free(test->bind_address);
+			test->bind_address = new_addr;
 			++state;
 		} else {
 			PRINT_ERR("process_mappings: unexpected parameters in mapping");
+			free(element_start);
 			return ERROR_ARGS;
 		}
 	}
+	free(element_start);
 	return NO_ERROR;
 }
 
@@ -255,8 +272,15 @@ int verify_args(struct ntttcp_test *test)
 		return ERROR_ARGS;
 	}
 
-	if (test->domain == AF_INET6 && strcmp(test->bind_address, "0.0.0.0") == 0)
-		test->bind_address = "::";
+	if (test->domain == AF_INET6 && strcmp(test->bind_address, "0.0.0.0") == 0) {
+		char *new_addr = strdup("::");
+		if (!new_addr) {
+			PRINT_ERR("failed to allocate memory for bind_address");
+			return ERROR_MEMORY_ALLOC;
+		}
+		free(test->bind_address);
+		test->bind_address = new_addr;
+	}
 
 	if (test->domain == AF_INET6 && !strstr(test->bind_address, ":")) {
 		PRINT_ERR("invalid ipv6 address provided");
@@ -270,17 +294,17 @@ int verify_args(struct ntttcp_test *test)
 
 	if (test->domain == AF_INET6 && strcmp(test->client_address, "0.0.0.0") == 0)
 		test->client_address = "::";
-    
-        if (test->use_client_address && test->server_role) {
-                PRINT_ERR("source interface address ('-a') is only for sender or client");
-                return ERROR_ARGS;
-        }
+
+	if (test->use_client_address && test->server_role) {
+		PRINT_ERR("source interface address ('-a') is only for sender or client");
+		return ERROR_ARGS;
+	}
 
 	/* validate ip address */
 	if (test->use_client_address && validate_ip_address(test->client_address) != NO_ERROR) {
-                PRINT_ERR("invalid client address");
-                return ERROR_ARGS;
-        }
+		PRINT_ERR("invalid client address");
+		return ERROR_ARGS;
+	}
 
 	if (!test->server_role && !test->client_role) {
 		PRINT_INFO("no role specified. use receiver role");
@@ -417,6 +441,7 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 	int opt;
+	int err_code;
 
 	while ((opt = getopt_long(argc, argv, "r::s::DMLeHm:P:a:n:l:6up:f::b:B:W:t:C:NO::x::j::QVh", longopts, NULL)) != -1) {
 		switch (opt) {
@@ -429,10 +454,23 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			}
 
 			if (optarg) {
-				test->bind_address = optarg;
+				char *new_addr = strdup(optarg);
+				if (!new_addr) {
+					PRINT_ERR("failed to allocate memory for bind_address");
+					return ERROR_MEMORY_ALLOC;
+				}
+				free(test->bind_address);
+				test->bind_address = new_addr;
 			} else {
-				if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0])
-					test->bind_address = argv[optind++];
+				if (optind < argc && NULL != argv[optind] && '\0' != argv[optind][0] && '-' != argv[optind][0]) {
+					char *new_addr = strdup(argv[optind++]);
+					if (!new_addr) {
+						PRINT_ERR("failed to allocate memory for bind_address");
+						return ERROR_MEMORY_ALLOC;
+					}
+					free(test->bind_address);
+					test->bind_address = new_addr;
+				}
 			}
 			break;
 
@@ -458,17 +496,19 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 
 		case 'm':
 			test->mapping = optarg;
-			process_mappings(test);
+			err_code = process_mappings(test);
+			if (err_code != NO_ERROR)
+				return err_code;
 			break;
 
 		case 'P':
 			test->server_ports = atoi(optarg);
 			break;
 
-                case 'a':	
-                        test->client_address     = optarg;
-                        test->use_client_address = true;
-                        break;
+		case 'a':
+			test->client_address = optarg;
+			test->use_client_address = true;
+			break;
 
 		case 'n':
 			test->threads_per_server_port = atoi(optarg);
@@ -586,9 +626,12 @@ int parse_arguments(struct ntttcp_test *test, int argc, char **argv)
 			break;
 
 		case 'h':
+			print_usage();
+			return INFO_HELP_DISPLAYED;
+
 		default:
 			print_usage();
-			exit(ERROR_ARGS);
+			return ERROR_ARGS;
 		}
 	}
 	return NO_ERROR;

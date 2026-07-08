@@ -246,6 +246,7 @@ void free_ntttcp_test_endpoint_and_test(struct ntttcp_test_endpoint *e)
 	free(e->results->final_tcp_retrans);
 	free(e->results);
 	free(e->threads);
+	free(e->test->bind_address);
 	free(e->test);
 	free(e);
 }
