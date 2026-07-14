@@ -6,6 +6,46 @@
 
 #include "util.h"
 
+/*
+ * Map internal error codes to standard exit status codes (0-255).
+ * This avoids relying on platform-specific truncation/wrapping when
+ * negative error codes are passed to exit().
+ */
+int map_error_code_to_exit_status(int err_code)
+{
+	switch (err_code) {
+	case NO_ERROR:
+		return 0;
+	case INFO_HELP_DISPLAYED:
+		return 0;
+	case ERROR_GENERAL:
+		return 1;
+	case ERROR_ARGS:
+		return 2;
+	case ERROR_MEMORY_ALLOC:
+		return 3;
+	case ERROR_PTHREAD_CREATE:
+		return 4;
+	case ERROR_LISTEN:
+		return 10;
+	case ERROR_ACCEPT:
+		return 11;
+	case ERROR_SELECT:
+		return 12;
+	case ERROR_EPOLL:
+		return 13;
+	case ERROR_NETWORK_READ:
+		return 14;
+	case ERROR_NETWORK_WRITE:
+		return 15;
+	case ERROR_RECEIVER_NOT_READY:
+		return 16;
+	default:
+		/* Unknown error code - return generic error status */
+		return 1;
+	}
+}
+
 void enable_fq_rate_limit(struct ntttcp_stream_client *sc, int sockfd)
 {
 	unsigned int fqrate_bytes = sc->socket_fq_rate_limit_bytes;

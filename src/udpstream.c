@@ -33,11 +33,15 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 	int ret = 0; /* hold function return value */
 	uint i = 0; /* for loop iterator */
 	uint total_sub_conn_created = 0; /* track how many sub connections created in this thread */
-	int sockfds[DEFAULT_CLIENT_CONNS_PER_THREAD] = {-1};
+	int sockfds[MAX_CLIENT_CONNS_PER_THREAD]; /* sc->num_connections is guaranteed to never exceed MAX_CLIENT_CONNS_PER_THREAD */
 	uint client_port = 0;
 	struct hostent *hp;
         char if_name[IFNAMSIZ] = {'\0'};
         struct sockaddr_storage client_addr = {0};
+
+	/* Initialize all socket fds to -1 for safe cleanup */
+	for (i = 0; i < MAX_CLIENT_CONNS_PER_THREAD; i++)
+		sockfds[i] = -1;
 
 	struct sockaddr_in serv_addr;
 	int sa_size = sizeof(struct sockaddr_in);
@@ -51,25 +55,25 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 		serv_addr.sin_addr.s_addr = inet_addr(sc->bind_address);
 	}
 
-        if (sc->use_client_address) {
-                /* get interface name using the interface ip address */
-                if (get_interface_name_by_ip(sc->client_address, sc->domain, if_name, IFNAMSIZ) != 0) {
-                        ASPRINTF(&log, "failed to get interface name by address [%s]", sc->client_address);
-                        PRINT_ERR(log);
-                        return NULL;
-                }
-        }
+	if (sc->use_client_address) {
+		/* get interface name using the interface ip address */
+		if (get_interface_name_by_ip(sc->client_address, sc->domain, if_name, IFNAMSIZ) != 0) {
+			ASPRINTF(&log, "failed to get interface name by address [%s]", sc->client_address);
+			PRINT_ERR_FREE(log);
+			return NULL;
+		}
+	}
 
-        /* update client information */
-        if (ntttcp_update_client_info(&client_addr, sc) < 0) {
-                ASPRINTF(&log, "failed to update udp client info [%s]", sc->client_address);
-                PRINT_ERR(log);
-                return NULL;
-        }
+	/* update client information */
+	if (ntttcp_update_client_info(&client_addr, sc) < 0) {
+		ASPRINTF(&log, "failed to update udp client info [%s]", sc->client_address);
+		PRINT_ERR_FREE(log);
+		return NULL;
+	}
 
 	for (i = 0; i < sc->num_connections; i++) {
 
-		if ((sockfd = socket(sc->domain, sc->domain, 0)) < 0) {
+		if ((sockfd = socket(sc->domain, UDP, 0)) < 0) {
 			PRINT_ERR("cannot create socket endpoint");
 			sockfds[i] = -1;
 			continue;
@@ -88,7 +92,7 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
                 if (ret != 0) {
                         ASPRINTF(&log, "failed to do udp socket bind : socket domain [%d] client_port [%d] errno [%d]", 
                         sc->domain, client_port, errno);
-                        PRINT_ERR(log);
+                        PRINT_ERR_FREE(log);
                         close(sockfd);
                         sockfds[i] = -1;
                         continue;
@@ -100,7 +104,7 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
                         if (ret != NO_ERROR) {
                                 ASPRINTF(&log, "failed to do udp socket bind to device : socket domain [%d] client_port [%d] errno [%d] if_name [%s]", 
                                 sc->domain, client_port, errno, if_name);
-                                PRINT_ERR(log);
+                                PRINT_ERR_FREE(log);
                                 close(sockfd);
                                 sockfds[i] = -1;
                                 continue;
@@ -114,7 +118,7 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 		if (connect(sockfd, &serv_addr, sa_size) == -1) {
                         ASPRINTF(&log,"failed to connect socket[%d] to remote: [%s:%d]. errno = %d.",
                                 sockfd, sc->bind_address, sc->server_port, errno);
-                        PRINT_ERR(log);
+                        PRINT_ERR_FREE(log);
                         close(sockfd);
                         sockfds[i] = -1;
                         continue;
@@ -192,10 +196,9 @@ void *run_ntttcp_receiver_udp_stream(void *ptr)
 
 void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 {
-	char *log;
-
+	char *log = NULL;
 	int ret = 0; /* hold function return value */
-	int sockfd = 0; /* socket file descriptor */
+	int sockfd = -1; /* socket file descriptor */
 	char *buffer; /* receive buffer */
 	char *local_addr_str; /* used to get local ip address */
 	int ip_addr_max_size; /* used to get local ip address */
@@ -214,6 +217,7 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 	ASPRINTF(&port_str, "%d", ss->server_port);
 	if (getaddrinfo(ss->bind_address, port_str, &hints, &serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");
+		free(port_str);
 		return 0;
 	}
 	free(port_str);
@@ -248,20 +252,33 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 				"failed to bind the socket to local address: %s on socket: %d. return = %d",
 				local_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, local_addr_str, ip_addr_max_size), sockfd, ret);
 
-			if (ret == -1) /* append more info to log */
-				ASPRINTF(&log, "%s. errcode = %d", log, errno);
-			PRINT_DBG_FREE(log);
+			if (ret == -1 && log != NULL) { /* append more info to log */
+				char *old_log = log;
+				ASPRINTF(&log, "%s. errcode = %d", old_log, errno);
+				if (log != NULL) {
+					free(old_log);
+				} else {
+					log = old_log; /* restore original message if second ASPRINTF failed */
+				}
+			}
+			if (log != NULL)
+				PRINT_DBG_FREE(log);
+			close(sockfd);
+			sockfd = -1;
 			continue;
 		} else {
 			break; /* connected */
 		}
 	}
+
 	freeaddrinfo(serv_info);
 	free(local_addr_str);
+
 	if (p == NULL) {
 		ASPRINTF(&log, "cannot bind the socket on address: %s", ss->bind_address);
 		PRINT_ERR_FREE(log);
-		close(sockfd);
+		if (sockfd >= 0)
+			close(sockfd);
 		return 0;
 	}
 
@@ -291,5 +308,7 @@ void *run_ntttcp_receiver_udp4_stream(struct ntttcp_stream_server *ss)
 		}
 	}
 
+	free(buffer);
+	close(sockfd);
 	return (void *)nbytes;
 }

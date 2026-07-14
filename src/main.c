@@ -39,14 +39,12 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 		reply_received = query_receiver_busy_state(tep->synch_socket);
 		if (reply_received == -1) {
 			PRINT_ERR("sender: failed to query receiver state");
-			if (test->no_synch == false)
-				close(tep->synch_socket);
+			close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 		if (reply_received == 1) {
 			PRINT_ERR("sender: receiver is busy with another test");
-			if (test->no_synch == false)
-				close(tep->synch_socket);
+			close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 
@@ -54,8 +52,7 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 							   test->warmup + test->duration + test->cooldown);
 		if (reply_received == -1) {
 			PRINT_ERR("sender: failed to negotiate test cycle time with receiver");
-			if (test->no_synch == false)
-				close(tep->synch_socket);
+			close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 		if (reply_received != test->duration) {
@@ -151,14 +148,12 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 						  tep->test->last_client ? (int)'L' : (int)'R');
 		if (reply_received == -1) {
 			PRINT_ERR("sender: failed to sync with receiver to start test");
-			if (test->no_synch == false)
-				close(tep->synch_socket);
+			close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 		if (reply_received == 0) {
 			PRINT_ERR("sender: receiver refuse to start test right now");
-			if (test->no_synch == false)
-				close(tep->synch_socket);
+			close(tep->synch_socket);
 			return ERROR_GENERAL;
 		}
 
@@ -342,7 +337,7 @@ int main(int argc, char **argv)
 	test = new_ntttcp_test();
 	if (!test) {
 		PRINT_ERR("main: error when creating new test");
-		exit(-1);
+		exit(map_error_code_to_exit_status(ERROR_GENERAL));
 	}
 
 	// Handle error return from default_ntttcp_test
@@ -351,23 +346,31 @@ int main(int argc, char **argv)
 		PRINT_ERR("main: error when initializing default test parameters");
 		free(test->bind_address);
 		free(test);
-		exit(err_code);
+		exit(map_error_code_to_exit_status(err_code));
 	}
 
 	err_code = parse_arguments(test, argc, argv);
+	if (err_code == INFO_HELP_DISPLAYED) {
+		free(test->bind_address);
+		free(test);
+		exit(map_error_code_to_exit_status(NO_ERROR));
+	}
+
 	if (err_code != NO_ERROR) {
 		PRINT_ERR("main: error when parsing args");
 		print_flags(test);
+		free(test->bind_address);
 		free(test);
-		exit(-1);
+		exit(map_error_code_to_exit_status(err_code));
 	}
 
 	err_code = verify_args(test);
 	if (err_code != NO_ERROR) {
 		PRINT_ERR("main: error when verifying the args");
 		print_flags(test);
+		free(test->bind_address);
 		free(test);
-		exit(-1);
+		exit(map_error_code_to_exit_status(err_code));
 	}
 
 	prepare_logging(test->verbose, test->save_console_log, test->console_log_filename);
@@ -377,8 +380,9 @@ int main(int argc, char **argv)
 
 	if (!check_resource_limit(test)) {
 		PRINT_ERR("main: error when checking resource limits");
+		free(test->bind_address);
 		free(test);
-		exit(-1);
+		exit(map_error_code_to_exit_status(ERROR_GENERAL));
 	}
 
 	turn_off_light();
@@ -406,5 +410,5 @@ int main(int argc, char **argv)
 	}
 
 	free_ntttcp_test_endpoint_and_test(tep);
-	return err_code;
+	return map_error_code_to_exit_status(err_code);
 }
