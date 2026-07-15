@@ -100,6 +100,7 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 	ASPRINTF(&port_str, "%d", sc->server_port);
 	if (getaddrinfo(sc->bind_address, port_str, &hints, &remote_serv_info) != 0) {
 		PRINT_ERR("cannot get address info for receiver");
+		free(port_str);
 		return 0;
 	}
 	free(port_str);
@@ -168,33 +169,35 @@ void *run_ntttcp_sender_tcp_stream(void *ptr)
 			if (sc->client_port != 0) {
 				/* 2. bind this socket fd to a local fixed TCP port */
 				client_port = sc->client_port + i;
-                        }
-
-                        /* update client port information */
-                        ntttcp_update_client_port_info(&client_addr, client_port);
-
-                        ret = ntttcp_bind_socket(sockfd, &client_addr);
-                        if (ret != 0) {
-                                ASPRINTF(&log, "failed to do tcp bind : socket domain [%d] client_port [%d] errno [%d]", 
-                                sc->domain, client_port, errno);
-                                PRINT_INFO_FREE(log);
-                                close(sockfd);
-                                sockfds[i] = -1;
-                                continue;
 			}
 
-                        /* perform SO_BINDTODEVICE operation for a socket */
-                        if (sc->use_client_address) {
-                                ret = ntttcp_bind_to_device(sockfd, sc, if_name);
-                                if (ret != NO_ERROR) {
-                                        ASPRINTF(&log, "failed to do tcp bind to device : socket domain [%d] client_port [%d] errno [%d] ifname [%s]", 
-                                        sc->domain, client_port, errno, if_name);
-                                        PRINT_INFO_FREE(log);
-                                        close(sockfd);
-                                        sockfds[i] = -1;
-                                        continue;
-                                }
-                        }
+			/* update client port information */
+			ntttcp_update_client_port_info(&client_addr, client_port);
+
+			ret = ntttcp_bind_socket(sockfd, &client_addr);
+			if (ret != 0) {
+				int bind_errno = errno;
+				ASPRINTF(&log, "failed to do tcp bind : socket domain [%d] client_port [%d] errno [%d]",
+				sc->domain, client_port, bind_errno);
+				PRINT_INFO_FREE(log);
+				close(sockfd);
+				sockfds[i] = -1;
+				continue;
+			}
+
+			/* perform SO_BINDTODEVICE operation for a socket */
+			if (sc->use_client_address) {
+				ret = ntttcp_bind_to_device(sockfd, sc, if_name);
+				if (ret != NO_ERROR) {
+					int bind_dev_errno = errno;
+					ASPRINTF(&log, "failed to do tcp bind to device : socket domain [%d] client_port [%d] errno [%d] ifname [%s]",
+					sc->domain, client_port, bind_dev_errno, if_name);
+					PRINT_INFO_FREE(log);
+					close(sockfd);
+					sockfds[i] = -1;
+					continue;
+				}
+			}
 
 			/* 3. connect to receiver */
 			remote_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, remote_addr_str, ip_addr_max_size);
@@ -365,6 +368,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 		}
 
 		if ((i = bind(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
+			int bind_errno = errno; /* capture errno immediately after bind failure */
 			ASPRINTF(&log,
 				"failed to bind the socket to local address: %s on socket: %d. return = %d",
 				local_addr_str = retrive_ip_address_str((struct sockaddr_storage *)p->ai_addr, local_addr_str, ip_addr_max_size),
@@ -372,7 +376,7 @@ int ntttcp_server_listen(struct ntttcp_stream_server *ss)
 
 			if (i == -1 && log != NULL) { /* append more info to log */
 				char *old_log = log;
-				ASPRINTF(&log, "%s. errcode = %d", old_log, errno);
+				ASPRINTF(&log, "%s. errcode = %d", old_log, bind_errno);
 				if (log != NULL) {
 					free(old_log);
 				} else {
@@ -464,6 +468,13 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 
 	/* Buffer where events are returned */
 	events = calloc(MAX_EPOLL_EVENTS, sizeof event);
+	if (events == NULL) {
+		PRINT_ERR("cannot allocate memory for epoll events");
+		free(buffer);
+		free(ip_address_str);
+		close(efd);
+		return ERROR_MEMORY_ALLOC;
+	}
 
 	while (1) {
 		if (ss->endpoint->receiver_exit_after_done &&
@@ -495,7 +506,8 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 							/* We have processed all incoming connections. */
 							break;
 						} else {
-							ASPRINTF(&log, "error to accept new connections. errno = %d", errno)
+							int accept_errno = errno;
+							ASPRINTF(&log, "error to accept new connections. errno = %d", accept_errno)
 							PRINT_ERR_FREE(log);
 							break;
 						}
@@ -557,10 +569,10 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 					if (nbytes <= 0) {
 						if (errno != EAGAIN) {
 							if (nbytes == 0) {
-								ASPRINTF(&log, "socket closed: %d", i);
+								ASPRINTF(&log, "socket closed: %d", current_fd);
 								PRINT_DBG_FREE(log);
 							} else {
-								ASPRINTF(&log, "error: cannot read data from socket: %d", i);
+								ASPRINTF(&log, "error: cannot read data from socket: %d", current_fd);
 								PRINT_INFO_FREE(log);
 								err_code = ERROR_NETWORK_READ;
 								/* need to continue ss and check other socket, so don't end the ss */
