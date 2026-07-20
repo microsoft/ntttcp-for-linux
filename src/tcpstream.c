@@ -439,12 +439,14 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 
 	if ((buffer = (char *)malloc(ss->recv_buf_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for receive buffer");
+		close(ss->listener);
 		return ERROR_MEMORY_ALLOC;
 	}
 	ip_addr_max_size = (ss->domain == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
 	if ((ip_address_str = (char *)malloc(ip_addr_max_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for ip address of peer");
 		free(buffer);
+		close(ss->listener);
 		return ERROR_MEMORY_ALLOC;
 	}
 
@@ -453,6 +455,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 		PRINT_ERR("epoll_create1 failed");
 		free(buffer);
 		free(ip_address_str);
+		close(ss->listener);
 		return ERROR_EPOLL;
 	}
 
@@ -463,6 +466,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 		free(buffer);
 		free(ip_address_str);
 		close(efd);
+		close(ss->listener);
 		return ERROR_EPOLL;
 	}
 
@@ -473,6 +477,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 		free(buffer);
 		free(ip_address_str);
 		close(efd);
+		close(ss->listener);
 		return ERROR_MEMORY_ALLOC;
 	}
 
@@ -617,12 +622,14 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 
 	if ((buffer = (char *)malloc(ss->recv_buf_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for receive buffer");
+		close(ss->listener);
 		return ERROR_MEMORY_ALLOC;
 	}
 	ip_addr_max_size = (ss->domain == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN);
 	if ((ip_address_str = (char *)malloc(ip_addr_max_size)) == (char *)NULL) {
 		PRINT_ERR("cannot allocate memory for ip address of peer");
 		free(buffer);
+		close(ss->listener);
 		return ERROR_MEMORY_ALLOC;
 	}
 
