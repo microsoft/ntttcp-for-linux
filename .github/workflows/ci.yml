@@ -27,12 +27,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: uraimo/run-on-arch-action@v2
+      - uses: uraimo/run-on-arch-action@v3
         name: Build artifact
         id: build
         with:
           arch: aarch64
-          distro: ubuntu20.04
+          distro: ubuntu_latest
           run: |
             apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake file musl musl-dev musl-tools
             cd src/ && CC="musl-gcc" cmake -DCMAKE_C_FLAGS="-static" . && make && ls -lh ntttcp && file ntttcp
