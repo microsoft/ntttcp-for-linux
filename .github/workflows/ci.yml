@@ -9,8 +9,11 @@ jobs:
     name: build x86-64
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: cd src/ && cmake . && make && ls -lh ntttcp && file ntttcp
+      - uses: gerlero/apt-install@v1
+        with:
+          packages: musl musl-dev musl-tools
+      - uses: actions/checkout@v7
+      - run: cd src/ && CC="musl-gcc" cmake -DCMAKE_C_FLAGS="-static" . && make && ls -lh ntttcp && file ntttcp
 
       - name: Uploads binary file for x86-64
         uses: actions/upload-artifact@v4
@@ -23,7 +26,7 @@ jobs:
     name: build aarch64
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: uraimo/run-on-arch-action@v2
         name: Build artifact
         id: build
@@ -31,8 +34,8 @@ jobs:
           arch: aarch64
           distro: ubuntu20.04
           run: |
-            apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake file
-            cd src/ && cmake . && make && ls -lh ntttcp && file ntttcp
+            apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake file musl musl-dev musl-tools
+            cd src/ && CC="musl-gcc" cmake -DCMAKE_C_FLAGS="-static" . && make && ls -lh ntttcp && file ntttcp
 
       - name: Uploads binary file for aarch64
         uses: actions/upload-artifact@v4
