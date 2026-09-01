@@ -36,6 +36,7 @@ A multiple-threaded Linux network throughput benchmark tool.
 
 * Support writing log into JSON file ('-j').
 
+* CI build statically links with [musl libc](https://wiki.musl-libc.org/getting-started.html) for portability across Linux distros & releases.
 
 ## Getting Started
 
