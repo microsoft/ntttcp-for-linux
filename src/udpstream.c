@@ -115,7 +115,7 @@ void *run_ntttcp_sender_udp4_stream(struct ntttcp_stream_client *sc)
 		if (sc->socket_fq_rate_limit_bytes != 0)
 			enable_fq_rate_limit(sc, sockfd);
 
-		if (connect(sockfd, &serv_addr, sa_size) == -1) {
+		if (connect(sockfd, (const struct sockaddr *)&serv_addr, sa_size) == -1) {
                         ASPRINTF(&log,"failed to connect socket[%d] to remote: [%s:%d]. errno = %d.",
                                 sockfd, sc->bind_address, sc->server_port, errno);
                         PRINT_ERR_FREE(log);
