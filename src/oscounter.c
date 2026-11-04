@@ -227,13 +227,13 @@ uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 
 void get_tcp_retrans(struct tcp_retrans *tr)
 {
-	tr->retrans_segs		= read_counter_from_proc(PROC_FILE_SNMP,    TCP_SECTION, "RetransSegs");
-	tr->tcp_lost_retransmit		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPLostRetransmit");
-	tr->tcp_syn_retrans		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPSynRetrans");
-	tr->tcp_fast_retrans		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPFastRetrans");
-	tr->tcp_forward_retrans		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPForwardRetrans");
-	tr->tcp_slowStart_retrans	= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPSlowStartRetrans");
-	tr->tcp_retrans_fail		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPRetransFail");
+	tr->retrans_segs          = read_counter_from_proc(PROC_FILE_SNMP,    TCP_SECTION,     "RetransSegs");
+	tr->tcp_lost_retransmit   = read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPLostRetransmit");
+	tr->tcp_syn_retrans       = read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPSynRetrans");
+	tr->tcp_fast_retrans      = read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPFastRetrans");
+	tr->tcp_forward_retrans   = read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPForwardRetrans");
+	tr->tcp_slowStart_retrans = read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPSlowStartRetrans");
+	tr->tcp_retrans_fail      = read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPRetransFail");
 }
 
 double read_value_from_proc(char *file_name, char *key)
