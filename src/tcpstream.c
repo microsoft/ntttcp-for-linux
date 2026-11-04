@@ -426,7 +426,7 @@ int ntttcp_server_epoll(struct ntttcp_stream_server *ss)
 
 	int efd = 0, n_fds = 0, newfd = 0, current_fd = 0;
 	char *buffer; /* receive buffer */
-	uint64_t nbytes; /* bytes read */
+	ssize_t nbytes; /* bytes read */
 	int bytes_to_be_read = 0; /* read bytes from socket */
 	struct epoll_event event, *events;
 
@@ -610,7 +610,7 @@ int ntttcp_server_select(struct ntttcp_stream_server *ss)
 
 	int n_fds = 0, newfd, current_fd = 0;
 	char *buffer; /* receive buffer */
-	uint64_t nbytes; /* bytes read */
+	ssize_t nbytes; /* bytes read */
 	int bytes_to_be_read = 0; /* read bytes from socket */
 	fd_set read_set, write_set;
 

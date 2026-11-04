@@ -76,6 +76,7 @@
 
 /* proc file for re-transmit counters */
 #define TCP_SECTION			"Tcp"
+#define TCP_EXT_SECTION			"TcpExt"
 #define PROC_FILE_SNMP			"/proc/net/snmp"
 #define PROC_FILE_NETSTAT		"/proc/net/netstat"
 #define PROC_FILE_INTERRUPTS		"/proc/interrupts"
