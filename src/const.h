@@ -11,11 +11,11 @@
 #define TCP 				SOCK_STREAM
 #define UDP 				SOCK_DGRAM
 
-#define ROLE_SENDER			1
+#define ROLE_SENDER       1
 #define ROLE_RECEIVER			2
 
 #define TEST_UNKNOWN			10
-#define TEST_NOT_STARTED		11
+#define TEST_NOT_STARTED	11
 #define TEST_RUNNING			12
 #define TEST_FINISHED			13
 
