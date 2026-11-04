@@ -351,7 +351,19 @@ int verify_args(struct ntttcp_test *test)
 		test->conns_per_thread = 1;
 	}
 
+	if (test->server_base_port < 1 || test->server_base_port > MAX_LOCAL_IP_PORT ||
+	    test->server_ports - 1 > MAX_LOCAL_IP_PORT - test->server_base_port ||
+	    (!test->no_synch && test->server_base_port == 1)) {
+		PRINT_ERR("invalid destination port range or sync port");
+		return ERROR_ARGS;
+	}
+
 	if (test->client_role) {
+		if (test->client_base_port > MAX_LOCAL_IP_PORT) {
+			PRINT_ERR("invalid source port");
+			return ERROR_ARGS;
+		}
+
 		if (test->use_epoll)
 			PRINT_DBG("ignore '-e' on sender role");
 		if (!test->exit_after_done)
@@ -371,9 +383,11 @@ int verify_args(struct ntttcp_test *test)
 			PRINT_DBG("source port is too small. use the default value");
 		}
 
-		if ((int)(MAX_LOCAL_IP_PORT - test->client_base_port) <
-			(int)(test->server_ports * test->threads_per_server_port * test->conns_per_thread)) {
+		if (test->client_base_port > 0 &&
+		    (uint64_t)test->server_ports * test->threads_per_server_port * test->conns_per_thread >
+		    MAX_LOCAL_IP_PORT - test->client_base_port + 1) {
 			PRINT_ERR("source port is too high to provide a sufficient range of ports for your test");
+			return ERROR_ARGS;
 		}
 
 		if (test->bandwidth_limit != 0)

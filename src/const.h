@@ -11,11 +11,11 @@
 #define TCP 				SOCK_STREAM
 #define UDP 				SOCK_DGRAM
 
-#define ROLE_SENDER			1
+#define ROLE_SENDER       1
 #define ROLE_RECEIVER			2
 
 #define TEST_UNKNOWN			10
-#define TEST_NOT_STARTED		11
+#define TEST_NOT_STARTED	11
 #define TEST_RUNNING			12
 #define TEST_FINISHED			13
 
@@ -76,6 +76,7 @@
 
 /* proc file for re-transmit counters */
 #define TCP_SECTION			"Tcp"
+#define TCP_EXT_SECTION			"TcpExt"
 #define PROC_FILE_SNMP			"/proc/net/snmp"
 #define PROC_FILE_NETSTAT		"/proc/net/netstat"
 #define PROC_FILE_INTERRUPTS		"/proc/interrupts"

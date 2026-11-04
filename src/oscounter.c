@@ -169,10 +169,10 @@ uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 {
 	char *log;
 	FILE *stream;
-	char *line = NULL, *pch = NULL;
+	char *line = NULL, *pch = NULL, *saveptr = NULL;
 	size_t len = 0;
-	ssize_t read;
-	int key_found = 0;
+	size_t section_len = strlen(section);
+	unsigned int column, i;
 	uint64_t ret = 0;
 
 	stream = fopen(file_name, "r");
@@ -192,34 +192,33 @@ uint64_t read_counter_from_proc(char *file_name, char *section, char *key)
 	 * if a key is found, then,
 	 * read the corresponding cell as value from next line
 	 */
-	while ((read = getline(&line, &len, stream)) != -1) {
-		/* key is found, then read the value here */
-		if (key_found > 0) {
-			pch = line;
-			while ((pch = strtok(pch, " "))) {
-				key_found--;
-				if (key_found == 0) {
-					ret = strtoull(pch, NULL, 10);
-					goto found;
-				}
-				pch = NULL;
-			}
+	while (getline(&line, &len, stream) != -1) {
+		if (strncmp(line, section, section_len) != 0 || line[section_len] != ':')
+			continue;
+
+		strtok_r(line, " \t\r\n", &saveptr);
+		column = 0;
+		while ((pch = strtok_r(NULL, " \t\r\n", &saveptr)) != NULL) {
+			if (strcmp(pch, key) == 0)
+				break;
+			column++;
 		}
-		/* try to locate the key */
-		if (strcmp(section, line) < 0) {
-			if (strstr(line, key) != NULL) {
-				pch = line;
-				while ((pch = strtok(pch, " "))) {
-					key_found++;
-					if (strcmp(pch, key) == 0)
-						break;
-					pch = NULL;
-				}
-			}
-		}
+		if (pch == NULL)
+			continue;
+
+		if (getline(&line, &len, stream) == -1)
+			break;
+		if (strncmp(line, section, section_len) != 0 || line[section_len] != ':')
+			break;
+
+		pch = strtok_r(line, " \t\r\n", &saveptr);
+		for (i = 0; pch != NULL && i <= column; i++)
+			pch = strtok_r(NULL, " \t\r\n", &saveptr);
+		if (pch != NULL)
+			ret = strtoull(pch, NULL, 10);
+		break;
 	}
 
-found:
 	free(line);
 	fclose(stream);
 
@@ -228,13 +227,13 @@ found:
 
 void get_tcp_retrans(struct tcp_retrans *tr)
 {
-	tr->retrans_segs		= read_counter_from_proc(PROC_FILE_SNMP,    TCP_SECTION, "RetransSegs");
-	tr->tcp_lost_retransmit		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPLostRetransmit");
-	tr->tcp_syn_retrans		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPSynRetrans");
-	tr->tcp_fast_retrans		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPFastRetrans");
-	tr->tcp_forward_retrans		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPForwardRetrans");
-	tr->tcp_slowStart_retrans	= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPSlowStartRetrans");
-	tr->tcp_retrans_fail		= read_counter_from_proc(PROC_FILE_NETSTAT, TCP_SECTION, "TCPRetransFail");
+	tr->retrans_segs          = read_counter_from_proc(PROC_FILE_SNMP,    TCP_SECTION,     "RetransSegs");
+	tr->tcp_lost_retransmit   = read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPLostRetransmit");
+	tr->tcp_syn_retrans       = read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPSynRetrans");
+	tr->tcp_fast_retrans      = read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPFastRetrans");
+	tr->tcp_forward_retrans   = read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPForwardRetrans");
+	tr->tcp_slowStart_retrans = read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPSlowStartRetrans");
+	tr->tcp_retrans_fail      = read_counter_from_proc(PROC_FILE_NETSTAT, TCP_EXT_SECTION, "TCPRetransFail");
 }
 
 double read_value_from_proc(char *file_name, char *key)
